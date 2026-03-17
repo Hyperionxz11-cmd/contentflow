@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase-server'
+import { getSupabaseServer } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabaseAdmin()
+  const supabase = getSupabaseServer()
   const body = await request.text()
   const event = JSON.parse(body)
 
@@ -10,18 +10,19 @@ export async function POST(request: NextRequest) {
     const session = event.data.object
     const userId = session.client_reference_id
 
-    await supabase.from('profiles').update({
-      plan: 'premium',
-      stripe_customer_id: session.customer,
-      stripe_subscription_id: session.subscription,
-    }).eq('id', userId)
+    await supabase.rpc('update_user_plan_checkout', {
+      p_user_id: userId,
+      p_plan: 'premium',
+      p_customer_id: session.customer,
+      p_subscription_id: session.subscription,
+    })
   }
 
   if (event.type === 'customer.subscription.deleted') {
     const sub = event.data.object
-    await supabase.from('profiles')
-      .update({ plan: 'free', stripe_subscription_id: null })
-      .eq('stripe_customer_id', sub.customer)
+    await supabase.rpc('cancel_user_subscription', {
+      p_customer_id: sub.customer
+    })
   }
 
   return NextResponse.json({ received: true })

@@ -5,10 +5,11 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import {
   Zap, LogOut, Plus, Calendar as CalendarIcon,
-  LayoutGrid, BarChart3, Settings, Linkedin
+  LayoutGrid, BarChart3, Settings, Linkedin, Upload
 } from 'lucide-react'
 import CalendarView from '@/components/calendar/CalendarView'
 import PostEditor from '@/components/post/PostEditor'
+import BulkImport from '@/components/dashboard/BulkImport'
 import { defaultTemplates } from '@/lib/templates'
 
 interface Post {
@@ -24,20 +25,16 @@ interface Profile {
   plan: string
   linkedin_connected: boolean
   linkedin_name?: string
+  linkedin_user_id?: string
+  full_name?: string
 }
-
-// Demo posts for preview
-const demoPosts: Post[] = [
-  { id: '1', content: '5 tips que j\'aurais aimé connaître plus tôt sur le personal branding...', scheduled_at: new Date(Date.now() + 86400000).toISOString(), status: 'scheduled' },
-  { id: '2', content: 'Mon parcours de développeur à entrepreneur : la vraie histoire...', scheduled_at: new Date(Date.now() + 86400000 * 3).toISOString(), status: 'scheduled' },
-  { id: '3', content: 'Unpopular opinion : le networking en ligne > le networking en présentiel', scheduled_at: new Date(Date.now() - 86400000).toISOString(), status: 'published' },
-]
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [posts, setPosts] = useState<Post[]>(demoPosts)
+  const [posts, setPosts] = useState<Post[]>([])
   const [showEditor, setShowEditor] = useState(false)
+  const [showBulkImport, setShowBulkImport] = useState(false)
   const [selectedDate, setSelectedDate] = useState('')
   const [activeTab, setActiveTab] = useState<'calendar' | 'posts' | 'analytics'>('calendar')
   const [loading, setLoading] = useState(true)
@@ -45,35 +42,49 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/login')
+          return
+        }
+        setUser(user)
+
+        // Fetch profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (profileData) {
+          setProfile({
+            id: profileData.id,
+            email: profileData.email,
+            plan: profileData.plan,
+            linkedin_connected: profileData.linkedin_connected || !!profileData.linkedin_access_token,
+            linkedin_name: profileData.linkedin_name,
+            linkedin_user_id: profileData.linkedin_user_id,
+            full_name: profileData.full_name,
+          } as Profile)
+        }
+
+        // Fetch posts
+        const { data: userPosts } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('scheduled_at', { ascending: true })
+
+        if (userPosts) {
+          setPosts(userPosts as Post[])
+        }
+      } catch (err) {
+        console.error('Dashboard load error:', err)
+      } finally {
+        setLoading(false)
       }
-      setUser(user)
-
-      // Fetch profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profile) setProfile(profile as Profile)
-
-      // Fetch posts
-      const { data: userPosts } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('scheduled_at', { ascending: true })
-
-      if (userPosts && userPosts.length > 0) {
-        setPosts(userPosts as Post[])
-      }
-
-      setLoading(false)
     }
     checkAuth()
   }, [router])
@@ -112,6 +123,29 @@ export default function DashboardPage() {
 
     setPosts(prev => [...prev, newPost])
     setShowEditor(false)
+  }
+
+  const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string }[]) => {
+    if (user) {
+      const supabase = createClient()
+      const toInsert = importedPosts.map(p => ({
+        user_id: user.id,
+        content: p.content,
+        scheduled_at: p.scheduledAt,
+        status: p.status,
+      }))
+
+      const { data } = await supabase.from('posts').insert(toInsert).select()
+      if (data) {
+        setPosts(prev => [...prev, ...data.map((d: any) => ({
+          id: d.id,
+          content: d.content,
+          scheduled_at: d.scheduled_at,
+          status: d.status,
+        }))])
+      }
+    }
+    setShowBulkImport(false)
   }
 
   const handleConnectLinkedIn = () => {
@@ -165,9 +199,14 @@ export default function DashboardPage() {
           {/* LinkedIn connect */}
           <div className="mt-8 p-4 bg-blue-50 rounded-xl">
             {profile?.linkedin_connected ? (
-              <div className="flex items-center gap-2 text-sm text-[var(--primary)]">
-                <Linkedin className="w-5 h-5" />
-                <span className="font-medium">LinkedIn connecté</span>
+              <div>
+                <div className="flex items-center gap-2 text-sm text-[var(--primary)] mb-1">
+                  <Linkedin className="w-5 h-5" />
+                  <span className="font-medium">LinkedIn connecté</span>
+                </div>
+                <p className="text-xs text-gray-500 ml-7">
+                  {profile.linkedin_name || profile.full_name || 'Compte vérifié'}
+                </p>
               </div>
             ) : (
               <>
@@ -227,13 +266,22 @@ export default function DashboardPage() {
               {scheduledCount} post{scheduledCount > 1 ? 's' : ''} programmé{scheduledCount > 1 ? 's' : ''} · {publishedCount} publié{publishedCount > 1 ? 's' : ''}
             </p>
           </div>
-          <button
-            onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowEditor(true) }}
-            className="flex items-center gap-2 px-5 py-3 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-          >
-            <Plus className="w-5 h-5" />
-            Nouveau post
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="flex items-center gap-2 px-4 py-3 border border-[var(--primary)] text-[var(--primary)] text-sm font-semibold rounded-xl hover:bg-[var(--primary-light)] transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              Importer
+            </button>
+            <button
+              onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowEditor(true) }}
+              className="flex items-center gap-2 px-5 py-3 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+            >
+              <Plus className="w-5 h-5" />
+              Nouveau post
+            </button>
+          </div>
         </div>
 
         {/* Stats cards */}
@@ -307,6 +355,14 @@ export default function DashboardPage() {
               Les analytics seront disponibles une fois que tu auras connecté ton LinkedIn et publié quelques posts.
             </p>
           </div>
+        )}
+
+        {/* Bulk Import Modal */}
+        {showBulkImport && (
+          <BulkImport
+            onImport={handleBulkImport}
+            onClose={() => setShowBulkImport(false)}
+          />
         )}
 
         {/* Post Editor Modal */}

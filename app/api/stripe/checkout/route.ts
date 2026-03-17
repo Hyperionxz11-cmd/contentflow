@@ -1,32 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Stripe Payment Link created via Stripe API
+// Supports client_reference_id as URL parameter
+const PAYMENT_LINK_URL = 'https://buy.stripe.com/bJe14n6PtfYYaWS7ha5kk00'
+
 export async function POST(request: NextRequest) {
   const { userId } = await request.json()
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').trim()
 
-  const params = new URLSearchParams()
-  params.append('mode', 'subscription')
-  params.append('payment_method_types[]', 'card')
-  params.append('line_items[0][price]', process.env.STRIPE_PRICE_ID_PREMIUM!)
-  params.append('line_items[0][quantity]', '1')
-  params.append('success_url', `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`)
-  params.append('cancel_url', `${appUrl}/pricing`)
-  params.append('client_reference_id', userId)
-
-  const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY!.trim()}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: params.toString(),
-  })
-
-  const session = await res.json()
-
-  if (session.error) {
-    return NextResponse.json({ error: session.error.message }, { status: 400 })
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
   }
 
-  return NextResponse.json({ url: session.url })
+  // Append client_reference_id to the payment link URL
+  // Stripe will include this in the checkout.session.completed webhook event
+  const checkoutUrl = `${PAYMENT_LINK_URL}?client_reference_id=${encodeURIComponent(userId)}`
+
+  return NextResponse.json({ url: checkoutUrl })
 }
