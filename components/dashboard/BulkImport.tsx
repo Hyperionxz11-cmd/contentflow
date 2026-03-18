@@ -15,7 +15,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set())
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'custom'>('daily')
+  const [frequency, setFrequency] = useState<'daily' | '3x_week' | 'weekdays' | 'weekly'>('daily')
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
   const [startTime, setStartTime] = useState('09:00')
   const [dragOver, setDragOver] = useState(false)
@@ -62,18 +62,44 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
     setSelectedPosts(next)
   }
 
+  const getNextDate = (current: Date, freq: string): Date => {
+    const next = new Date(current)
+    const day = next.getDay()
+    switch (freq) {
+      case 'daily':
+        next.setDate(next.getDate() + 1)
+        break
+      case '3x_week': // lun, mer, ven
+        if (day === 1) next.setDate(next.getDate() + 2) // lun -> mer
+        else if (day === 3) next.setDate(next.getDate() + 2) // mer -> ven
+        else if (day === 5) next.setDate(next.getDate() + 3) // ven -> lun
+        else { // trouver le prochain lun
+          const daysToMon = (8 - day) % 7 || 7
+          next.setDate(next.getDate() + daysToMon)
+        }
+        break
+      case 'weekdays':
+        next.setDate(next.getDate() + 1)
+        while (next.getDay() === 0 || next.getDay() === 6) {
+          next.setDate(next.getDate() + 1)
+        }
+        break
+      case 'weekly':
+        next.setDate(next.getDate() + 7)
+        break
+    }
+    return next
+  }
+
   const handleSchedule = () => {
     const selected = posts.filter((_, i) => selectedPosts.has(i))
+    let currentDate = new Date(`${startDate}T${startTime}:00`)
+
     const scheduled = selected.map((content, i) => {
-      const date = new Date(`${startDate}T${startTime}:00`)
-      if (frequency === 'daily') {
-        date.setDate(date.getDate() + i)
-      } else if (frequency === 'weekly') {
-        date.setDate(date.getDate() + (i * 7))
-      }
+      if (i > 0) currentDate = getNextDate(currentDate, frequency)
       return {
         content,
-        scheduledAt: date.toISOString(),
+        scheduledAt: currentDate.toISOString(),
         status: 'scheduled',
       }
     })
@@ -196,9 +222,11 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Fréquence de publication</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {[
                     { id: 'daily' as const, label: 'Quotidien', desc: '1 post/jour' },
+                    { id: '3x_week' as const, label: '3x / semaine', desc: 'Lun, Mer, Ven' },
+                    { id: 'weekdays' as const, label: 'Jours ouvrés', desc: 'Lun - Ven' },
                     { id: 'weekly' as const, label: 'Hebdomadaire', desc: '1 post/semaine' },
                   ].map(f => (
                     <button
@@ -244,14 +272,9 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                   <span className="text-sm font-medium text-[var(--primary)]">Résumé</span>
                 </div>
                 <p className="text-sm text-gray-600">
-                  {selectedPosts.size} posts programmés {frequency === 'daily' ? 'quotidiennement' : 'chaque semaine'} à partir du{' '}
-                  {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} à {startTime}.
-                  {frequency === 'daily' && selectedPosts.size > 0 && (
-                    <> Dernier post le {new Date(new Date(startDate).getTime() + (selectedPosts.size - 1) * 86400000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.</>
-                  )}
-                  {frequency === 'weekly' && selectedPosts.size > 0 && (
-                    <> Dernier post le {new Date(new Date(startDate).getTime() + (selectedPosts.size - 1) * 7 * 86400000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.</>
-                  )}
+                  {selectedPosts.size} posts programmés{' '}
+                  {frequency === 'daily' ? 'tous les jours' : frequency === '3x_week' ? '3x par semaine (Lun, Mer, Ven)' : frequency === 'weekdays' ? 'du lundi au vendredi' : 'chaque semaine'}{' '}
+                  à partir du {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} à {startTime}.
                 </p>
               </div>
             </div>
