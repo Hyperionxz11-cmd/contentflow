@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileText, Calendar, Check, X, ChevronDown, Loader2 } from 'lucide-react'
+import { Upload, FileText, Calendar, Check, X, Loader2 } from 'lucide-react'
 
 interface BulkImportProps {
   onImport: (posts: { content: string; scheduledAt: string; status: string }[]) => void
@@ -13,6 +13,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   const [posts, setPosts] = useState<string[]>([])
   const [filename, setFilename] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState('')
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set())
   const [frequency, setFrequency] = useState<'daily' | '3x_week' | 'weekdays' | 'weekly'>('daily')
@@ -24,32 +25,44 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
     setLoading(true)
     setError('')
 
-    // Vérification taille côté client (10 Mo max)
-    if (file.size > 10 * 1024 * 1024) {
-      setError(`Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(1)} Mo). Maximum : 10 Mo.`)
-      setLoading(false)
-      return
-    }
-
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
-      const res = await fetch('/api/import', { method: 'POST', body: formData })
+      let text = ''
 
-      // Lire le body comme texte d'abord pour éviter les crashs JSON
-      const rawText = await res.text()
+      if (file.name.toLowerCase().match(/\.docx?$/)) {
+        // ✅ Extraction DOCX côté client — évite la limite de taille serveur (4.5 Mo)
+        setLoadingMsg('Extraction du texte en cours...')
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const mammoth = await import('mammoth')
+          const result = await mammoth.extractRawText({ arrayBuffer })
+          if (!result.value || result.value.trim().length === 0) {
+            throw new Error('Le fichier semble vide ou illisible.')
+          }
+          text = result.value
+        } catch (e: any) {
+          throw new Error(`Impossible de lire le fichier DOCX : ${e.message}`)
+        }
+      } else if (file.name.toLowerCase().match(/\.(txt|md|csv)$/)) {
+        setLoadingMsg('Lecture du fichier...')
+        text = await file.text()
+      } else {
+        throw new Error('Format non supporté. Utilisez .docx, .txt ou .md')
+      }
+
+      // Envoyer uniquement le texte (quelques Ko) au lieu du fichier entier
+      setLoadingMsg('Détection des posts...')
+      const res = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, filename: file.name }),
+      })
+
+      const rawResponse = await res.text()
       let data: any
       try {
-        data = JSON.parse(rawText)
+        data = JSON.parse(rawResponse)
       } catch {
-        // La réponse n'est pas du JSON — c'est une erreur serveur/proxy
-        const statusMsg = res.status === 413
-          ? 'Fichier trop volumineux pour le serveur.'
-          : res.status === 500
-          ? 'Erreur serveur lors du traitement du fichier.'
-          : `Erreur inattendue (${res.status})`
-        throw new Error(statusMsg)
+        throw new Error(`Erreur serveur inattendue (${res.status})`)
       }
 
       if (!res.ok) throw new Error(data?.error || `Erreur ${res.status}`)
@@ -59,9 +72,10 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
       setSelectedPosts(new Set(data.posts.map((_: string, i: number) => i)))
       setStep('preview')
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'import')
+      setError(err.message || "Erreur lors de l'import")
     } finally {
       setLoading(false)
+      setLoadingMsg('')
     }
   }
 
@@ -91,11 +105,11 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
       case 'daily':
         next.setDate(next.getDate() + 1)
         break
-      case '3x_week': // lun, mer, ven
-        if (day === 1) next.setDate(next.getDate() + 2) // lun -> mer
-        else if (day === 3) next.setDate(next.getDate() + 2) // mer -> ven
-        else if (day === 5) next.setDate(next.getDate() + 3) // ven -> lun
-        else { // trouver le prochain lun
+      case '3x_week':
+        if (day === 1) next.setDate(next.getDate() + 2)
+        else if (day === 3) next.setDate(next.getDate() + 2)
+        else if (day === 5) next.setDate(next.getDate() + 3)
+        else {
           const daysToMon = (8 - day) % 7 || 7
           next.setDate(next.getDate() + daysToMon)
         }
@@ -116,14 +130,9 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   const handleSchedule = () => {
     const selected = posts.filter((_, i) => selectedPosts.has(i))
     let currentDate = new Date(`${startDate}T${startTime}:00`)
-
     const scheduled = selected.map((content, i) => {
       if (i > 0) currentDate = getNextDate(currentDate, frequency)
-      return {
-        content,
-        scheduledAt: currentDate.toISOString(),
-        status: 'scheduled',
-      }
+      return { content, scheduledAt: currentDate.toISOString(), status: 'scheduled' }
     })
     onImport(scheduled)
   }
@@ -164,7 +173,10 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                 }`}
               >
                 {loading ? (
-                  <Loader2 className="w-10 h-10 text-[var(--primary)] mx-auto animate-spin" />
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="w-10 h-10 text-[var(--primary)] animate-spin" />
+                    <p className="text-sm text-gray-500">{loadingMsg}</p>
+                  </div>
                 ) : (
                   <>
                     <Upload className="w-10 h-10 text-gray-300 mx-auto mb-4" />
@@ -178,7 +190,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                         onChange={handleFileInput}
                       />
                     </label>
-                    <p className="text-xs text-gray-400 mt-3">Formats : .docx, .txt, .md</p>
+                    <p className="text-xs text-gray-400 mt-3">Formats : .docx, .txt, .md — Taille illimitée</p>
                   </>
                 )}
               </div>
@@ -190,8 +202,8 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
               <div className="mt-6 p-4 bg-gray-50 rounded-xl">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Comment formater ton fichier ?</h3>
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  Sépare chaque post avec <code className="bg-gray-200 px-1 rounded">---</code> ou laisse
-                  une ligne vide entre chaque post. Tu peux aussi numéroter tes posts (1. 2. 3. etc).
+                  Sépare chaque post avec <code className="bg-gray-200 px-1 rounded">---</code> sur une ligne seule,
+                  ou laisse une ligne vide entre chaque post. Tu peux aussi numéroter tes posts (1. 2. 3. etc).
                   Chaque bloc de texte deviendra un post LinkedIn séparé.
                 </p>
               </div>
@@ -205,7 +217,10 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                 <FileText className="w-4 h-4 text-gray-400" />
                 <span className="text-sm text-gray-500">{filename}</span>
                 <button
-                  onClick={() => { const allSelected = selectedPosts.size === posts.length; setSelectedPosts(allSelected ? new Set() : new Set(posts.map((_, i) => i))) }}
+                  onClick={() => {
+                    const allSelected = selectedPosts.size === posts.length
+                    setSelectedPosts(allSelected ? new Set() : new Set(posts.map((_, i) => i)))
+                  }}
                   className="ml-auto text-xs text-[var(--primary)] font-medium hover:underline"
                 >
                   {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
@@ -295,8 +310,20 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                 </div>
                 <p className="text-sm text-gray-600">
                   {selectedPosts.size} posts programmés{' '}
-                  {frequency === 'daily' ? 'tous les jours' : frequency === '3x_week' ? '3x par semaine (Lun, Mer, Ven)' : frequency === 'weekdays' ? 'du lundi au vendredi' : 'chaque semaine'}{' '}
-                  à partir du {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} à {startTime}.
+                  {frequency === 'daily'
+                    ? 'tous les jours'
+                    : frequency === '3x_week'
+                    ? '3x par semaine (Lun, Mer, Ven)'
+                    : frequency === 'weekdays'
+                    ? 'du lundi au vendredi'
+                    : 'chaque semaine'}{' '}
+                  à partir du{' '}
+                  {new Date(startDate).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}{' '}
+                  à {startTime}.
                 </p>
               </div>
             </div>
