@@ -26,9 +26,30 @@ function splitIntoPosts(rawText: string): string[] {
     posts = rawText.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0)
   }
 
-  // Filtrer les entrées trop courtes (titres, artefacts)
-  return posts
-    .filter(p => p.length >= 20)
+  // --- Fusion intelligente : titre court + contenu suivant ---
+  // Un "titre" = bloc court (< 130 chars) sans ponctuation finale (.?!)
+  // On le fusionne avec le bloc suivant pour former un post complet
+  const merged: string[] = []
+  let i = 0
+  while (i < posts.length) {
+    const current = posts[i].trim()
+    const looksLikeTitle =
+      current.length < 130 &&
+      !current.match(/[.?!…]$/) &&
+      !current.match(/\n/) &&   // sur une seule ligne
+      i + 1 < posts.length
+
+    if (looksLikeTitle) {
+      merged.push(current + '\n\n' + posts[i + 1].trim())
+      i += 2
+    } else {
+      merged.push(current)
+      i++
+    }
+  }
+
+  return merged
+    .filter(p => p.length >= 50)
     .slice(0, 100)
 }
 
