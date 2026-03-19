@@ -17,6 +17,7 @@ interface Post {
   content: string
   scheduled_at: string
   status: 'scheduled' | 'published' | 'failed' | 'draft'
+  image_url?: string
 }
 
 interface Profile {
@@ -125,7 +126,7 @@ export default function DashboardPage() {
     setShowEditor(false)
   }
 
-  const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string }[]) => {
+  const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string; image_url?: string }[]) => {
     if (user) {
       const supabase = createClient()
       const toInsert = importedPosts.map(p => ({
@@ -133,6 +134,7 @@ export default function DashboardPage() {
         content: p.content,
         scheduled_at: p.scheduledAt,
         status: p.status,
+        image_url: p.image_url || null,
       }))
 
       const { data } = await supabase.from('posts').insert(toInsert).select()
@@ -142,6 +144,7 @@ export default function DashboardPage() {
           content: d.content,
           scheduled_at: d.scheduled_at,
           status: d.status,
+          image_url: d.image_url,
         }))])
       }
     }
