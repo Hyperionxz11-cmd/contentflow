@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
         p_user_id: user.id,
         p_access_token: accessToken,
         p_linkedin_user_id: linkedinProfile.sub,
-        p_linkedin_name: linkedinProfile.name
+        p_linkedin_name: linkedinProfile.name,
+        p_linkedin_picture_url: linkedinProfile.picture || null
       })
     }
 
