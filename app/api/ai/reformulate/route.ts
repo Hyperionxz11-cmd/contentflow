@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bvsfclqlopzkfmeinbqs.supabase.co'
+const EDGE_FN_URL = `${SUPABASE_URL}/functions/v1/anthropic-reformulate`
+
 export async function POST(req: NextRequest) {
   try {
     const { content } = await req.json()
-    const apiKey = process.env.ANTHROPIC_API_KEY
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Clé ANTHROPIC_API_KEY non configurée dans les variables d\'environnement Vercel.' }, { status: 503 })
-    }
 
     const prompt = `Tu es un expert LinkedIn avec 10 ans d'expérience en content marketing B2B francophone.
 
@@ -44,11 +42,9 @@ Réponds UNIQUEMENT en JSON valide (pas de texte avant ou après) :
   ]
 }`
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(EDGE_FN_URL, {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
       },
       body: JSON.stringify({
