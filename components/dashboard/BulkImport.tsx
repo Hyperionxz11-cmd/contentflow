@@ -357,16 +357,16 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
         onClose={() => setPreviewIdx(null)}
       />
     )}
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div className="bg-[#17171E] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-[rgba(255,255,255,0.1)]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.07)] flex-shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg font-bold text-[#FAFAFA]" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700 }}>
               {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Aperçu des posts' : 'Programmer'}
             </h2>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-[#71717A]">
               {step === 'upload'
                 ? 'Glisse un fichier Word ou texte avec tes posts'
                 : step === 'preview'
@@ -374,7 +374,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                 : 'Choisis la fréquence et la date de début'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+          <button onClick={onClose} className="p-2 text-[#71717A] hover:text-[#A1A1AA] rounded-lg hover:bg-[#1C1C24] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -389,35 +389,37 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                 onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
-                  dragOver ? 'border-[var(--primary)] bg-[var(--primary-light)]' : 'border-gray-200 hover:border-gray-300'
+                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${
+                  dragOver
+                    ? 'border-[#7C3AED] bg-[rgba(124,58,237,0.08)]'
+                    : 'border-[rgba(255,255,255,0.12)] hover:border-[#7C3AED]'
                 }`}
               >
                 {loading ? (
                   <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-10 h-10 text-[var(--primary)] animate-spin" />
-                    <p className="text-sm text-gray-500">{loadingMsg}</p>
+                    <Loader2 className="w-10 h-10 text-[#7C3AED] animate-spin" />
+                    <p className="text-sm text-[#A1A1AA]">{loadingMsg}</p>
                   </div>
                 ) : (
                   <>
-                    <Upload className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-                    <p className="text-sm text-gray-600 mb-2">Glisse ton fichier ici ou</p>
-                    <label className="inline-block px-4 py-2 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-[var(--primary-dark)] transition-colors">
+                    <Upload className="w-10 h-10 text-[#71717A] mx-auto mb-4" />
+                    <p className="text-sm text-[#A1A1AA] mb-2">Glisse ton fichier ici ou</p>
+                    <label className="inline-block px-4 py-2 bg-[#7C3AED] text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-[#6D28D9] transition-all shadow-lg shadow-[#7C3AED]/20 hover:shadow-[#7C3AED]/30">
                       Parcourir
                       <input type="file" className="hidden" accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
                     </label>
-                    <p className="text-xs text-gray-400 mt-3">Formats : .docx, .txt, .md — Images intégrées automatiquement</p>
+                    <p className="text-xs text-[#71717A] mt-3">Formats : .docx, .txt, .md — Images intégrées automatiquement</p>
                   </>
                 )}
               </div>
 
-              {error && <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>}
+              {error && <div className="mt-4 p-3 bg-[rgba(239,68,68,0.1)] text-[#EF4444] text-sm rounded-lg border border-[rgba(239,68,68,0.2)]">{error}</div>}
 
-              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Comment formater ton fichier ?</h3>
-                <p className="text-xs text-gray-500 leading-relaxed">
+              <div className="mt-6 p-4 bg-[#1C1C24] rounded-xl border border-[rgba(255,255,255,0.07)]">
+                <h3 className="text-sm font-semibold text-[#FAFAFA] mb-2">Comment formater ton fichier ?</h3>
+                <p className="text-xs text-[#A1A1AA] leading-relaxed">
                   Les fichiers Word (.docx) sont analysés automatiquement — images incluses.
-                  Pour les fichiers texte, sépare chaque post avec <code className="bg-gray-200 px-1 rounded">---</code> ou une ligne vide.
+                  Pour les fichiers texte, sépare chaque post avec <code className="bg-[#111116] text-[#A78BFA] px-1 rounded">---</code> ou une ligne vide.
                 </p>
               </div>
             </div>
@@ -427,10 +429,10 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
           {step === 'preview' && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500">{filename}</span>
+                <FileText className="w-4 h-4 text-[#71717A]" />
+                <span className="text-sm text-[#A1A1AA]">{filename}</span>
                 {isHtml && (
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-[rgba(59,130,246,0.1)] text-[#93C5FD] rounded-full border border-[rgba(59,130,246,0.2)]">
                     <ImageIcon className="w-3 h-3" /> images incluses
                   </span>
                 )}
@@ -438,7 +440,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                   onClick={() => setSelectedPosts(
                     selectedPosts.size === posts.length ? new Set() : new Set(posts.map((_, i) => i))
                   )}
-                  className="ml-auto text-xs text-[var(--primary)] font-medium hover:underline"
+                  className="ml-auto text-xs text-[#A78BFA] font-medium hover:text-[#7C3AED] transition-colors"
                 >
                   {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
@@ -459,19 +461,21 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                     onClick={() => !isEditing && togglePost(idx)}
                     className={`rounded-xl border transition-all ${
                       isEditing
-                        ? 'border-amber-400 bg-amber-50/30 cursor-default'
+                        ? 'border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.05)] cursor-default'
                         : isSelected
-                        ? 'border-[var(--primary)] bg-[var(--primary-light)]/20 cursor-pointer hover:bg-[var(--primary-light)]/30'
-                        : 'border-gray-200 opacity-60 cursor-pointer hover:opacity-80'
+                        ? 'border-[rgba(124,58,237,0.5)] bg-[rgba(124,58,237,0.06)] cursor-pointer hover:bg-[rgba(124,58,237,0.08)]'
+                        : 'border-[rgba(255,255,255,0.07)] opacity-40 cursor-pointer hover:opacity-60'
                     }`}
                   >
                     {/* Card header */}
                     <div className="flex items-start gap-3 p-4 pb-2">
                       <div
-                        className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          isEditing ? 'border-2 border-amber-400 bg-white'
-                            : isSelected ? 'bg-[var(--primary)] text-white'
-                            : 'border-2 border-gray-300'
+                        className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
+                          isEditing
+                            ? 'border-2 border-[#F59E0B] bg-[#0E0E12]'
+                            : isSelected
+                            ? 'bg-[#7C3AED] text-white'
+                            : 'border-2 border-[rgba(255,255,255,0.2)]'
                         }`}
                         onClick={e => { e.stopPropagation(); if (!isEditing) togglePost(idx) }}
                       >
@@ -480,16 +484,16 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-xs font-medium text-gray-400">Post {idx + 1}</span>
+                          <span className="text-xs font-medium text-[#71717A]">Post {idx + 1}</span>
                           {isModified && (
-                            <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">modifié</span>
+                            <span className="text-xs px-1.5 py-0.5 bg-[rgba(245,158,11,0.15)] text-[#F59E0B] rounded-full font-medium border border-[rgba(245,158,11,0.3)]">modifié</span>
                           )}
                           {imgCount > 0 && (
-                            <span className="flex items-center gap-0.5 text-xs text-blue-500">
+                            <span className="flex items-center gap-0.5 text-xs text-[#93C5FD]">
                               <ImageIcon className="w-3 h-3" />{imgCount}
                             </span>
                           )}
-                          <span className="text-xs text-gray-400 ml-auto">{textLen} car.</span>
+                          <span className="text-xs text-[#71717A] ml-auto" style={{ fontFamily: 'DM Mono, monospace' }}>{textLen} car.</span>
                         </div>
 
                         {/* Contenu du post */}
@@ -498,21 +502,24 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                             value={editedContent[idx] ?? ''}
                             onChange={e => setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))}
                             onClick={e => e.stopPropagation()}
-                            className="w-full text-sm text-gray-700 border border-amber-300 rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white font-mono"
+                            className="w-full text-sm text-[#FAFAFA] border-2 border-[#F59E0B] rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-[#F59E0B] focus:ring-offset-0 bg-[#0E0E12]"
+                            style={{ fontFamily: 'DM Mono, monospace' }}
                             rows={12}
                             autoFocus
                           />
                         ) : isHtml && !isModified ? (
                           // ── Rendu HTML avec images ──
                           <div
-                            className={`post-html-content text-sm text-gray-700 ${!isExpanded ? 'max-h-24 overflow-hidden' : ''}`}
-                            style={{ maskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none',
-                                     WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none' }}
+                            className={`post-html-content text-sm text-[#A1A1AA] ${!isExpanded ? 'max-h-24 overflow-hidden' : ''}`}
+                            style={{
+                              maskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none',
+                              WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none'
+                            }}
                             dangerouslySetInnerHTML={{ __html: displayContent }}
                           />
                         ) : (
                           // ── Texte brut ──
-                          <p className={`text-sm text-gray-700 whitespace-pre-wrap ${!isExpanded ? 'line-clamp-3' : ''}`}>
+                          <p className={`text-sm text-[#A1A1AA] whitespace-pre-wrap ${!isExpanded ? 'line-clamp-3' : ''}`}>
                             {displayContent}
                           </p>
                         )}
@@ -524,27 +531,27 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                       {isEditing ? (
                         <>
                           <button onClick={e => saveEdit(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--primary-dark)] transition-colors">
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[#10B981] text-white text-xs font-semibold rounded-lg hover:bg-[#059669] transition-all">
                             <Check className="w-3 h-3" /> Enregistrer
                           </button>
                           <button onClick={e => cancelEdit(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                            className="flex items-center gap-1 px-3 py-1.5 text-[#A1A1AA] text-xs hover:text-[#FAFAFA] hover:bg-[#1C1C24] rounded-lg transition-colors">
                             <X className="w-3 h-3" /> Annuler
                           </button>
                         </>
                       ) : (
                         <>
                           <button onClick={e => startEdit(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-[var(--primary)] hover:bg-[var(--primary-light)]/30 rounded-lg transition-colors">
+                            className="flex items-center gap-1 px-3 py-1.5 text-[#A78BFA] text-xs hover:text-[#7C3AED] hover:bg-[rgba(124,58,237,0.1)] rounded-lg transition-colors">
                             <Pencil className="w-3 h-3" /> Modifier
                           </button>
                           <button
                             onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
-                            className="flex items-center gap-1 px-3 py-1.5 text-[#0a66c2] text-xs hover:bg-blue-50 rounded-lg transition-colors font-medium">
+                            className="flex items-center gap-1 px-3 py-1.5 text-[#93C5FD] text-xs hover:bg-[rgba(59,130,246,0.1)] rounded-lg transition-colors font-medium">
                             <Linkedin className="w-3 h-3" /> Aperçu
                           </button>
                           <button onClick={e => toggleExpand(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors ml-auto">
+                            className="flex items-center gap-1 px-3 py-1.5 text-[#A1A1AA] text-xs hover:text-[#FAFAFA] hover:bg-[#1C1C24] rounded-lg transition-colors ml-auto">
                             {isExpanded ? <><ChevronUp className="w-3 h-3" />Réduire</> : <><ChevronDown className="w-3 h-3" />Voir tout</>}
                           </button>
                         </>
@@ -560,7 +567,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
           {step === 'schedule' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Fréquence de publication</label>
+                <label className="block text-sm font-semibold text-[#FAFAFA] mb-3">Fréquence de publication</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { id: 'daily' as const, label: 'Quotidien', desc: '1 post/jour' },
@@ -570,10 +577,12 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                   ].map(f => (
                     <button key={f.id} onClick={() => setFrequency(f.id)}
                       className={`p-4 rounded-xl border text-left transition-all ${
-                        frequency === f.id ? 'border-[var(--primary)] bg-[var(--primary-light)]/30' : 'border-gray-200 hover:border-gray-300'
+                        frequency === f.id
+                          ? 'border-[#7C3AED] bg-[rgba(124,58,237,0.08)]'
+                          : 'border-[rgba(255,255,255,0.07)] hover:border-[#7C3AED]'
                       }`}>
-                      <p className="text-sm font-medium text-gray-900">{f.label}</p>
-                      <p className="text-xs text-gray-400">{f.desc}</p>
+                      <p className="text-sm font-semibold text-[#FAFAFA]">{f.label}</p>
+                      <p className="text-xs text-[#71717A]">{f.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -581,23 +590,23 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
+                  <label className="block text-sm font-semibold text-[#FAFAFA] mb-2">Date de début</label>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                    className="w-full px-4 py-3 border border-[rgba(255,255,255,0.07)] bg-[#111116] text-[#FAFAFA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-[#7C3AED]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Heure</label>
+                  <label className="block text-sm font-semibold text-[#FAFAFA] mb-2">Heure</label>
                   <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                    className="w-full px-4 py-3 border border-[rgba(255,255,255,0.07)] bg-[#111116] text-[#FAFAFA] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-[#7C3AED]" />
                 </div>
               </div>
 
-              <div className="p-4 bg-blue-50 rounded-xl">
+              <div className="p-4 bg-[rgba(124,58,237,0.05)] rounded-xl border border-[rgba(124,58,237,0.2)]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 text-[var(--primary)]" />
-                  <span className="text-sm font-medium text-[var(--primary)]">Résumé</span>
+                  <Calendar className="w-4 h-4 text-[#A78BFA]" />
+                  <span className="text-sm font-semibold text-[#A78BFA]">Résumé</span>
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-[#A1A1AA]">
                   {selectedPosts.size} posts programmés{' '}
                   {frequency === 'daily' ? 'tous les jours'
                     : frequency === '3x_week' ? '3x par semaine (Lun, Mer, Ven)'
@@ -608,13 +617,13 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                   à {startTime}.
                 </p>
                 {totalImages > 0 && (
-                  <p className="text-sm text-blue-600 mt-1.5 font-medium">
-                    🖼 {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — elles seront uploadées et incluses dans les posts LinkedIn.
+                  <p className="text-sm text-[#93C5FD] mt-1.5 font-medium">
+                    {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — elles seront uploadées et incluses dans les posts LinkedIn.
                   </p>
                 )}
                 {isHtml && totalImages === 0 && (
-                  <p className="text-xs text-gray-400 mt-1.5">
-                    ℹ️ Aucune image embedded détectée dans ce document (les liens 📎 sont des hyperlinks Word, pas des images).
+                  <p className="text-xs text-[#71717A] mt-1.5">
+                    Aucune image embedded détectée dans ce document (les liens sont des hyperlinks Word, pas des images).
                   </p>
                 )}
               </div>
@@ -623,23 +632,23 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-t border-[rgba(255,255,255,0.07)] flex items-center justify-between flex-shrink-0">
           {step !== 'upload' && (
             <button onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
-              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
+              className="px-4 py-2 text-sm text-[#A1A1AA] hover:text-[#FAFAFA] bg-[#1C1C24] hover:bg-[#17171E] rounded-lg transition-colors">
               Retour
             </button>
           )}
           <div className="ml-auto">
             {step === 'preview' && (
               <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
-                className="px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-40">
+                className="px-6 py-2.5 bg-[#7C3AED] text-white text-sm font-semibold rounded-lg hover:bg-[#6D28D9] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#7C3AED]/20 hover:shadow-[#7C3AED]/30">
                 Programmer ({selectedPosts.size} posts)
               </button>
             )}
             {step === 'schedule' && (
               <button onClick={handleSchedule} disabled={scheduling}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-60">
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#7C3AED] text-white text-sm font-semibold rounded-lg hover:bg-[#6D28D9] transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-[#7C3AED]/20 hover:shadow-[#7C3AED]/30">
                 {scheduling ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />{totalImages > 0 ? `Upload images (${totalImages})…` : 'Programmation…'}</>
                 ) : (

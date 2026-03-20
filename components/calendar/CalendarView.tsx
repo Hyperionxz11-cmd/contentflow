@@ -23,10 +23,10 @@ const MONTHS_FR = [
 ]
 
 const statusColors: Record<string, string> = {
-  scheduled: 'bg-[var(--primary)] text-white',
-  published: 'bg-emerald-500 text-white',
-  failed: 'bg-red-500 text-white',
-  draft: 'bg-gray-300 text-gray-700',
+  scheduled: 'bg-[rgba(124,58,237,0.2)] text-[#A78BFA]',
+  published: 'bg-[rgba(16,185,129,0.2)] text-[#6EE7B7]',
+  failed: 'bg-[rgba(239,68,68,0.2)] text-[#FCA5A5]',
+  draft: 'bg-[rgba(255,255,255,0.07)] text-[#A1A1AA]',
 }
 
 export default function CalendarView({ posts, onDayClick, onPostClick }: CalendarViewProps) {
@@ -96,38 +96,38 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
   const displayDays = view === 'month' ? calendarDays : weekDays
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div className="bg-[#111116] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.07)]">
         <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className="text-xl font-bold text-[#FAFAFA]" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700 }}>
             {MONTHS_FR[month]} {year}
           </h2>
           <div className="flex items-center gap-1">
-            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronLeft className="w-5 h-5 text-gray-500" />
+            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors">
+              <ChevronLeft className="w-5 h-5 text-[#71717A]" />
             </button>
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-1 text-xs font-medium text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
+              className="px-3 py-1 text-xs font-medium text-[#A78BFA] border border-[#7C3AED] hover:bg-[rgba(124,58,237,0.1)] rounded-lg transition-colors"
             >
               Aujourd'hui
             </button>
-            <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronRight className="w-5 h-5 text-gray-500" />
+            <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors">
+              <ChevronRight className="w-5 h-5 text-[#71717A]" />
             </button>
           </div>
         </div>
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex gap-1 bg-[#1C1C24] rounded-lg p-1">
           <button
             onClick={() => setView('week')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'week' ? 'bg-[#17171E] text-[#FAFAFA] shadow-sm' : 'text-[#71717A]'}`}
           >
             Semaine
           </button>
           <button
             onClick={() => setView('month')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'month' ? 'bg-[#17171E] text-[#FAFAFA] shadow-sm' : 'text-[#71717A]'}`}
           >
             Mois
           </button>
@@ -135,9 +135,9 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-gray-100">
+      <div className="grid grid-cols-7 border-b border-[rgba(255,255,255,0.07)]">
         {DAYS_FR.map(day => (
-          <div key={day} className="py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <div key={day} className="py-3 text-center text-xs font-semibold text-[#71717A] uppercase tracking-wider">
             {day}
           </div>
         ))}
@@ -154,26 +154,26 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
               key={idx}
               onClick={() => onDayClick(dateStr)}
               className={`
-                min-h-[100px] p-2 border-b border-r border-gray-50 cursor-pointer transition-colors
-                hover:bg-blue-50/50
-                ${!currentMonth ? 'bg-gray-50/50' : ''}
-                ${isToday(date) ? 'bg-blue-50/80' : ''}
+                min-h-[100px] p-2 border-b border-r border-[rgba(255,255,255,0.04)] cursor-pointer transition-colors
+                hover:bg-[rgba(255,255,255,0.03)]
+                ${!currentMonth ? 'bg-[rgba(255,255,255,0.01)]' : ''}
+                ${isToday(date) ? 'bg-[rgba(124,58,237,0.08)]' : ''}
               `}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className={`
                   text-sm font-medium
-                  ${isToday(date) ? 'w-7 h-7 bg-[var(--primary)] text-white rounded-full flex items-center justify-center' : ''}
-                  ${!currentMonth ? 'text-gray-300' : 'text-gray-700'}
+                  ${isToday(date) ? 'w-7 h-7 bg-[#7C3AED] text-[#FAFAFA] rounded-full flex items-center justify-center' : ''}
+                  ${!currentMonth ? 'text-[#3F3F46]' : 'text-[#FAFAFA]'}
                 `}>
                   {date.getDate()}
                 </span>
                 {currentMonth && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onDayClick(dateStr) }}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[var(--primary-light)] transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[rgba(124,58,237,0.15)] transition-all"
                   >
-                    <Plus className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    <Plus className="w-3.5 h-3.5 text-[#7C3AED]" />
                   </button>
                 )}
               </div>
@@ -188,7 +188,7 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
                   </button>
                 ))}
                 {dayPosts.length > 3 && (
-                  <span className="text-[10px] text-gray-400 font-medium">+{dayPosts.length - 3} autres</span>
+                  <span className="text-[10px] text-[#71717A] font-medium">+{dayPosts.length - 3} autres</span>
                 )}
               </div>
             </div>
