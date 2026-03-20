@@ -8,13 +8,14 @@ import {
   Zap, LogOut, Plus, Calendar as CalendarIcon,
   LayoutGrid, BarChart3, Linkedin, Upload,
   Pencil, Trash2, Eye, X, Check, Loader2,
-  FileText, Clock, CheckCircle2, RefreshCw, ChevronLeft, ChevronRight, TrendingUp
+  FileText, Clock, CheckCircle2, RefreshCw, ChevronLeft, ChevronRight, TrendingUp, Layers
 } from 'lucide-react'
 import CalendarView from '@/components/calendar/CalendarView'
 import PostEditor from '@/components/post/PostEditor'
 import BulkImport from '@/components/dashboard/BulkImport'
 import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 import Analytics from '@/components/analytics/Analytics'
+import CarouselBuilder from '@/components/carousel/CarouselBuilder'
 import { defaultTemplates } from '@/lib/templates'
 
 interface Post {
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [showEditor, setShowEditor] = useState(false)
   const [showBulkImport, setShowBulkImport] = useState(false)
+  const [showCarousel, setShowCarousel] = useState(false)
   const [selectedDate, setSelectedDate] = useState('')
   const [activeTab, setActiveTab] = useState<'calendar' | 'posts' | 'analytics'>('calendar')
   const [previewPost, setPreviewPost] = useState<Post | null>(null)
@@ -307,6 +309,28 @@ export default function DashboardPage() {
 
   const handleConnectLinkedIn = () => {
     window.location.href = '/api/linkedin/auth'
+  }
+
+  /** Drag & drop : reprogramme un post sur une nouvelle date (conserve l'heure originale) */
+  const handleReschedule = async (postId: string, newDate: string) => {
+    if (!user) return
+    const post = posts.find(p => p.id === postId)
+    if (!post) return
+    const originalTime = new Date(post.scheduled_at)
+    const [y, m, d] = newDate.split('-').map(Number)
+    const newScheduledAt = new Date(
+      y, m - 1, d,
+      originalTime.getHours(),
+      originalTime.getMinutes(),
+      0
+    ).toISOString()
+    const supabase = createClient()
+    const { error } = await supabase.from('posts').update({ scheduled_at: newScheduledAt }).eq('id', postId)
+    if (!error) {
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, scheduled_at: newScheduledAt } : p
+      ))
+    }
   }
 
   const handleDisconnectLinkedIn = async () => {
@@ -618,6 +642,21 @@ export default function DashboardPage() {
               transition={{delay:0.35,duration:0.5}}
               style={{display:'flex',gap:'12px'}}
             >
+              {['premium','team','agency'].includes(profile?.plan||'') && (
+                <button
+                  onClick={()=>setShowCarousel(true)}
+                  style={{
+                    display:'flex',alignItems:'center',gap:'8px',padding:'10px 16px',borderRadius:'10px',
+                    fontSize:'14px',fontWeight:500,border:'1px solid rgba(167,139,250,0.3)',
+                    color:'#A78BFA',background:'rgba(124,58,237,0.08)',cursor:'pointer',transition:'all 0.3s'
+                  }}
+                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.15)'}}
+                  onMouseLeave={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.08)'}}
+                >
+                  <Layers style={{width:'16px',height:'16px'}} />
+                  Carousel
+                </button>
+              )}
               <button
                 onClick={()=>setShowBulkImport(true)}
                 style={{
@@ -678,6 +717,7 @@ export default function DashboardPage() {
                   posts={posts}
                   onDayClick={handleDayClick}
                   onPostClick={(post)=>setPreviewPost(post as Post)}
+                  onPostReschedule={handleReschedule}
                 />
               </motion.div>
             )}
@@ -705,7 +745,7 @@ export default function DashboardPage() {
               <motion.div key="analytics" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
                 <Analytics
                   posts={posts}
-                  isPremium={profile?.plan === 'premium' || profile?.plan === 'team'}
+                  isPremium={['premium', 'team', 'agency'].includes(profile?.plan || '')}
                   onUpgrade={() => router.push('/pricing')}
                 />
               </motion.div>
@@ -733,6 +773,21 @@ export default function DashboardPage() {
               <BulkImport
                 onImport={handleBulkImport}
                 onClose={()=>setShowBulkImport(false)}
+                isPremium={['premium', 'team', 'agency'].includes(profile?.plan || '')}
+                publishedPosts={posts.map(p => ({ scheduled_at: p.scheduled_at, status: p.status }))}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showCarousel&&(
+              <CarouselBuilder
+                onClose={()=>setShowCarousel(false)}
+                onInsert={(content)=>{
+                  setSelectedDate(new Date().toISOString().split('T')[0])
+                  setShowCarousel(false)
+                  setShowEditor(true)
+                }}
               />
             )}
           </AnimatePresence>
@@ -1029,4 +1084,5 @@ function hexToRgb(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   return result ? `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}` : '124,58,237'
 }
+
 
