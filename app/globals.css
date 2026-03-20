@@ -122,3 +122,23 @@ body {
 .animate-fade-in  { animation: fadeIn 0.4s ease forwards; }
 .animate-slide-up { animation: slideUp 0.5s ease forwards; }
 .animate-pulse-soft { animation: pulse-soft 2s ease infinite; }
+
+/* ── Rendu HTML des posts importés (mammoth) ── */
+.post-html-content p        { margin: 0 0 0.5rem 0; line-height: 1.55; }
+.post-html-content strong   { font-weight: 600; }
+.post-html-content em       { font-style: italic; }
+.post-html-content img      {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.75rem 0;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.post-html-content h1,
+.post-html-content h2,
+.post-html-content h3 { font-weight: 700; margin: 0.5rem 0 0.25rem; }
+.post-html-content ul,
+.post-html-content ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.post-html-content li { margin-bottom: 0.2rem; }
