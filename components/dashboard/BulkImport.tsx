@@ -1,15 +1,41 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileText, Calendar, Check, X, Loader2, Pencil, ChevronDown, ChevronUp, Image as ImageIcon, Linkedin } from 'lucide-react'
+import {
+  Upload, FileText, Calendar, Check, X, Loader2,
+  Pencil, ChevronDown, ChevronUp, Image as ImageIcon,
+  Linkedin, Sparkles, Clock, Star, RefreshCw, AlertCircle
+} from 'lucide-react'
 import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 
 interface BulkImportProps {
   onImport: (posts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => Promise<void> | void
   onClose: () => void
-  authorAvatar?: string
-  authorName?: string
+  isPremium?: boolean
+  publishedPosts?: Array<{ scheduled_at: string; status: string }>
 }
+
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
+
+interface AIVariant {
+  format: string
+  description: string
+  content: string
+}
+
+interface SmartSlot {
+  hour: number
+  day: number
+  dayLabel: string
+  score: number
+  label: string
+}
+
+// ─────────────────────────────────────────────────────────────
+// Helpers HTML
+// ─────────────────────────────────────────────────────────────
 
 function splitHtmlIntoPosts(html: string): string[] {
   if (typeof window === 'undefined') return []
@@ -49,33 +75,16 @@ function splitHtmlIntoPosts(html: string): string[] {
   })
 }
 
-/** Supprimer les lignes de structure DOCX qui ne doivent pas apparaître dans un post LinkedIn */
-function stripDocxHeaders(text: string): string {
-  return text
-    .split('\n')
-    .filter(line => {
-      const t = line.trim()
-      if (!t) return true
-      // Supprimer les lignes tout en MAJUSCULES (ex: "FONDAMENTAUX", "CHAPITRE 2")
-      if (t.length >= 3 && t === t.toUpperCase() && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3,}/.test(t)) return false
-      // Supprimer les lignes "Semaine X — ..." ou "Semaine X –"
-      if (/^Semaine\s+\d+\s*[—–-]/i.test(t)) return false
-      return true
-    })
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
 function htmlToText(html: string): string {
   if (typeof window === 'undefined') return html.replace(/<[^>]+>/g, '')
   const div = document.createElement('div')
   div.innerHTML = html
-  div.querySelectorAll('p, h1, h2, h3').forEach(el => { el.insertAdjacentText('afterend', '\n') })
+  div.querySelectorAll('p, h1, h2, h3').forEach(el => {
+    el.insertAdjacentText('afterend', '\n')
+  })
   div.querySelectorAll('br').forEach(el => el.replaceWith('\n'))
   div.querySelectorAll('img').forEach(el => el.remove())
-  const raw = (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
-  return stripDocxHeaders(raw)
+  return (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 function countImages(html: string): number {
@@ -89,16 +98,62 @@ function extractImagesFromHtml(html: string): string[] {
   const imgs: string[] = []
   div.querySelectorAll('img').forEach(el => {
     const src = el.getAttribute('src')
-    if (!src) return
-    // Garder uniquement les vraies images — exclure PDF/doc/zip/etc.
-    const isDataImage = src.startsWith('data:image/')
-    const isImageUrl = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(src)
-    const isHttpImage = src.startsWith('http') &&
-      !/\.(pdf|doc|docx|xls|xlsx|zip|rar|ppt|pptx|txt|xml)(\?.*)?$/i.test(src)
-    if (isDataImage || isImageUrl || isHttpImage) imgs.push(src)
+    if (src) imgs.push(src)
   })
   return imgs
 }
+
+// ─────────────────────────────────────────────────────────────
+// Smart slot analysis
+// ─────────────────────────────────────────────────────────────
+
+const DAYS_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+
+function analyzeSmartSlots(publishedPosts: Array<{ scheduled_at: string; status: string }>): SmartSlot[] {
+  const published = publishedPosts.filter(p => p.status === 'published' && p.scheduled_at)
+
+  if (published.length < 3) {
+    // Default slots based on LinkedIn best practices
+    return [
+      { hour: 8, day: 2, dayLabel: 'Mardi', score: 95, label: 'Meilleur créneau LinkedIn (Mardi 8h)' },
+      { hour: 9, day: 3, dayLabel: 'Mercredi', score: 90, label: 'Top engagement (Mercredi 9h)' },
+      { hour: 12, day: 4, dayLabel: 'Jeudi', score: 85, label: 'Pause déjeuner (Jeudi 12h)' },
+    ]
+  }
+
+  // Build a heatmap: day × hour → count
+  const heatmap: Record<string, number> = {}
+  for (const p of published) {
+    const d = new Date(p.scheduled_at)
+    const key = `${d.getDay()}_${d.getHours()}`
+    heatmap[key] = (heatmap[key] || 0) + 1
+  }
+
+  const maxCount = Math.max(...Object.values(heatmap), 1)
+
+  // Sort entries by count descending
+  const sorted = Object.entries(heatmap)
+    .map(([key, count]) => {
+      const [dayStr, hourStr] = key.split('_')
+      const day = Number(dayStr)
+      const hour = Number(hourStr)
+      return { day, hour, count, score: Math.round((count / maxCount) * 100) }
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+
+  return sorted.map(s => ({
+    hour: s.hour,
+    day: s.day,
+    dayLabel: DAYS_FR[s.day],
+    score: s.score,
+    label: `Tes posts publiés à ${s.hour}h le ${DAYS_FR[s.day]}`,
+  }))
+}
+
+// ─────────────────────────────────────────────────────────────
+// Server split fallback
+// ─────────────────────────────────────────────────────────────
 
 async function serverSplit(text: string, filename: string): Promise<string[]> {
   const res = await fetch('/api/import', {
@@ -113,9 +168,11 @@ async function serverSplit(text: string, filename: string): Promise<string[]> {
   return data.posts as string[]
 }
 
-const font = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+// ─────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────
 
-export default function BulkImport({ onImport, onClose, authorAvatar, authorName }: BulkImportProps) {
+export default function BulkImport({ onImport, onClose, isPremium = false, publishedPosts = [] }: BulkImportProps) {
   const [step, setStep] = useState<'upload' | 'preview' | 'schedule'>('upload')
   const [posts, setPosts] = useState<string[]>([])
   const [isHtml, setIsHtml] = useState(false)
@@ -124,15 +181,25 @@ export default function BulkImport({ onImport, onClose, authorAvatar, authorName
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState('')
   const [selectedPosts, setSelectedPosts] = useState<Set<number>>(new Set())
-  const [frequency, setFrequency] = useState<'daily' | '3x_week' | 'weekdays' | 'weekly'>('daily')
+  const [frequency, setFrequency] = useState<'daily' | '3x_week' | 'weekdays' | 'weekly'>('3x_week')
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
-  const [startTime, setStartTime] = useState('09:00')
+  const [startTime, setStartTime] = useState('08:00')
   const [dragOver, setDragOver] = useState(false)
+
+  // Per-post state
   const [expandedPosts, setExpandedPosts] = useState<Set<number>>(new Set())
   const [editingPosts, setEditingPosts] = useState<Set<number>>(new Set())
   const [editedContent, setEditedContent] = useState<Record<number, string>>({})
   const [previewIdx, setPreviewIdx] = useState<number | null>(null)
   const [scheduling, setScheduling] = useState(false)
+
+  // AI Reformulation state
+  const [aiLoadingIdx, setAiLoadingIdx] = useState<number | null>(null)
+  const [aiVariants, setAiVariants] = useState<AIVariant[] | null>(null)
+  const [aiModalIdx, setAiModalIdx] = useState<number | null>(null)
+  const [aiError, setAiError] = useState('')
+
+  // ── File handling ──────────────────────────────────────────
 
   const handleFileFixed = async (file: File) => {
     setLoading(true)
@@ -179,6 +246,7 @@ export default function BulkImport({ onImport, onClose, authorAvatar, authorName
       setEditingPosts(new Set())
       setEditedContent({})
       setStep('preview')
+
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'import")
     } finally {
@@ -196,6 +264,8 @@ export default function BulkImport({ onImport, onClose, authorAvatar, authorName
     const file = e.target.files?.[0]
     if (file) handleFileFixed(file)
   }
+
+  // ── Post actions ───────────────────────────────────────────
 
   const togglePost = (idx: number) => {
     const next = new Set(selectedPosts)
@@ -240,6 +310,44 @@ export default function BulkImport({ onImport, onClose, authorAvatar, authorName
     return isHtml ? htmlToText(c) : c
   }
 
+  // ── AI Reformulation ───────────────────────────────────────
+
+  const handleAIReformulate = async (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!isPremium) return
+    setAiLoadingIdx(idx)
+    setAiError('')
+    setAiVariants(null)
+    setAiModalIdx(null)
+
+    try {
+      const content = getTextContent(idx)
+      const resp = await fetch('/api/ai/reformulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Erreur IA')
+      setAiVariants(data.variants || [])
+      setAiModalIdx(idx)
+    } catch (err: any) {
+      setAiError(err.message || 'Erreur lors de la reformulation IA')
+    } finally {
+      setAiLoadingIdx(null)
+    }
+  }
+
+  const applyVariant = (variant: AIVariant) => {
+    if (aiModalIdx === null) return
+    setEditedContent(prev => ({ ...prev, [aiModalIdx]: variant.content }))
+    setEditingPosts(prev => { const s = new Set(prev); s.delete(aiModalIdx); return s })
+    setAiModalIdx(null)
+    setAiVariants(null)
+  }
+
+  // ── Schedule ───────────────────────────────────────────────
+
   const getNextDate = (current: Date, freq: string): Date => {
     const next = new Date(current)
     const day = next.getDay()
@@ -264,12 +372,28 @@ export default function BulkImport({ onImport, onClose, authorAvatar, authorName
       const scheduled = selected.map((i, n) => {
         if (n > 0) currentDate = getNextDate(currentDate, frequency)
         const images = isHtml && !(i in editedContent) ? extractImagesFromHtml(posts[i]) : []
-        return { content: getTextContent(i), scheduledAt: currentDate.toISOString(), status: 'scheduled', images }
+        return {
+          content: getTextContent(i),
+          scheduledAt: currentDate.toISOString(),
+          status: 'scheduled',
+          images,
+        }
       })
       await onImport(scheduled)
     } finally {
       setScheduling(false)
     }
+  }
+
+  const applySmartSlot = (slot: SmartSlot) => {
+    setStartTime(`${String(slot.hour).padStart(2, '0')}:00`)
+    // Find next occurrence of that day
+    const today = new Date()
+    const d = new Date(today)
+    let diff = slot.day - today.getDay()
+    if (diff <= 0) diff += 7
+    d.setDate(d.getDate() + diff)
+    setStartDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
   }
 
   const totalImages = isHtml
@@ -279,571 +403,442 @@ export default function BulkImport({ onImport, onClose, authorAvatar, authorName
       }, 0)
     : 0
 
+  const smartSlots = analyzeSmartSlots(publishedPosts)
+
+  // ─────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────
+
   return (
     <>
-      {previewIdx !== null && (
-        <LinkedInPreview
-          content={getTextContent(previewIdx)}
-          images={isHtml && !(previewIdx in editedContent) ? extractImagesFromHtml(posts[previewIdx]) : []}
-          authorAvatar={authorAvatar}
-          authorName={authorName}
-          onClose={() => setPreviewIdx(null)}
-        />
-      )}
+    {/* LinkedIn Preview */}
+    {previewIdx !== null && (
+      <LinkedInPreview
+        content={getTextContent(previewIdx)}
+        images={isHtml && !(previewIdx in editedContent) ? extractImagesFromHtml(posts[previewIdx]) : []}
+        onClose={() => setPreviewIdx(null)}
+      />
+    )}
 
-      {/* Backdrop */}
-      <div style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        fontFamily: font,
-      }}>
-        {/* Modal */}
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '8px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
-          width: '100%',
-          maxWidth: '640px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          border: '1px solid rgba(0,0,0,0.08)',
-        }}>
-
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px',
-            borderBottom: '1px solid rgba(0,0,0,0.08)',
-            flexShrink: 0,
-          }}>
-            <div>
-              <h2 style={{ fontFamily: font, fontWeight: 700, fontSize: '16px', color: 'rgba(0,0,0,0.9)', margin: 0 }}>
-                {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Aperçu des posts' : 'Programmer'}
-              </h2>
-              <p style={{ fontFamily: font, fontSize: '13px', color: 'rgba(0,0,0,0.5)', margin: '2px 0 0' }}>
-                {step === 'upload'
-                  ? 'Glisse un fichier Word ou texte avec tes posts'
-                  : step === 'preview'
-                  ? `${selectedPosts.size} / ${posts.length} posts sélectionnés`
-                  : 'Choisis la fréquence et la date de début'}
-              </p>
+    {/* AI Variants Modal */}
+    {aiModalIdx !== null && aiVariants && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-violet-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">3 variantes générées par IA</h3>
+                <p className="text-xs text-gray-400">Clique sur une variante pour l'appliquer au post {aiModalIdx + 1}</p>
+              </div>
             </div>
-            <button
-              onClick={onClose}
-              style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                border: 'none', background: 'transparent', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'rgba(0,0,0,0.4)', transition: 'background 150ms',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.06)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              <X style={{ width: '18px', height: '18px' }} />
+            <button onClick={() => { setAiModalIdx(null); setAiVariants(null) }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+              <X className="w-5 h-5" />
             </button>
           </div>
-
-          {/* Body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-
-            {/* ── STEP 1 : Upload ── */}
-            {step === 'upload' && (
-              <div>
-                <div
-                  onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleDrop}
-                  style={{
-                    border: `2px dashed ${dragOver ? '#0A66C2' : 'rgba(0,0,0,0.2)'}`,
-                    borderRadius: '8px',
-                    padding: '48px 24px',
-                    textAlign: 'center',
-                    background: dragOver ? 'rgba(10,102,194,0.04)' : 'rgba(0,0,0,0.02)',
-                    transition: 'all 150ms',
-                    cursor: 'default',
-                  }}
-                >
-                  {loading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <Loader2 style={{ width: '36px', height: '36px', color: '#0A66C2', animation: 'spin 1s linear infinite' }} />
-                      <p style={{ fontFamily: font, fontSize: '13px', color: 'rgba(0,0,0,0.5)', margin: 0 }}>{loadingMsg}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload style={{ width: '36px', height: '36px', color: 'rgba(0,0,0,0.3)', margin: '0 auto 12px' }} />
-                      <p style={{ fontFamily: font, fontSize: '14px', color: 'rgba(0,0,0,0.6)', margin: '0 0 12px' }}>
-                        Glisse ton fichier ici ou
-                      </p>
-                      <label style={{
-                        display: 'inline-block',
-                        padding: '8px 20px',
-                        borderRadius: '9999px',
-                        background: '#0A66C2',
-                        color: '#FFFFFF',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        fontFamily: font,
-                        cursor: 'pointer',
-                        transition: 'background 150ms',
-                      }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#004182')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '#0A66C2')}
-                      >
-                        Parcourir
-                        <input type="file" style={{ display: 'none' }} accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
-                      </label>
-                      <p style={{ fontFamily: font, fontSize: '12px', color: 'rgba(0,0,0,0.4)', marginTop: '12px' }}>
-                        Formats : .docx, .txt, .md — Images intégrées automatiquement
-                      </p>
-                    </>
-                  )}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {aiVariants.map((v, i) => (
+              <button
+                key={i}
+                onClick={() => applyVariant(v)}
+                className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-violet-400 hover:bg-violet-50/30 transition-all group"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-full">{v.format}</span>
+                  <span className="text-xs text-gray-400">{v.description}</span>
+                  <span className="ml-auto text-xs text-violet-500 opacity-0 group-hover:opacity-100 font-semibold transition-opacity">Appliquer →</span>
                 </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-6 leading-relaxed">{v.content}</p>
+                <p className="text-xs text-gray-400 mt-2">{v.content.length} caractères</p>
+              </button>
+            ))}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400 text-center">✨ Powered by Claude AI · Reformulation contextuelle LinkedIn</p>
+          </div>
+        </div>
+      </div>
+    )}
 
-                {error && (
-                  <div style={{
-                    marginTop: '12px', padding: '12px 16px',
-                    background: 'rgba(220,38,38,0.06)',
-                    border: '1px solid rgba(220,38,38,0.2)',
-                    borderRadius: '6px',
-                    color: '#DC2626',
-                    fontSize: '13px',
-                    fontFamily: font,
-                  }}>{error}</div>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">
+              {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Aperçu des posts' : 'Programmer'}
+            </h2>
+            <p className="text-sm text-gray-400">
+              {step === 'upload'
+                ? 'Glisse un fichier Word ou texte avec tes posts'
+                : step === 'preview'
+                ? `${selectedPosts.size} / ${posts.length} posts sélectionnés`
+                : 'Choisis la fréquence et la date de début'}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+
+          {/* ── STEP 1 : Upload ── */}
+          {step === 'upload' && (
+            <div>
+              <div
+                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
+                  dragOver ? 'border-[var(--primary)] bg-[var(--primary-light)]' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {loading ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="w-10 h-10 text-[var(--primary)] animate-spin" />
+                    <p className="text-sm text-gray-500">{loadingMsg}</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-10 h-10 text-gray-300 mx-auto mb-4" />
+                    <p className="text-sm text-gray-600 mb-2">Glisse ton fichier ici ou</p>
+                    <label className="inline-block px-4 py-2 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-[var(--primary-dark)] transition-colors">
+                      Parcourir
+                      <input type="file" className="hidden" accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
+                    </label>
+                    <p className="text-xs text-gray-400 mt-3">Formats : .docx, .txt, .md — Images intégrées automatiquement</p>
+                  </>
                 )}
+              </div>
 
-                <div style={{
-                  marginTop: '20px', padding: '16px',
-                  background: '#F3F2EF',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                }}>
-                  <h3 style={{ fontFamily: font, fontSize: '13px', fontWeight: 700, color: 'rgba(0,0,0,0.9)', margin: '0 0 6px' }}>
-                    Comment formater ton fichier ?
-                  </h3>
-                  <p style={{ fontFamily: font, fontSize: '12px', color: 'rgba(0,0,0,0.55)', margin: 0, lineHeight: 1.6 }}>
-                    Les fichiers Word (.docx) sont analysés automatiquement — images incluses.
-                    Pour les fichiers texte, sépare chaque post avec{' '}
-                    <code style={{ background: 'rgba(0,0,0,0.08)', color: '#0A66C2', padding: '1px 6px', borderRadius: '4px', fontFamily: 'monospace' }}>---</code>
-                    {' '}ou une ligne vide.
+              {error && <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>}
+
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Comment formater ton fichier ?</h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Les fichiers Word (.docx) sont analysés automatiquement — images incluses.
+                  Pour les fichiers texte, sépare chaque post avec <code className="bg-gray-200 px-1 rounded">---</code> ou une ligne vide.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP 2 : Preview ── */}
+          {step === 'preview' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-500">{filename}</span>
+                {isHtml && (
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                    <ImageIcon className="w-3 h-3" /> images incluses
+                  </span>
+                )}
+                {isPremium && (
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-violet-50 text-violet-600 rounded-full font-medium">
+                    <Sparkles className="w-3 h-3" /> IA disponible
+                  </span>
+                )}
+                <button
+                  onClick={() => setSelectedPosts(
+                    selectedPosts.size === posts.length ? new Set() : new Set(posts.map((_, i) => i))
+                  )}
+                  className="ml-auto text-xs text-[var(--primary)] font-medium hover:underline"
+                >
+                  {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+                </button>
+              </div>
+
+              {aiError && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{aiError}</span>
+                </div>
+              )}
+
+              {!isPremium && (
+                <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl border border-violet-100">
+                  <Sparkles className="w-4 h-4 text-violet-500 flex-shrink-0" />
+                  <p className="text-xs text-violet-700">
+                    <strong>Feature Premium :</strong> Reformulation IA contextuelle — 3 variantes optimisées LinkedIn par post (Storytelling, Liste, Hook+CTA)
                   </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* ── STEP 2 : Preview ── */}
-            {step === 'preview' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {/* File info row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <FileText style={{ width: '14px', height: '14px', color: 'rgba(0,0,0,0.4)' }} />
-                  <span style={{ fontFamily: font, fontSize: '13px', color: 'rgba(0,0,0,0.5)' }}>{filename}</span>
-                  {isHtml && (
-                    <span style={{
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                      fontSize: '11px', fontWeight: 600,
-                      padding: '2px 8px', borderRadius: '9999px',
-                      background: 'rgba(10,102,194,0.08)', color: '#0A66C2',
-                      border: '1px solid rgba(10,102,194,0.2)',
-                      fontFamily: font,
-                    }}>
-                      <ImageIcon style={{ width: '10px', height: '10px' }} /> images incluses
-                    </span>
-                  )}
-                  <button
-                    onClick={() => setSelectedPosts(
-                      selectedPosts.size === posts.length ? new Set() : new Set(posts.map((_, i) => i))
-                    )}
-                    style={{
-                      marginLeft: 'auto', background: 'none', border: 'none',
-                      color: '#0A66C2', fontSize: '12px', fontWeight: 600,
-                      fontFamily: font, cursor: 'pointer',
-                    }}
+              {posts.map((_, idx) => {
+                const isSelected = selectedPosts.has(idx)
+                const isExpanded = expandedPosts.has(idx)
+                const isEditing = editingPosts.has(idx)
+                const isModified = idx in editedContent
+                const isAiLoading = aiLoadingIdx === idx
+                const displayContent = getDisplayContent(idx)
+                const imgCount = isHtml && !isModified ? countImages(displayContent) : 0
+                const textLen = isModified ? displayContent.length : htmlToText(displayContent).length
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => !isEditing && togglePost(idx)}
+                    className={`rounded-xl border transition-all ${
+                      isEditing
+                        ? 'border-amber-400 bg-amber-50/30 cursor-default'
+                        : isSelected
+                        ? 'border-[var(--primary)] bg-[var(--primary-light)]/20 cursor-pointer hover:bg-[var(--primary-light)]/30'
+                        : 'border-gray-200 opacity-60 cursor-pointer hover:opacity-80'
+                    }`}
                   >
-                    {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
-                  </button>
-                </div>
-
-                {posts.map((_, idx) => {
-                  const isSelected = selectedPosts.has(idx)
-                  const isExpanded = expandedPosts.has(idx)
-                  const isEditing = editingPosts.has(idx)
-                  const isModified = idx in editedContent
-                  const displayContent = getDisplayContent(idx)
-                  const imgCount = isHtml && !isModified ? countImages(displayContent) : 0
-                  const textLen = isModified ? displayContent.length : htmlToText(displayContent).length
-
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => !isEditing && togglePost(idx)}
-                      style={{
-                        borderRadius: '6px',
-                        border: isEditing
-                          ? '1px solid rgba(245,158,11,0.4)'
-                          : isSelected
-                          ? '1px solid rgba(10,102,194,0.4)'
-                          : '1px solid rgba(0,0,0,0.1)',
-                        background: isEditing
-                          ? 'rgba(245,158,11,0.03)'
-                          : isSelected
-                          ? 'rgba(10,102,194,0.03)'
-                          : 'rgba(0,0,0,0.01)',
-                        opacity: !isEditing && !isSelected ? 0.45 : 1,
-                        cursor: isEditing ? 'default' : 'pointer',
-                        transition: 'all 150ms',
-                      }}
-                    >
-                      {/* Card header */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px 6px' }}>
-                        {/* Checkbox */}
-                        <div
-                          onClick={e => { e.stopPropagation(); if (!isEditing) togglePost(idx) }}
-                          style={{
-                            width: '18px', height: '18px', borderRadius: '4px',
-                            flexShrink: 0, marginTop: '2px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: isSelected && !isEditing ? '#0A66C2' : 'transparent',
-                            border: isEditing
-                              ? '2px solid rgba(245,158,11,0.6)'
-                              : isSelected
-                              ? '2px solid #0A66C2'
-                              : '2px solid rgba(0,0,0,0.2)',
-                            transition: 'all 150ms',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {isSelected && !isEditing && <Check style={{ width: '11px', height: '11px', color: '#FFFFFF' }} />}
-                        </div>
-
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                            <span style={{ fontFamily: font, fontSize: '12px', fontWeight: 600, color: 'rgba(0,0,0,0.4)' }}>
-                              Post {idx + 1}
-                            </span>
-                            {isModified && (
-                              <span style={{
-                                fontSize: '11px', fontWeight: 600, padding: '1px 6px', borderRadius: '9999px',
-                                background: 'rgba(245,158,11,0.1)', color: '#D97706',
-                                border: '1px solid rgba(245,158,11,0.25)', fontFamily: font,
-                              }}>modifié</span>
-                            )}
-                            {imgCount > 0 && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: '#0A66C2', fontFamily: font }}>
-                                <ImageIcon style={{ width: '10px', height: '10px' }} />{imgCount}
-                              </span>
-                            )}
-                            <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: '11px', color: 'rgba(0,0,0,0.3)' }}>
-                              {textLen} car.
-                            </span>
-                          </div>
-
-                          {isEditing ? (
-                            <textarea
-                              value={editedContent[idx] ?? ''}
-                              onChange={e => setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))}
-                              onClick={e => e.stopPropagation()}
-                              autoFocus
-                              rows={12}
-                              style={{
-                                width: '100%', fontFamily: 'monospace', fontSize: '13px',
-                                color: 'rgba(0,0,0,0.85)', lineHeight: 1.6,
-                                border: '1px solid rgba(245,158,11,0.5)',
-                                borderRadius: '6px', padding: '10px 12px',
-                                resize: 'none', outline: 'none',
-                                background: '#FEFCE8', boxSizing: 'border-box',
-                              }}
-                            />
-                          ) : isHtml && !isModified ? (
-                            <div
-                              style={{
-                                fontSize: '13px', color: 'rgba(0,0,0,0.65)', lineHeight: 1.6,
-                                maxHeight: isExpanded ? 'none' : '80px',
-                                overflow: isExpanded ? 'visible' : 'hidden',
-                                maskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none',
-                                WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none',
-                              }}
-                              dangerouslySetInnerHTML={{ __html: displayContent }}
-                            />
-                          ) : (
-                            <p style={{
-                              fontSize: '13px', color: 'rgba(0,0,0,0.65)', fontFamily: font, lineHeight: 1.6,
-                              margin: 0, whiteSpace: 'pre-wrap',
-                              display: isExpanded ? 'block' : '-webkit-box',
-                              WebkitLineClamp: isExpanded ? 'unset' : 3,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: isExpanded ? 'visible' : 'hidden',
-                            }}>
-                              {displayContent}
-                            </p>
-                          )}
-                        </div>
+                    {/* Card header */}
+                    <div className="flex items-start gap-3 p-4 pb-2">
+                      <div
+                        className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          isEditing ? 'border-2 border-amber-400 bg-white'
+                            : isSelected ? 'bg-[var(--primary)] text-white'
+                            : 'border-2 border-gray-300'
+                        }`}
+                        onClick={e => { e.stopPropagation(); if (!isEditing) togglePost(idx) }}
+                      >
+                        {isSelected && !isEditing && <Check className="w-3 h-3" />}
                       </div>
 
-                      {/* Action bar */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 14px 10px' }} onClick={e => e.stopPropagation()}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-xs font-medium text-gray-400">Post {idx + 1}</span>
+                          {isModified && (
+                            <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">modifié</span>
+                          )}
+                          {imgCount > 0 && (
+                            <span className="flex items-center gap-0.5 text-xs text-blue-500">
+                              <ImageIcon className="w-3 h-3" />{imgCount}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400 ml-auto">{textLen} car.</span>
+                        </div>
+
                         {isEditing ? (
-                          <>
-                            <button
-                              onClick={e => saveEdit(idx, e)}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                padding: '5px 12px', borderRadius: '9999px',
-                                border: 'none', background: '#059669', color: '#FFFFFF',
-                                fontSize: '12px', fontWeight: 600, fontFamily: font, cursor: 'pointer',
-                              }}
-                            >
-                              <Check style={{ width: '11px', height: '11px' }} /> Enregistrer
-                            </button>
-                            <button
-                              onClick={e => cancelEdit(idx, e)}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                padding: '5px 12px', borderRadius: '9999px',
-                                border: '1px solid rgba(0,0,0,0.15)', background: 'transparent',
-                                color: 'rgba(0,0,0,0.55)', fontSize: '12px', fontFamily: font, cursor: 'pointer',
-                              }}
-                            >
-                              <X style={{ width: '11px', height: '11px' }} /> Annuler
-                            </button>
-                          </>
+                          <textarea
+                            value={editedContent[idx] ?? ''}
+                            onChange={e => setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))}
+                            onClick={e => e.stopPropagation()}
+                            className="w-full text-sm text-gray-700 border border-amber-300 rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white font-mono"
+                            rows={12}
+                            autoFocus
+                          />
+                        ) : isHtml && !isModified ? (
+                          <div
+                            className={`post-html-content text-sm text-gray-700 ${!isExpanded ? 'max-h-24 overflow-hidden' : ''}`}
+                            style={{ maskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none',
+                                     WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none' }}
+                            dangerouslySetInnerHTML={{ __html: displayContent }}
+                          />
                         ) : (
-                          <>
-                            <button
-                              onClick={e => startEdit(idx, e)}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                padding: '5px 10px', borderRadius: '9999px',
-                                border: 'none', background: 'transparent',
-                                color: '#0A66C2', fontSize: '12px', fontWeight: 600, fontFamily: font, cursor: 'pointer',
-                              }}
-                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(10,102,194,0.08)')}
-                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                            >
-                              <Pencil style={{ width: '11px', height: '11px' }} /> Modifier
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                padding: '5px 10px', borderRadius: '9999px',
-                                border: 'none', background: 'transparent',
-                                color: '#0A66C2', fontSize: '12px', fontWeight: 600, fontFamily: font, cursor: 'pointer',
-                              }}
-                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(10,102,194,0.08)')}
-                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                            >
-                              <Linkedin style={{ width: '11px', height: '11px' }} /> Aperçu
-                            </button>
-                            <button
-                              onClick={e => toggleExpand(idx, e)}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                                padding: '5px 10px', borderRadius: '9999px',
-                                border: 'none', background: 'transparent',
-                                color: 'rgba(0,0,0,0.4)', fontSize: '12px', fontFamily: font, cursor: 'pointer',
-                                marginLeft: 'auto',
-                              }}
-                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.05)')}
-                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                            >
-                              {isExpanded
-                                ? <><ChevronUp style={{ width: '12px', height: '12px' }} />Réduire</>
-                                : <><ChevronDown style={{ width: '12px', height: '12px' }} />Voir tout</>
-                              }
-                            </button>
-                          </>
+                          <p className={`text-sm text-gray-700 whitespace-pre-wrap ${!isExpanded ? 'line-clamp-3' : ''}`}>
+                            {displayContent}
+                          </p>
                         )}
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            )}
 
-            {/* ── STEP 3 : Schedule ── */}
-            {step === 'schedule' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Frequency */}
+                    {/* Action bar */}
+                    <div className="flex items-center gap-1 px-4 pb-3 pt-1" onClick={e => e.stopPropagation()}>
+                      {isEditing ? (
+                        <>
+                          <button onClick={e => saveEdit(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--primary-dark)] transition-colors">
+                            <Check className="w-3 h-3" /> Enregistrer
+                          </button>
+                          <button onClick={e => cancelEdit(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                            <X className="w-3 h-3" /> Annuler
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {/* AI Reformulate Button */}
+                          {isPremium ? (
+                            <button
+                              onClick={e => handleAIReformulate(idx, e)}
+                              disabled={isAiLoading}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-violet-50 text-violet-600 text-xs font-semibold rounded-lg hover:bg-violet-100 transition-colors disabled:opacity-50"
+                              title="Reformulation IA — 3 variantes LinkedIn"
+                            >
+                              {isAiLoading ? (
+                                <><Loader2 className="w-3 h-3 animate-spin" />IA…</>
+                              ) : (
+                                <><Sparkles className="w-3 h-3" />Reformuler</>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={e => e.stopPropagation()}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 text-gray-400 text-xs rounded-lg cursor-not-allowed"
+                              title="Disponible en plan Premium"
+                            >
+                              <Sparkles className="w-3 h-3" />Premium
+                            </button>
+                          )}
+                          <button onClick={e => startEdit(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-[var(--primary)] hover:bg-[var(--primary-light)]/30 rounded-lg transition-colors">
+                            <Pencil className="w-3 h-3" /> Modifier
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
+                            className="flex items-center gap-1 px-3 py-1.5 text-[#0a66c2] text-xs hover:bg-blue-50 rounded-lg transition-colors font-medium">
+                            <Linkedin className="w-3 h-3" /> Aperçu
+                          </button>
+                          <button onClick={e => toggleExpand(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors ml-auto">
+                            {isExpanded ? <><ChevronUp className="w-3 h-3" />Réduire</> : <><ChevronDown className="w-3 h-3" />Voir tout</>}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* ── STEP 3 : Schedule ── */}
+          {step === 'schedule' && (
+            <div className="space-y-6">
+
+              {/* Smart slots (premium) */}
+              {isPremium && (
                 <div>
-                  <label style={{ fontFamily: font, fontSize: '13px', fontWeight: 700, color: 'rgba(0,0,0,0.75)', display: 'block', marginBottom: '10px' }}>
-                    Fréquence de publication
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    {[
-                      { id: 'daily' as const, label: 'Quotidien', desc: '1 post/jour' },
-                      { id: '3x_week' as const, label: '3x / semaine', desc: 'Lun, Mer, Ven' },
-                      { id: 'weekdays' as const, label: 'Jours ouvrés', desc: 'Lun – Ven' },
-                      { id: 'weekly' as const, label: 'Hebdomadaire', desc: '1 post/semaine' },
-                    ].map(f => (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-violet-500" />
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      {publishedPosts.filter(p => p.status === 'published').length >= 3
+                        ? '🎯 Meilleurs créneaux basés sur tes données'
+                        : '💡 Créneaux LinkedIn recommandés'}
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {smartSlots.map((slot, i) => (
                       <button
-                        key={f.id}
-                        onClick={() => setFrequency(f.id)}
-                        style={{
-                          padding: '14px 16px', borderRadius: '6px', textAlign: 'left', cursor: 'pointer',
-                          border: frequency === f.id ? '2px solid #0A66C2' : '1px solid rgba(0,0,0,0.12)',
-                          background: frequency === f.id ? 'rgba(10,102,194,0.04)' : '#FFFFFF',
-                          transition: 'all 150ms',
-                          fontFamily: font,
-                        }}
+                        key={i}
+                        onClick={() => applySmartSlot(slot)}
+                        className="p-3 rounded-xl border-2 border-violet-100 bg-violet-50/50 hover:border-violet-400 hover:bg-violet-50 transition-all text-left group"
                       >
-                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(0,0,0,0.85)', margin: '0 0 2px' }}>{f.label}</p>
-                        <p style={{ fontSize: '12px', color: 'rgba(0,0,0,0.45)', margin: 0 }}>{f.desc}</p>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Star className={`w-3 h-3 ${i === 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />
+                          <span className="text-xs font-bold text-gray-700">{slot.dayLabel} {slot.hour}h</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1 mb-1">
+                          <div
+                            className="h-1 rounded-full bg-violet-500 transition-all"
+                            style={{ width: `${slot.score}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-gray-500 leading-tight truncate">{slot.label}</p>
+                        <p className="text-[10px] text-violet-500 opacity-0 group-hover:opacity-100 transition-opacity font-medium mt-0.5">Appliquer →</p>
                       </button>
                     ))}
                   </div>
                 </div>
+              )}
 
-                {/* Date & time */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontFamily: font, fontSize: '13px', fontWeight: 700, color: 'rgba(0,0,0,0.75)', display: 'block', marginBottom: '6px' }}>
-                      Date de début
-                    </label>
-                    <input
-                      type="date" value={startDate}
-                      onChange={e => setStartDate(e.target.value)}
-                      style={{
-                        width: '100%', padding: '10px 12px',
-                        border: '1px solid rgba(0,0,0,0.35)', borderRadius: '4px',
-                        fontSize: '13px', fontFamily: font, color: 'rgba(0,0,0,0.85)',
-                        outline: 'none', boxSizing: 'border-box', background: '#FFFFFF',
-                      }}
-                      onFocus={e => (e.currentTarget.style.border = '2px solid #0A66C2')}
-                      onBlur={e => (e.currentTarget.style.border = '1px solid rgba(0,0,0,0.35)')}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontFamily: font, fontSize: '13px', fontWeight: 700, color: 'rgba(0,0,0,0.75)', display: 'block', marginBottom: '6px' }}>
-                      Heure
-                    </label>
-                    <input
-                      type="time" value={startTime}
-                      onChange={e => setStartTime(e.target.value)}
-                      style={{
-                        width: '100%', padding: '10px 12px',
-                        border: '1px solid rgba(0,0,0,0.35)', borderRadius: '4px',
-                        fontSize: '13px', fontFamily: font, color: 'rgba(0,0,0,0.85)',
-                        outline: 'none', boxSizing: 'border-box', background: '#FFFFFF',
-                      }}
-                      onFocus={e => (e.currentTarget.style.border = '2px solid #0A66C2')}
-                      onBlur={e => (e.currentTarget.style.border = '1px solid rgba(0,0,0,0.35)')}
-                    />
-                  </div>
-                </div>
-
-                {/* Summary */}
-                <div style={{
-                  padding: '14px 16px',
-                  background: 'rgba(10,102,194,0.04)',
-                  border: '1px solid rgba(10,102,194,0.2)',
-                  borderRadius: '6px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                    <Calendar style={{ width: '14px', height: '14px', color: '#0A66C2' }} />
-                    <span style={{ fontFamily: font, fontSize: '13px', fontWeight: 700, color: '#0A66C2' }}>Résumé</span>
-                  </div>
-                  <p style={{ fontFamily: font, fontSize: '13px', color: 'rgba(0,0,0,0.65)', margin: 0, lineHeight: 1.6 }}>
-                    {selectedPosts.size} posts programmés{' '}
-                    {frequency === 'daily' ? 'tous les jours'
-                      : frequency === '3x_week' ? '3x par semaine (Lun, Mer, Ven)'
-                      : frequency === 'weekdays' ? 'du lundi au vendredi'
-                      : 'chaque semaine'}{' '}
-                    à partir du{' '}
-                    {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}{' '}
-                    à {startTime}.
+              {!isPremium && (
+                <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl border border-violet-100">
+                  <Clock className="w-4 h-4 text-violet-500 flex-shrink-0" />
+                  <p className="text-xs text-violet-700">
+                    <strong>Créneaux intelligents Premium :</strong> Détection automatique des meilleurs horaires basée sur l'analyse de tes posts publiés.
                   </p>
-                  {totalImages > 0 && (
-                    <p style={{ fontFamily: font, fontSize: '13px', fontWeight: 600, color: '#0A66C2', margin: '6px 0 0' }}>
-                      {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — elles seront uploadées et incluses dans les posts LinkedIn.
-                    </p>
-                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fréquence de publication</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'daily' as const, label: 'Quotidien', desc: '1 post/jour' },
+                    { id: '3x_week' as const, label: '3x / semaine', desc: 'Lun, Mer, Ven' },
+                    { id: 'weekdays' as const, label: 'Jours ouvrés', desc: 'Lun – Ven' },
+                    { id: 'weekly' as const, label: 'Hebdomadaire', desc: '1 post/semaine' },
+                  ].map(f => (
+                    <button key={f.id} onClick={() => setFrequency(f.id)}
+                      className={`p-4 rounded-xl border text-left transition-all ${
+                        frequency === f.id ? 'border-[var(--primary)] bg-[var(--primary-light)]/30' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                      <p className="text-sm font-medium text-gray-900">{f.label}</p>
+                      <p className="text-xs text-gray-400">{f.desc}</p>
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Footer */}
-          <div style={{
-            padding: '14px 20px',
-            borderTop: '1px solid rgba(0,0,0,0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0,
-            background: '#FAFAFA',
-          }}>
-            {step !== 'upload' ? (
-              <button
-                onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
-                style={{
-                  padding: '8px 18px', borderRadius: '9999px',
-                  border: '1px solid rgba(0,0,0,0.3)', background: '#FFFFFF',
-                  color: 'rgba(0,0,0,0.7)', fontSize: '14px', fontWeight: 600,
-                  fontFamily: font, cursor: 'pointer', transition: 'all 150ms',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#FFFFFF')}
-              >
-                Retour
-              </button>
-            ) : <div />}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Heure</label>
+                  <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                </div>
+              </div>
 
-            <div>
-              {step === 'preview' && (
-                <button
-                  onClick={() => setStep('schedule')}
-                  disabled={selectedPosts.size === 0}
-                  style={{
-                    padding: '8px 20px', borderRadius: '9999px',
-                    border: 'none', background: '#0A66C2', color: '#FFFFFF',
-                    fontSize: '14px', fontWeight: 700, fontFamily: font,
-                    cursor: selectedPosts.size === 0 ? 'not-allowed' : 'pointer',
-                    opacity: selectedPosts.size === 0 ? 0.4 : 1,
-                    transition: 'background 150ms',
-                  }}
-                  onMouseEnter={e => { if (selectedPosts.size > 0) e.currentTarget.style.background = '#004182' }}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#0A66C2')}
-                >
-                  Programmer ({selectedPosts.size} posts)
-                </button>
-              )}
-              {step === 'schedule' && (
-                <button
-                  onClick={handleSchedule}
-                  disabled={scheduling}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '8px 20px', borderRadius: '9999px',
-                    border: 'none', background: '#0A66C2', color: '#FFFFFF',
-                    fontSize: '14px', fontWeight: 700, fontFamily: font,
-                    cursor: scheduling ? 'not-allowed' : 'pointer',
-                    opacity: scheduling ? 0.6 : 1,
-                    transition: 'background 150ms',
-                  }}
-                  onMouseEnter={e => { if (!scheduling) e.currentTarget.style.background = '#004182' }}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#0A66C2')}
-                >
-                  {scheduling ? (
-                    <><Loader2 style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} />
-                      {totalImages > 0 ? `Upload images (${totalImages})…` : 'Programmation…'}
-                    </>
-                  ) : 'Confirmer et programmer'}
-                </button>
-              )}
+              <div className="p-4 bg-blue-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-[var(--primary)]" />
+                  <span className="text-sm font-medium text-[var(--primary)]">Résumé</span>
+                </div>
+                <p className="text-sm text-gray-600">
+                  {selectedPosts.size} posts programmés{' '}
+                  {frequency === 'daily' ? 'tous les jours'
+                    : frequency === '3x_week' ? '3x par semaine (Lun, Mer, Ven)'
+                    : frequency === 'weekdays' ? 'du lundi au vendredi'
+                    : 'chaque semaine'}{' '}
+                  à partir du{' '}
+                  {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}{' '}
+                  à {startTime}.
+                </p>
+                {totalImages > 0 && (
+                  <p className="text-sm text-blue-600 mt-1.5 font-medium">
+                    🖼 {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — elles seront uploadées et incluses dans les posts LinkedIn.
+                  </p>
+                )}
+              </div>
             </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+          {step !== 'upload' && (
+            <button onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
+              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
+              Retour
+            </button>
+          )}
+          <div className="ml-auto">
+            {step === 'preview' && (
+              <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
+                className="px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-40">
+                Programmer ({selectedPosts.size} posts)
+              </button>
+            )}
+            {step === 'schedule' && (
+              <button onClick={handleSchedule} disabled={scheduling}
+                className="flex items-center gap-2 px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-60">
+                {scheduling ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />{totalImages > 0 ? `Upload images (${totalImages})…` : 'Programmation…'}</>
+                ) : (
+                  'Confirmer et programmer'
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
+    </div>
     </>
   )
 }
