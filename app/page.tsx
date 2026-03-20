@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, useInView } from 'framer-motion'
 
 // ──────────────────── ANIMATIONS ────────────────────
@@ -227,7 +228,7 @@ const TestimonialCard = ({ name, role, quote, delay, initials, avatarColor }) =>
   </FadeInUp>
 )
 
-const PricingCard = ({ name, price, description, features, isHighlight, delay }) => (
+const PricingCard = ({ name, price, description, features, isHighlight, delay, onClick = undefined }) => (
   <FadeInUp delay={delay}>
     <motion.div
       whileHover={{ y: -4 }}
@@ -297,7 +298,7 @@ const PricingCard = ({ name, price, description, features, isHighlight, delay })
         {price === '0' ? 'Gratuit' : `€${price}`}
         {price !== '0' && <span style={{ fontSize: '14px', color: 'rgba(240,240,255,0.5)' }}>/mois</span>}
       </div>
-      <button style={{
+      <button onClick={onClick} style={{
         width: '100%',
         padding: '12px 24px',
         borderRadius: '10px',
@@ -340,6 +341,7 @@ const PricingCard = ({ name, price, description, features, isHighlight, delay })
 
 export default function Page() {
   const [isNavOpen, setIsNavOpen] = useState(false)
+  const router = useRouter()
 
   return (
     <div style={{
@@ -413,7 +415,7 @@ export default function Page() {
               Tarifs
             </Link>
           </div>
-          <button style={{
+          <button onClick={() => router.push('/login')} style={{
             padding: '8px 20px',
             borderRadius: '8px',
             border: '1px solid rgba(124,58,237,0.4)',
@@ -527,7 +529,7 @@ export default function Page() {
             flexWrap: 'wrap',
           }}
         >
-          <button style={{
+          <button onClick={() => router.push('/login')} style={{
             padding: '12px 32px',
             borderRadius: '10px',
             border: 'none',
@@ -545,7 +547,7 @@ export default function Page() {
             Commencer gratuitement
             <ArrowRight size={16} />
           </button>
-          <button style={{
+          <button onClick={() => router.push('/login')} style={{
             padding: '12px 32px',
             borderRadius: '10px',
             border: '1px solid rgba(255,255,255,0.15)',
@@ -968,6 +970,7 @@ export default function Page() {
             price='0'
             description='Pour découvrir ContentFlow'
             isHighlight={false}
+            onClick={() => router.push('/login')}
             features={[
               '3 posts programmés par semaine',
               'Calendrier simplifié',
@@ -981,6 +984,7 @@ export default function Page() {
             price='29'
             description='Pour les créateurs sérieux'
             isHighlight={true}
+            onClick={() => router.push('/login')}
             features={[
               'Posts illimités',
               'Calendrier avancé',
@@ -1026,7 +1030,7 @@ export default function Page() {
           </p>
         </FadeInUp>
         <FadeInUp delay={0.2}>
-          <button style={{
+          <button onClick={() => router.push('/login')} style={{
             padding: '14px 40px',
             borderRadius: '10px',
             border: 'none',
@@ -1121,3 +1125,4 @@ export default function Page() {
     </div>
   )
 }
+
