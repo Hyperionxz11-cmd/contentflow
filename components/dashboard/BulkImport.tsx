@@ -5,7 +5,7 @@ import { Upload, FileText, Calendar, Check, X, Loader2, Pencil, ChevronDown, Che
 import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 
 interface BulkImportProps {
-  onImport: (posts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => void
+  onImport: (posts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => Promise<void> | void
   onClose: () => void
 }
 
@@ -124,6 +124,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   const [editingPosts, setEditingPosts] = useState<Set<number>>(new Set())
   const [editedContent, setEditedContent] = useState<Record<number, string>>({})
   const [previewIdx, setPreviewIdx] = useState<number | null>(null)
+  const [scheduling, setScheduling] = useState(false)
 
   // ── Gestion fichier ───────────────────────────────────────
 
@@ -314,22 +315,34 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
     return next
   }
 
-  const handleSchedule = () => {
-    const selected = posts.map((_, i) => i).filter(i => selectedPosts.has(i))
-    let currentDate = new Date(`${startDate}T${startTime}:00`)
-    const scheduled = selected.map((i, n) => {
-      if (n > 0) currentDate = getNextDate(currentDate, frequency)
-      // Extraire les images si le post est en HTML et non modifié
-      const images = isHtml && !(i in editedContent) ? extractImagesFromHtml(posts[i]) : []
-      return {
-        content: getTextContent(i),
-        scheduledAt: currentDate.toISOString(),
-        status: 'scheduled',
-        images,
-      }
-    })
-    onImport(scheduled)
+  const handleSchedule = async () => {
+    setScheduling(true)
+    try {
+      const selected = posts.map((_, i) => i).filter(i => selectedPosts.has(i))
+      let currentDate = new Date(`${startDate}T${startTime}:00`)
+      const scheduled = selected.map((i, n) => {
+        if (n > 0) currentDate = getNextDate(currentDate, frequency)
+        const images = isHtml && !(i in editedContent) ? extractImagesFromHtml(posts[i]) : []
+        return {
+          content: getTextContent(i),
+          scheduledAt: currentDate.toISOString(),
+          status: 'scheduled',
+          images,
+        }
+      })
+      await onImport(scheduled)
+    } finally {
+      setScheduling(false)
+    }
   }
+
+  // Nombre total d'images détectées dans les posts sélectionnés
+  const totalImages = isHtml
+    ? [...selectedPosts].reduce((sum, i) => {
+        if (i in editedContent) return sum
+        return sum + extractImagesFromHtml(posts[i]).length
+      }, 0)
+    : 0
 
   // ─────────────────────────────────────────────────────────
   // Render
@@ -594,6 +607,16 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                   {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}{' '}
                   à {startTime}.
                 </p>
+                {totalImages > 0 && (
+                  <p className="text-sm text-blue-600 mt-1.5 font-medium">
+                    🖼 {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — elles seront uploadées et incluses dans les posts LinkedIn.
+                  </p>
+                )}
+                {isHtml && totalImages === 0 && (
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    ℹ️ Aucune image embedded détectée dans ce document (les liens 📎 sont des hyperlinks Word, pas des images).
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -615,9 +638,13 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
               </button>
             )}
             {step === 'schedule' && (
-              <button onClick={handleSchedule}
-                className="px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors">
-                Confirmer et programmer
+              <button onClick={handleSchedule} disabled={scheduling}
+                className="flex items-center gap-2 px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-60">
+                {scheduling ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />{totalImages > 0 ? `Upload images (${totalImages})…` : 'Programmation…'}</>
+                ) : (
+                  'Confirmer et programmer'
+                )}
               </button>
             )}
           </div>
