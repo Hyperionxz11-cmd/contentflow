@@ -465,15 +465,29 @@ export default function DashboardPage() {
             }}>
               {profile?.linkedin_connected?(
                 <div>
-                  <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px'}}>
-                    <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#10B981'}} />
-                    <span style={{fontSize:'11px',fontWeight:600,color:'#10B981'}}>LinkedIn connecté</span>
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'4px'}}>
-                    <p style={{fontSize:'11px',color:'#9CA3AF',maxWidth:'110px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                      {profile.linkedin_name||profile.full_name||'Compte vérifié'}
-                    </p>
-                    <button onClick={handleDisconnectLinkedIn} style={{fontSize:'11px',fontWeight:500,color:'#EF4444',background:'none',border:'none',cursor:'pointer'}}>
+                  {/* Photo LinkedIn + nom */}
+                  <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
+                    {profile.linkedin_picture_url ? (
+                      <img
+                        src={profile.linkedin_picture_url}
+                        alt="LinkedIn"
+                        style={{width:'36px',height:'36px',borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(16,185,129,0.4)',flexShrink:0}}
+                      />
+                    ) : (
+                      <div style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#7C3AED,#A78BFA)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>
+                        {(profile.linkedin_name||profile.full_name||'?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                        <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#10B981',flexShrink:0}} />
+                        <span style={{fontSize:'10px',fontWeight:600,color:'#10B981'}}>Connecté</span>
+                      </div>
+                      <p style={{fontSize:'11px',color:'#D1D5DB',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'2px',fontWeight:500}}>
+                        {profile.linkedin_name||profile.full_name||'Compte vérifié'}
+                      </p>
+                    </div>
+                    <button onClick={handleDisconnectLinkedIn} style={{fontSize:'10px',fontWeight:500,color:'#EF4444',background:'none',border:'none',cursor:'pointer',flexShrink:0}}>
                       Déco
                     </button>
                   </div>
@@ -974,7 +988,7 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
                         <button onClick={()=>setConfirmDeleteId(null)} style={{padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#9CA3AF',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',transition:'all 0.3s'}}>Non</button>
                       </div>
                     ):(
-                      <div style={{display:'flex',alignItems:'center',gap:'4px',opacity:0,transition:'opacity 0.3s'}} className="hover-actions">
+                      <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
                         <button onClick={()=>setPreviewPost(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Eye style={{width:'12px',height:'12px'}} />Aperçu</button>
                         {post.status!=='published'&&(<button onClick={()=>openEditModal(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Pencil style={{width:'12px',height:'12px'}} />Modifier</button>)}
                         {post.status==='failed'&&(<button onClick={()=>handleRetryPost(post)} disabled={isRetrying} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:500,borderRadius:'6px',color:'#FCD34D',background:'rgba(245,158,11,0.1)',border:'none',cursor:'pointer',opacity:isRetrying?0.6:1,transition:'all 0.3s'}}>{isRetrying?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:'↺'}Réessayer</button>)}
@@ -1005,3 +1019,4 @@ function hexToRgb(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   return result ? `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}` : '124,58,237'
 }
+
