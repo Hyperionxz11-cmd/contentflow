@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { X, ThumbsUp, MessageSquare, Repeat2, Send, Globe, MoreHorizontal, ChevronDown, ChevronUp, Calendar, CheckCircle2 } from 'lucide-react'
 
 interface LinkedInPreviewProps {
-  content: string          // texte brut du post
+  content: string          // texte brut ou HTML du post
   scheduledAt?: string     // ISO date string
   status?: string
   authorName?: string
   authorHeadline?: string
+  authorAvatar?: string    // URL ou base64 de la photo de profil LinkedIn
+  images?: string[]        // base64 images extraites du DOCX
   onClose: () => void
 }
 
@@ -16,7 +18,6 @@ interface LinkedInPreviewProps {
 function formatLinkedInText(text: string) {
   const lines = text.split('\n')
   return lines.map((line, li) => {
-    const parts = line.split(/(\s|^)(?=#\w|@\w)/g)
     const formatted = line.replace(
       /(#\w[\wÀ-ÿ]*|@\w[\wÀ-ÿ]*)/g,
       '<span class="text-[#0a66c2] font-medium">$1</span>'
@@ -30,19 +31,25 @@ function formatLinkedInText(text: string) {
   })
 }
 
-/** Nettoie le texte : supprime balises HTML résiduelles */
-function cleanText(raw: string): string {
+/** Nettoie le texte : supprime balises HTML résiduelles, extrait les src d'images */
+function cleanTextAndImages(raw: string): { text: string; imgs: string[] } {
+  const imgs: string[] = []
   if (typeof window !== 'undefined') {
     const div = document.createElement('div')
     div.innerHTML = raw
+    // Extraire les images
+    div.querySelectorAll('img').forEach(el => {
+      const src = el.getAttribute('src')
+      if (src) imgs.push(src)
+      el.remove()
+    })
     // Remplacer les <br> et </p> par des sauts de ligne
     div.querySelectorAll('p, br, h1, h2, h3').forEach(el => {
       el.insertAdjacentText('afterend', '\n')
     })
-    div.querySelectorAll('img').forEach(el => el.remove())
-    return (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
+    return { text: (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim(), imgs }
   }
-  return raw.replace(/<[^>]+>/g, '').trim()
+  return { text: raw.replace(/<[^>]+>/g, '').trim(), imgs }
 }
 
 export default function LinkedInPreview({
@@ -51,11 +58,16 @@ export default function LinkedInPreview({
   status,
   authorName = 'André Isoz',
   authorHeadline = 'Conseiller financier | Brevet Fédéral',
+  authorAvatar,
+  images = [],
   onClose,
 }: LinkedInPreviewProps) {
   const [expanded, setExpanded] = useState(false)
 
-  const cleanContent = cleanText(content)
+  const { text: cleanContent, imgs: inlineImgs } = cleanTextAndImages(content)
+  // Merge: images prop (from DB) + inline images from HTML content
+  const allImages = [...(images || []), ...inlineImgs].filter(Boolean)
+
   const lines = cleanContent.split('\n')
   const previewLines = 5
   const isLong = lines.length > previewLines
@@ -110,10 +122,18 @@ export default function LinkedInPreview({
           <div className="px-4 pt-4 pb-3">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
-                {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0a66c2] to-blue-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {initials}
-                </div>
+                {/* Avatar — photo réelle ou initiales */}
+                {authorAvatar ? (
+                  <img
+                    src={authorAvatar}
+                    alt={authorName}
+                    className="w-12 h-12 rounded-full object-cover flex-shrink-0 border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0a66c2] to-blue-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {initials}
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-semibold text-gray-900 leading-tight">{authorName}</p>
                   <p className="text-xs text-gray-500 leading-tight mt-0.5 max-w-[280px]">{authorHeadline}</p>
@@ -152,6 +172,27 @@ export default function LinkedInPreview({
               </button>
             )}
           </div>
+
+          {/* Images du post (extraites du DOCX) */}
+          {allImages.length > 0 && (
+            <div className={`px-4 pb-3 grid gap-2 ${allImages.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {allImages.slice(0, 4).map((src, i) => (
+                <div key={i} className="relative">
+                  <img
+                    src={src}
+                    alt={`Image ${i + 1}`}
+                    className="w-full rounded-lg object-cover border border-gray-100"
+                    style={{ maxHeight: allImages.length === 1 ? '400px' : '200px' }}
+                  />
+                  {i === 3 && allImages.length > 4 && (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <span className="text-white text-lg font-bold">+{allImages.length - 4}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Reactions counter */}
           <div className="px-4 pb-2 flex items-center justify-between text-xs text-gray-400">
@@ -192,6 +233,9 @@ export default function LinkedInPreview({
           {cleanContent.length} caractères · LinkedIn recommande moins de 1 300 car. pour un bon taux d'engagement
           {cleanContent.length > 1300 && (
             <span className="ml-2 text-amber-300 font-medium">⚠ post long — pensez à ajouter «…voir plus»</span>
+          )}
+          {allImages.length > 0 && (
+            <span className="ml-2 text-blue-300 font-medium">🖼 {allImages.length} image{allImages.length > 1 ? 's' : ''}</span>
           )}
         </div>
       </div>
