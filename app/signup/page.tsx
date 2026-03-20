@@ -18,14 +18,12 @@ export default function SignupPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     const supabase = createClient()
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name } },
     })
-
     if (error) {
       setError(error.message)
       setLoading(false)
@@ -35,74 +33,68 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 mb-6 transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Retour
-          </Link>
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-10 h-10 bg-[var(--primary)] rounded-xl flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
+    <div
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{ background: '#09090B' }}
+    >
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at center top, rgba(124,58,237,0.12) 0%, transparent 70%)' }}
+      />
+
+      <div className="w-full max-w-md relative">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm mb-8 transition-colors" style={{ color: 'var(--text-muted)' }}>
+          <ArrowLeft className="w-4 h-4" />
+          Retour
+        </Link>
+
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent)', boxShadow: '0 0 24px rgba(124,58,237,0.4)' }}>
+            <Zap className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mt-4">Crée ton compte</h1>
-          <p className="text-gray-500 mt-1">Commence à planifier tes posts LinkedIn</p>
+          <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '20px', color: 'var(--text)' }}>ContentFlow</span>
         </div>
 
-        <form onSubmit={handleSignup} className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+        <h1 className="mb-1" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '28px', color: 'var(--text)', letterSpacing: '-0.02em' }}>
+          Crée ton compte.
+        </h1>
+        <p className="mb-8 text-sm" style={{ color: 'var(--text-muted)' }}>Commence à planifier ton contenu LinkedIn dès aujourd'hui</p>
+
+        <form onSubmit={handleSignup} className="rounded-xl p-8 space-y-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3 mb-4">{error}</div>
+            <div className="text-sm rounded-lg p-3" style={{ background: 'var(--danger-dim)', color: '#FCA5A5', border: '1px solid rgba(239,68,68,0.2)' }}>
+              {error}
+            </div>
           )}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
+
+          {[
+            { label: 'Nom complet', type: 'text', value: name, onChange: setName, placeholder: 'Jean Dupont' },
+            { label: 'Email', type: 'email', value: email, onChange: setEmail, placeholder: 'ton@email.com' },
+            { label: 'Mot de passe', type: 'password', value: password, onChange: setPassword, placeholder: '••••••••' },
+          ].map(field => (
+            <div key={field.label}>
+              <label className="block text-xs font-medium mb-2 uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{field.label}</label>
               <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
-                placeholder="Jean Dupont"
+                type={field.type}
+                value={field.value}
+                onChange={e => field.onChange(e.target.value)}
+                placeholder={field.placeholder}
                 required
+                className="w-full px-4 py-3 text-sm rounded-lg outline-none transition-all"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                onFocus={e => (e.target.style.borderColor = 'var(--accent-bright)')}
+                onBlur={e => (e.target.style.borderColor = 'var(--border)')}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
-                placeholder="ton@email.com"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
-                placeholder="Minimum 6 caractères"
-                minLength={6}
-                required
-              />
-            </div>
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-6 py-3 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Création...' : 'Créer mon compte gratuit'}
+          ))}
+
+          <button type="submit" disabled={loading} className="w-full py-3 rounded-lg text-sm font-semibold transition-all mt-2" style={{ background: loading ? 'var(--accent-dim)' : 'var(--accent)', color: 'white', boxShadow: loading ? 'none' : '0 0 20px rgba(124,58,237,0.3)', cursor: loading ? 'not-allowed' : 'pointer' }}>
+            {loading ? 'Création…' : 'Créer mon compte →'}
           </button>
-          <p className="text-center text-sm text-gray-400 mt-4">
+
+          <p className="text-center text-sm pt-2" style={{ color: 'var(--text-muted)' }}>
             Déjà un compte ?{' '}
-            <Link href="/login" className="text-[var(--primary)] font-medium hover:underline">
-              Se connecter
-            </Link>
+            <Link href="/login" className="font-medium" style={{ color: 'var(--accent-text)' }}>Se connecter</Link>
           </p>
         </form>
       </div>
