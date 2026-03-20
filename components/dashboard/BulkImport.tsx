@@ -13,6 +13,8 @@ interface BulkImportProps {
   onClose: () => void
   isPremium?: boolean
   publishedPosts?: Array<{ scheduled_at: string; status: string }>
+  authorAvatar?: string
+  authorName?: string
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -75,6 +77,21 @@ function splitHtmlIntoPosts(html: string): string[] {
   })
 }
 
+function stripDocxHeaders(text: string): string {
+  return text
+    .split('\n')
+    .filter(line => {
+      const t = line.trim()
+      if (!t) return true
+      if (t.length >= 3 && t === t.toUpperCase() && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3,}/.test(t)) return false
+      if (/^Semaine\s+\d+\s*[—–-]/i.test(t)) return false
+      return true
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 function htmlToText(html: string): string {
   if (typeof window === 'undefined') return html.replace(/<[^>]+>/g, '')
   const div = document.createElement('div')
@@ -84,7 +101,7 @@ function htmlToText(html: string): string {
   })
   div.querySelectorAll('br').forEach(el => el.replaceWith('\n'))
   div.querySelectorAll('img').forEach(el => el.remove())
-  return (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
+  return stripDocxHeaders((div.textContent || '').replace(/\n{3,}/g, '\n\n').trim())
 }
 
 function countImages(html: string): number {
@@ -98,7 +115,12 @@ function extractImagesFromHtml(html: string): string[] {
   const imgs: string[] = []
   div.querySelectorAll('img').forEach(el => {
     const src = el.getAttribute('src')
-    if (src) imgs.push(src)
+    if (!src) return
+    const isDataImage = src.startsWith('data:image/')
+    const isImageUrl = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(src)
+    const isHttpImage = src.startsWith('http') &&
+      !/\.(pdf|doc|docx|xls|xlsx|zip|rar|ppt|pptx|txt|xml)(\?.*)?$/i.test(src)
+    if (isDataImage || isImageUrl || isHttpImage) imgs.push(src)
   })
   return imgs
 }
@@ -172,7 +194,7 @@ async function serverSplit(text: string, filename: string): Promise<string[]> {
 // Main component
 // ─────────────────────────────────────────────────────────────
 
-export default function BulkImport({ onImport, onClose, isPremium = false, publishedPosts = [] }: BulkImportProps) {
+export default function BulkImport({ onImport, onClose, isPremium = false, publishedPosts = [], authorAvatar, authorName }: BulkImportProps) {
   const [step, setStep] = useState<'upload' | 'preview' | 'schedule'>('upload')
   const [posts, setPosts] = useState<string[]>([])
   const [isHtml, setIsHtml] = useState(false)
@@ -416,6 +438,8 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
       <LinkedInPreview
         content={getTextContent(previewIdx)}
         images={isHtml && !(previewIdx in editedContent) ? extractImagesFromHtml(posts[previewIdx]) : []}
+        authorAvatar={authorAvatar}
+        authorName={authorName}
         onClose={() => setPreviewIdx(null)}
       />
     )}
@@ -426,8 +450,8 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-violet-600" />
+              <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-[#0A66C2]" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-gray-900">3 variantes générées par IA</h3>
@@ -443,12 +467,12 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               <button
                 key={i}
                 onClick={() => applyVariant(v)}
-                className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-violet-400 hover:bg-violet-50/30 transition-all group"
+                className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#0A66C2] hover:bg-blue-50/30 transition-all group"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-full">{v.format}</span>
+                  <span className="px-2.5 py-0.5 bg-blue-100 text-[#004182] text-xs font-bold rounded-full">{v.format}</span>
                   <span className="text-xs text-gray-400">{v.description}</span>
-                  <span className="ml-auto text-xs text-violet-500 opacity-0 group-hover:opacity-100 font-semibold transition-opacity">Appliquer →</span>
+                  <span className="ml-auto text-xs text-[#0A66C2] opacity-0 group-hover:opacity-100 font-semibold transition-opacity">Appliquer →</span>
                 </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-6 leading-relaxed">{v.content}</p>
                 <p className="text-xs text-gray-400 mt-2">{v.content.length} caractères</p>
@@ -540,7 +564,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                   </span>
                 )}
                 {isPremium && (
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-violet-50 text-violet-600 rounded-full font-medium">
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-[#0A66C2] rounded-full font-medium">
                     <Sparkles className="w-3 h-3" /> IA disponible
                   </span>
                 )}
@@ -562,9 +586,9 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               )}
 
               {!isPremium && (
-                <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl border border-violet-100">
-                  <Sparkles className="w-4 h-4 text-violet-500 flex-shrink-0" />
-                  <p className="text-xs text-violet-700">
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                  <Sparkles className="w-4 h-4 text-[#0A66C2] flex-shrink-0" />
+                  <p className="text-xs text-[#004182]">
                     <strong>Feature Premium :</strong> Reformulation IA contextuelle — 3 variantes optimisées LinkedIn par post (Storytelling, Liste, Hook+CTA)
                   </p>
                 </div>
@@ -663,7 +687,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                             <button
                               onClick={e => handleAIReformulate(idx, e)}
                               disabled={isAiLoading}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-violet-50 text-violet-600 text-xs font-semibold rounded-lg hover:bg-violet-100 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#0A66C2] text-xs font-semibold rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
                               title="Reformulation IA — 3 variantes LinkedIn"
                             >
                               {isAiLoading ? (
@@ -711,7 +735,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               {isPremium && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Clock className="w-4 h-4 text-violet-500" />
+                    <Clock className="w-4 h-4 text-[#0A66C2]" />
                     <h3 className="text-sm font-semibold text-gray-800">
                       {publishedPosts.filter(p => p.status === 'published').length >= 3
                         ? '🎯 Meilleurs créneaux basés sur tes données'
@@ -723,7 +747,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                       <button
                         key={i}
                         onClick={() => applySmartSlot(slot)}
-                        className="p-3 rounded-xl border-2 border-violet-100 bg-violet-50/50 hover:border-violet-400 hover:bg-violet-50 transition-all text-left group"
+                        className="p-3 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:border-[#0A66C2] hover:bg-blue-50 transition-all text-left group"
                       >
                         <div className="flex items-center gap-1.5 mb-1">
                           <Star className={`w-3 h-3 ${i === 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />
@@ -731,12 +755,12 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-1 mb-1">
                           <div
-                            className="h-1 rounded-full bg-violet-500 transition-all"
+                            className="h-1 rounded-full bg-blue-500 transition-all"
                             style={{ width: `${slot.score}%` }}
                           />
                         </div>
                         <p className="text-[10px] text-gray-500 leading-tight truncate">{slot.label}</p>
-                        <p className="text-[10px] text-violet-500 opacity-0 group-hover:opacity-100 transition-opacity font-medium mt-0.5">Appliquer →</p>
+                        <p className="text-[10px] text-[#0A66C2] opacity-0 group-hover:opacity-100 transition-opacity font-medium mt-0.5">Appliquer →</p>
                       </button>
                     ))}
                   </div>
@@ -744,9 +768,9 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               )}
 
               {!isPremium && (
-                <div className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl border border-violet-100">
-                  <Clock className="w-4 h-4 text-violet-500 flex-shrink-0" />
-                  <p className="text-xs text-violet-700">
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                  <Clock className="w-4 h-4 text-[#0A66C2] flex-shrink-0" />
+                  <p className="text-xs text-[#004182]">
                     <strong>Créneaux intelligents Premium :</strong> Détection automatique des meilleurs horaires basée sur l'analyse de tes posts publiés.
                   </p>
                 </div>
