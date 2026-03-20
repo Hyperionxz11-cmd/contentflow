@@ -130,10 +130,57 @@ export default function DashboardPage() {
     setShowEditor(false)
   }
 
+  /** Upload une image base64 vers Supabase Storage, retourne l'URL publique */
+  const uploadImageToStorage = async (
+    supabase: ReturnType<typeof createClient>,
+    userId: string,
+    base64: string,
+    filename: string
+  ): Promise<string | null> => {
+    try {
+      const match = base64.match(/^data:([^;]+);base64,(.+)$/)
+      if (!match) return null
+      const mimeType = match[1]
+      const b64data = match[2]
+      const byteChars = atob(b64data)
+      const bytes = new Uint8Array(byteChars.length)
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i)
+      const blob = new Blob([bytes], { type: mimeType })
+      const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
+      const path = `${userId}/${Date.now()}-${filename}.${ext}`
+      const { error } = await supabase.storage.from('post-images').upload(path, blob, {
+        contentType: mimeType,
+        upsert: false,
+      })
+      if (error) { console.error('Storage upload error:', error); return null }
+      const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
+      return urlData?.publicUrl || null
+    } catch (err) {
+      console.error('uploadImageToStorage error:', err)
+      return null
+    }
+  }
+
   const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => {
     if (user) {
       const supabase = createClient()
-      const toInsert = importedPosts.map(p => ({
+
+      // Upload chaque image base64 vers Storage, remplace par URL publique
+      const postsWithUrls = await Promise.all(
+        importedPosts.map(async (p, postIdx) => {
+          if (!p.images || p.images.length === 0) return { ...p, images: [] }
+          const urls = await Promise.all(
+            p.images.map((img, imgIdx) =>
+              img.startsWith('data:')
+                ? uploadImageToStorage(supabase, user.id, img, `post${postIdx}-img${imgIdx}`)
+                : Promise.resolve(img)
+            )
+          )
+          return { ...p, images: urls.filter(Boolean) as string[] }
+        })
+      )
+
+      const toInsert = postsWithUrls.map(p => ({
         user_id: user.id,
         content: p.content,
         scheduled_at: p.scheduledAt,
