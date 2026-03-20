@@ -4,51 +4,67 @@ import { NextRequest, NextResponse } from 'next/server'
 function splitIntoPosts(rawText: string): string[] {
   let posts: string[] = []
 
-  // 1. Séparateur --- ou ===
+  // 1. Séparateur explicite --- ou ===
   if (rawText.includes('---')) {
     posts = rawText.split(/---+/).map(p => p.trim()).filter(p => p.length > 0)
   } else if (rawText.includes('===')) {
     posts = rawText.split(/===+/).map(p => p.trim()).filter(p => p.length > 0)
   }
-  // 2. Triple saut de ligne
+  // 2. Docs Word avec headers en majuscules (ex: FONDAMENTAUX, PATRIMOINE, ACTUALITÉS…)
+  //    Structure : CATÉGORIE\n\nTitre du post\n\n\n\nContenu du post
+  //    On coupe avant chaque header en majuscules précédé de 2+ newlines
+  else if (/\n{2,}[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{4,}\n\n/.test(rawText)) {
+    const raw = rawText
+      .split(/\n{2,}(?=[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{4,}\n\n)/)
+      .map(p => p.trim())
+      .filter(p => {
+        if (!p || p.length < 100) return false
+        const firstLine = p.split('\n')[0].trim()
+        // La 1ère ligne doit être entièrement en majuscules (header de section)
+        return (
+          firstLine.length >= 4 &&
+          firstLine === firstLine.toUpperCase() &&
+          /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]/.test(firstLine)
+        )
+      })
+    posts = raw
+  }
+  // 3. Triple saut de ligne
   else if (rawText.includes('\n\n\n')) {
     posts = rawText.split(/\n{3,}/).map(p => p.trim()).filter(p => p.length > 0)
   }
-  // 3. Posts numérotés (1. ou 1) au début d'une ligne)
+  // 4. Posts numérotés (1. ou 1) au début d'une ligne)
   else if (/^\d+[\.\)]/m.test(rawText)) {
     posts = rawText
       .split(/\n(?=\d+[\.\)]\s)/)
       .map(p => p.replace(/^\d+[\.\)]\s*/, '').trim())
       .filter(p => p.length > 0)
   }
-  // 4. Fallback : double saut de ligne
+  // 5. Fallback : double saut de ligne + smart merge des titres courts
   else {
-    posts = rawText.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0)
-  }
-
-  // --- Fusion intelligente : titre court + contenu suivant ---
-  // Un "titre" = bloc court (< 130 chars) sans ponctuation finale (.?!)
-  // On le fusionne avec le bloc suivant pour former un post complet
-  const merged: string[] = []
-  let i = 0
-  while (i < posts.length) {
-    const current = posts[i].trim()
-    const looksLikeTitle =
-      current.length < 130 &&
-      !current.match(/[.?!…]$/) &&
-      !current.match(/\n/) &&   // sur une seule ligne
-      i + 1 < posts.length
-
-    if (looksLikeTitle) {
-      merged.push(current + '\n\n' + posts[i + 1].trim())
-      i += 2
-    } else {
-      merged.push(current)
-      i++
+    const raw = rawText.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 0)
+    const merged: string[] = []
+    let i = 0
+    while (i < raw.length) {
+      const current = raw[i]
+      const lines = current.split('\n').filter(l => l.trim())
+      const isTitle =
+        lines.length <= 2 &&
+        current.length < 130 &&
+        !current.match(/[.?!…]$/) &&
+        i + 1 < raw.length
+      if (isTitle) {
+        merged.push(current + '\n\n' + raw[i + 1])
+        i += 2
+      } else {
+        merged.push(current)
+        i++
+      }
     }
+    posts = merged
   }
 
-  return merged
+  return posts
     .filter(p => p.length >= 50)
     .slice(0, 100)
 }
