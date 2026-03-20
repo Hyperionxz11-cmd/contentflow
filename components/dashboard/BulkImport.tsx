@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileText, Calendar, Check, X, Loader2 } from 'lucide-react'
+import { Upload, FileText, Calendar, Check, X, Loader2, Eye, Pencil, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface BulkImportProps {
   onImport: (posts: { content: string; scheduledAt: string; status: string }[]) => void
@@ -21,6 +21,11 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   const [startTime, setStartTime] = useState('09:00')
   const [dragOver, setDragOver] = useState(false)
 
+  // État par post : expanded (aperçu complet) + editing (mode édition)
+  const [expandedPosts, setExpandedPosts] = useState<Set<number>>(new Set())
+  const [editingPosts, setEditingPosts] = useState<Set<number>>(new Set())
+  const [editedContent, setEditedContent] = useState<Record<number, string>>({})
+
   const handleFile = async (file: File) => {
     setLoading(true)
     setError('')
@@ -29,7 +34,6 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
       let text = ''
 
       if (file.name.toLowerCase().match(/\.docx?$/)) {
-        // ✅ Extraction DOCX côté client — évite la limite de taille serveur (4.5 Mo)
         setLoadingMsg('Extraction du texte en cours...')
         try {
           const arrayBuffer = await file.arrayBuffer()
@@ -49,7 +53,6 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
         throw new Error('Format non supporté. Utilisez .docx, .txt ou .md')
       }
 
-      // Envoyer uniquement le texte (quelques Ko) au lieu du fichier entier
       setLoadingMsg('Détection des posts...')
       const res = await fetch('/api/import', {
         method: 'POST',
@@ -70,6 +73,9 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
       setPosts(data.posts)
       setFilename(data.filename)
       setSelectedPosts(new Set(data.posts.map((_: string, i: number) => i)))
+      setExpandedPosts(new Set())
+      setEditingPosts(new Set())
+      setEditedContent({})
       setStep('preview')
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'import")
@@ -97,6 +103,49 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
     else next.add(idx)
     setSelectedPosts(next)
   }
+
+  const toggleExpand = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = new Set(expandedPosts)
+    if (next.has(idx)) next.delete(idx)
+    else next.add(idx)
+    setExpandedPosts(next)
+  }
+
+  const startEdit = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = new Set(editingPosts)
+    next.add(idx)
+    setEditingPosts(next)
+    // Assurer que le post est expanded en mode édition
+    const exp = new Set(expandedPosts)
+    exp.add(idx)
+    setExpandedPosts(exp)
+    // Initialiser avec le contenu actuel (édité ou original)
+    if (!(idx in editedContent)) {
+      setEditedContent(prev => ({ ...prev, [idx]: posts[idx] }))
+    }
+  }
+
+  const saveEdit = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = new Set(editingPosts)
+    next.delete(idx)
+    setEditingPosts(next)
+  }
+
+  const cancelEdit = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const next = new Set(editingPosts)
+    next.delete(idx)
+    setEditingPosts(next)
+    // Supprimer les modifications
+    const ed = { ...editedContent }
+    delete ed[idx]
+    setEditedContent(ed)
+  }
+
+  const getPostContent = (idx: number) => editedContent[idx] ?? posts[idx]
 
   const getNextDate = (current: Date, freq: string): Date => {
     const next = new Date(current)
@@ -128,7 +177,11 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   }
 
   const handleSchedule = () => {
-    const selected = posts.filter((_, i) => selectedPosts.has(i))
+    const selected = posts
+      .map((_, i) => i)
+      .filter(i => selectedPosts.has(i))
+      .map(i => getPostContent(i))
+
     let currentDate = new Date(`${startDate}T${startTime}:00`)
     const scheduled = selected.map((content, i) => {
       if (i > 0) currentDate = getNextDate(currentDate, frequency)
@@ -139,9 +192,9 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
               {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Aperçu des posts' : 'Programmer'}
@@ -161,6 +214,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
+
           {/* STEP 1: Upload */}
           {step === 'upload' && (
             <div>
@@ -227,30 +281,119 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                 </button>
               </div>
 
-              {posts.map((post, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => togglePost(idx)}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                    selectedPosts.has(idx)
-                      ? 'border-[var(--primary)] bg-[var(--primary-light)]/30'
-                      : 'border-gray-200 opacity-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      selectedPosts.has(idx) ? 'bg-[var(--primary)] text-white' : 'border-2 border-gray-300'
-                    }`}>
-                      {selectedPosts.has(idx) && <Check className="w-3 h-3" />}
+              {posts.map((_, idx) => {
+                const content = getPostContent(idx)
+                const isSelected = selectedPosts.has(idx)
+                const isExpanded = expandedPosts.has(idx)
+                const isEditing = editingPosts.has(idx)
+                const isModified = idx in editedContent
+                const charCount = content.length
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => !isEditing && togglePost(idx)}
+                    className={`rounded-xl border transition-all ${
+                      isEditing
+                        ? 'border-amber-400 bg-amber-50/30 cursor-default'
+                        : isSelected
+                        ? 'border-[var(--primary)] bg-[var(--primary-light)]/20 cursor-pointer hover:bg-[var(--primary-light)]/30'
+                        : 'border-gray-200 opacity-60 cursor-pointer hover:opacity-80'
+                    }`}
+                  >
+                    {/* Card Header */}
+                    <div className="flex items-start gap-3 p-4">
+                      {/* Checkbox */}
+                      <div
+                        className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          isEditing
+                            ? 'border-2 border-amber-400 bg-white'
+                            : isSelected
+                            ? 'bg-[var(--primary)] text-white'
+                            : 'border-2 border-gray-300'
+                        }`}
+                        onClick={(e) => { e.stopPropagation(); if (!isEditing) togglePost(idx) }}
+                      >
+                        {isSelected && !isEditing && <Check className="w-3 h-3" />}
+                      </div>
+
+                      {/* Content preview */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-xs font-medium text-gray-400">Post {idx + 1}</p>
+                          {isModified && (
+                            <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">modifié</span>
+                          )}
+                          <span className="text-xs text-gray-400 ml-auto">{charCount} car.</span>
+                        </div>
+
+                        {isEditing ? (
+                          <textarea
+                            value={editedContent[idx] ?? content}
+                            onChange={(e) => {
+                              e.stopPropagation()
+                              setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full text-sm text-gray-700 border border-amber-300 rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                            rows={Math.min(Math.max(content.split('\n').length + 2, 5), 15)}
+                            autoFocus
+                          />
+                        ) : isExpanded ? (
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{content}</p>
+                        ) : (
+                          <p className="text-sm text-gray-700 line-clamp-2">{content}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-400 mb-1">Post {idx + 1}</p>
-                      <p className="text-sm text-gray-700 line-clamp-3">{post}</p>
-                      <p className="text-xs text-gray-400 mt-1">{post.length} caractères</p>
+
+                    {/* Action bar */}
+                    <div
+                      className="flex items-center gap-1 px-4 pb-3 pt-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={(e) => saveEdit(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--primary-dark)] transition-colors"
+                          >
+                            <Check className="w-3 h-3" />
+                            Enregistrer
+                          </button>
+                          <button
+                            onClick={(e) => cancelEdit(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                            Annuler
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={(e) => startEdit(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-[var(--primary)] hover:bg-[var(--primary-light)]/30 rounded-lg transition-colors"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            Modifier
+                          </button>
+                          <button
+                            onClick={(e) => toggleExpand(idx, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors ml-auto"
+                          >
+                            {isExpanded ? (
+                              <><ChevronUp className="w-3 h-3" /> Réduire</>
+                            ) : (
+                              <><ChevronDown className="w-3 h-3" /> Voir tout</>
+                            )}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -331,7 +474,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
           {step !== 'upload' && (
             <button
               onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
