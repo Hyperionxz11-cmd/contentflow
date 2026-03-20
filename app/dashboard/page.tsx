@@ -394,13 +394,21 @@ export default function DashboardPage() {
         <div style={{flex:1}} />
 
         <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-          <div style={{
-            width:'34px',height:'34px',borderRadius:'50%',
-            background:LINKEDIN_COLORS.primaryBlue,display:'flex',alignItems:'center',justifyContent:'center',
-            color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'13px'
-          }}>
-            {(profile?.full_name||profile?.email||'U')[0].toUpperCase()}
-          </div>
+          {profile?.linkedin_picture_url ? (
+            <img
+              src={profile.linkedin_picture_url}
+              alt="Profil"
+              style={{width:'34px',height:'34px',borderRadius:'50%',objectFit:'cover',border:`2px solid ${LINKEDIN_COLORS.primaryBlue}`}}
+            />
+          ) : (
+            <div style={{
+              width:'34px',height:'34px',borderRadius:'50%',
+              background:LINKEDIN_COLORS.primaryBlue,display:'flex',alignItems:'center',justifyContent:'center',
+              color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'13px'
+            }}>
+              {(profile?.full_name||profile?.email||'U')[0].toUpperCase()}
+            </div>
+          )}
           <button onClick={handleLogout} style={{
             display:'flex',alignItems:'center',gap:'4px',
             padding:'6px 12px',borderRadius:'9999px',
@@ -424,7 +432,7 @@ export default function DashboardPage() {
         gap:'20px'
       }}>
         <aside style={{
-          width:'225px',flexShrink:0,
+          width:'280px',flexShrink:0,
           position:'sticky',top:'72px',
           alignSelf:'flex-start',
           display:'flex',flexDirection:'column',gap:'8px'
@@ -434,15 +442,29 @@ export default function DashboardPage() {
             borderRadius:'8px',overflow:'hidden',textAlign:'center'
           }}>
             <div style={{height:'56px',background:`linear-gradient(135deg, ${LINKEDIN_COLORS.primaryBlue} 0%, ${LINKEDIN_COLORS.hoverBlue} 100%)`}} />
-            <div style={{marginTop:'-20px',display:'flex',justifyContent:'center'}}>
-              <div style={{
-                width:'40px',height:'40px',borderRadius:'50%',
-                background:LINKEDIN_COLORS.primaryBlue,border:`2px solid ${LINKEDIN_COLORS.white}`,
-                display:'flex',alignItems:'center',justifyContent:'center',
-                color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'16px'
-              }}>
-                {(profile?.full_name||profile?.email||'U')[0].toUpperCase()}
-              </div>
+            <div style={{marginTop:'-28px',display:'flex',justifyContent:'center'}}>
+              {profile?.linkedin_picture_url ? (
+                <img
+                  src={profile.linkedin_picture_url}
+                  alt="Photo LinkedIn"
+                  style={{
+                    width:'56px',height:'56px',borderRadius:'50%',
+                    border:`3px solid ${LINKEDIN_COLORS.white}`,
+                    objectFit:'cover',
+                    boxShadow:'0 2px 8px rgba(0,0,0,0.15)'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width:'56px',height:'56px',borderRadius:'50%',
+                  background:LINKEDIN_COLORS.primaryBlue,border:`3px solid ${LINKEDIN_COLORS.white}`,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'20px',
+                  boxShadow:'0 2px 8px rgba(0,0,0,0.15)'
+                }}>
+                  {(profile?.full_name||profile?.email||'U')[0].toUpperCase()}
+                </div>
+              )}
             </div>
             <div style={{padding:'8px 16px 16px'}}>
               <p style={{fontWeight:700,fontSize:'14px',color:LINKEDIN_COLORS.textPrimary}}>
@@ -512,14 +534,22 @@ export default function DashboardPage() {
             borderRadius:'8px',padding:'16px'
           }}>
             <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-              <div style={{
-                width:'40px',height:'40px',borderRadius:'50%',
-                background:LINKEDIN_COLORS.primaryBlue,flexShrink:0,
-                display:'flex',alignItems:'center',justifyContent:'center',
-                color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'16px'
-              }}>
-                {(profile?.full_name||'U')[0].toUpperCase()}
-              </div>
+              {profile?.linkedin_picture_url ? (
+                <img
+                  src={profile.linkedin_picture_url}
+                  alt="Profil"
+                  style={{width:'40px',height:'40px',borderRadius:'50%',objectFit:'cover',flexShrink:0,border:`2px solid rgba(0,0,0,0.08)`}}
+                />
+              ) : (
+                <div style={{
+                  width:'40px',height:'40px',borderRadius:'50%',
+                  background:LINKEDIN_COLORS.primaryBlue,flexShrink:0,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'16px'
+                }}>
+                  {(profile?.full_name||'U')[0].toUpperCase()}
+                </div>
+              )}
               <button
                 onClick={() => setShowEditor(true)}
                 style={{
@@ -805,7 +835,7 @@ export default function DashboardPage() {
         </main>
 
         <aside style={{
-          width:'220px',flexShrink:0,
+          width:'260px',flexShrink:0,
           position:'sticky',top:'72px',
           alignSelf:'flex-start',
           display:'flex',flexDirection:'column',gap:'8px'
