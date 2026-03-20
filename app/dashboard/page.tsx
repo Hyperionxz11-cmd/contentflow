@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import {
@@ -30,6 +30,7 @@ interface Profile {
   linkedin_name?: string
   linkedin_user_id?: string
   linkedin_picture_url?: string
+  linkedin_token_expires_at?: string
   full_name?: string
 }
 
@@ -47,8 +48,11 @@ export default function DashboardPage() {
   const [editDate, setEditDate] = useState('')
   const [editTime, setEditTime] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)    // id du post en cours de suppression
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)  // id affiché avec confirmation
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [retryingId, setRetryingId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const POSTS_PER_PAGE = 20
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -79,6 +83,7 @@ export default function DashboardPage() {
             linkedin_name: profileData.linkedin_name,
             linkedin_user_id: profileData.linkedin_user_id,
             linkedin_picture_url: profileData.linkedin_picture_url,
+            linkedin_token_expires_at: profileData.linkedin_token_expires_at,
             full_name: profileData.full_name,
           } as Profile)
         }
@@ -248,6 +253,45 @@ export default function DashboardPage() {
     setConfirmDeleteId(null)
   }
 
+  // Auto-refresh : met à jour le statut des posts toutes les 30s
+  const refreshPostStatuses = useCallback(async () => {
+    if (!user) return
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('posts')
+      .select('id, status')
+      .eq('user_id', user.id)
+    if (data) {
+      setPosts(prev => prev.map(p => {
+        const updated = data.find((d: any) => d.id === p.id)
+        return updated ? { ...p, status: updated.status } : p
+      }))
+    }
+  }, [user])
+
+  useEffect(() => {
+    const interval = setInterval(refreshPostStatuses, 30_000)
+    return () => clearInterval(interval)
+  }, [refreshPostStatuses])
+
+  // Réessayer un post échoué : reprogramme dans 5 minutes
+  const handleRetryPost = async (post: Post) => {
+    if (!user) return
+    setRetryingId(post.id)
+    const supabase = createClient()
+    const retryAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    const { error } = await supabase.from('posts').update({
+      status: 'scheduled',
+      scheduled_at: retryAt,
+    }).eq('id', post.id)
+    if (!error) {
+      setPosts(prev => prev.map(p =>
+        p.id === post.id ? { ...p, status: 'scheduled', scheduled_at: retryAt } : p
+      ))
+    }
+    setRetryingId(null)
+  }
+
   const handleConnectLinkedIn = () => {
     window.location.href = '/api/linkedin/auth'
   }
@@ -335,6 +379,23 @@ export default function DashboardPage() {
                     ✕ Déco
                   </button>
                 </div>
+                {/* Alerte token expiré */}
+                {profile.linkedin_token_expires_at && (() => {
+                  const daysLeft = Math.ceil((new Date(profile.linkedin_token_expires_at).getTime() - Date.now()) / 86400000)
+                  if (daysLeft <= 0) return (
+                    <div className="mt-2 ml-0 p-2 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs text-red-600 font-medium">⚠️ Token expiré — reconnecte LinkedIn</p>
+                      <button onClick={handleConnectLinkedIn} className="mt-1 text-xs text-red-600 underline">Reconnecter →</button>
+                    </div>
+                  )
+                  if (daysLeft <= 7) return (
+                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-700 font-medium">⏳ Token expire dans {daysLeft} jour{daysLeft > 1 ? 's' : ''}</p>
+                      <button onClick={handleConnectLinkedIn} className="mt-1 text-xs text-amber-700 underline">Renouveler →</button>
+                    </div>
+                  )
+                  return null
+                })()}
               </div>
             ) : (
               <>
@@ -432,7 +493,7 @@ export default function DashboardPage() {
           <CalendarView
             posts={posts}
             onDayClick={handleDayClick}
-            onPostClick={(post) => console.log('View post', post)}
+            onPostClick={(post) => setPreviewPost(post as Post)}
           />
         )}
 
@@ -449,10 +510,15 @@ export default function DashboardPage() {
                   <p className="text-sm">Clique sur "Nouveau post" ou "Importer" pour commencer !</p>
                 </div>
               ) : (
-                posts.map(post => {
+                (() => {
+                  const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE)
+                  const paginated = posts.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE)
+                  return (<>
+                  {paginated.map(post => {
                   const d = new Date(post.scheduled_at)
                   const isConfirmingDelete = confirmDeleteId === post.id
                   const isDeleting = deletingId === post.id
+                  const isRetrying = retryingId === post.id
                   return (
                     <div key={post.id} className="px-6 py-4 flex items-start gap-4 hover:bg-gray-50/60 transition-colors group">
                       {/* Date column */}
@@ -520,14 +586,27 @@ export default function DashboardPage() {
                               <Eye className="w-3.5 h-3.5" />
                               Aperçu
                             </button>
-                            <button
-                              onClick={() => openEditModal(post)}
-                              className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 hover:text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
-                              title="Modifier"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              Modifier
-                            </button>
+                            {post.status !== 'published' && (
+                              <button
+                                onClick={() => openEditModal(post)}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 hover:text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
+                                title="Modifier"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                Modifier
+                              </button>
+                            )}
+                            {post.status === 'failed' && (
+                              <button
+                                onClick={() => handleRetryPost(post)}
+                                disabled={isRetrying}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded-lg transition-colors font-medium"
+                                title="Réessayer dans 5 min"
+                              >
+                                {isRetrying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '↺'}
+                                Réessayer
+                              </button>
+                            )}
                             <button
                               onClick={() => setConfirmDeleteId(post.id)}
                               className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -540,7 +619,33 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )
-                })
+                  })}
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
+                      <span className="text-xs text-gray-400">
+                        Page {currentPage} / {totalPages} · {posts.length} posts
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                        >
+                          ← Précédent
+                        </button>
+                        <button
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                        >
+                          Suivant →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  </>)
+                })()
               )}
             </div>
           </div>
