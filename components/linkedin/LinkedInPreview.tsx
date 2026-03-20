@@ -31,25 +31,47 @@ function formatLinkedInText(text: string) {
   })
 }
 
-/** Nettoie le texte : supprime balises HTML résiduelles, extrait les src d'images */
+/** Supprime les lignes de structure DOCX (ALL CAPS, Semaine X —) qui ne doivent pas apparaître */
+function stripDocxHeaders(text: string): string {
+  return text
+    .split('\n')
+    .filter(line => {
+      const t = line.trim()
+      if (!t) return true
+      if (t.length >= 3 && t === t.toUpperCase() && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3,}/.test(t)) return false
+      if (/^Semaine\s+\d+\s*[—–-]/i.test(t)) return false
+      return true
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** Nettoie le texte : supprime balises HTML résiduelles, extrait les src d'images (vraies images uniquement) */
 function cleanTextAndImages(raw: string): { text: string; imgs: string[] } {
   const imgs: string[] = []
   if (typeof window !== 'undefined') {
     const div = document.createElement('div')
     div.innerHTML = raw
-    // Extraire les images
+    // Extraire uniquement les vraies images (pas les PDF/doc/zip)
     div.querySelectorAll('img').forEach(el => {
       const src = el.getAttribute('src')
-      if (src) imgs.push(src)
+      if (src) {
+        const isDataImage = src.startsWith('data:image/')
+        const isImageUrl = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(src)
+        const isHttpImage = src.startsWith('http') &&
+          !/\.(pdf|doc|docx|xls|xlsx|zip|rar|ppt|pptx|txt|xml)(\?.*)?$/i.test(src)
+        if (isDataImage || isImageUrl || isHttpImage) imgs.push(src)
+      }
       el.remove()
     })
-    // Remplacer les <br> et </p> par des sauts de ligne
     div.querySelectorAll('p, br, h1, h2, h3').forEach(el => {
       el.insertAdjacentText('afterend', '\n')
     })
-    return { text: (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim(), imgs }
+    const rawText = (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
+    return { text: stripDocxHeaders(rawText), imgs }
   }
-  return { text: raw.replace(/<[^>]+>/g, '').trim(), imgs }
+  return { text: stripDocxHeaders(raw.replace(/<[^>]+>/g, '').trim()), imgs }
 }
 
 export default function LinkedInPreview({

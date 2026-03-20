@@ -47,6 +47,24 @@ function splitHtmlIntoPosts(html: string): string[] {
   })
 }
 
+/** Supprimer les lignes de structure DOCX qui ne doivent pas apparaître dans un post LinkedIn */
+function stripDocxHeaders(text: string): string {
+  return text
+    .split('\n')
+    .filter(line => {
+      const t = line.trim()
+      if (!t) return true
+      // Supprimer les lignes tout en MAJUSCULES (ex: "FONDAMENTAUX", "CHAPITRE 2")
+      if (t.length >= 3 && t === t.toUpperCase() && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3,}/.test(t)) return false
+      // Supprimer les lignes "Semaine X — ..." ou "Semaine X –"
+      if (/^Semaine\s+\d+\s*[—–-]/i.test(t)) return false
+      return true
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 function htmlToText(html: string): string {
   if (typeof window === 'undefined') return html.replace(/<[^>]+>/g, '')
   const div = document.createElement('div')
@@ -54,7 +72,8 @@ function htmlToText(html: string): string {
   div.querySelectorAll('p, h1, h2, h3').forEach(el => { el.insertAdjacentText('afterend', '\n') })
   div.querySelectorAll('br').forEach(el => el.replaceWith('\n'))
   div.querySelectorAll('img').forEach(el => el.remove())
-  return (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
+  const raw = (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
+  return stripDocxHeaders(raw)
 }
 
 function countImages(html: string): number {
@@ -68,7 +87,13 @@ function extractImagesFromHtml(html: string): string[] {
   const imgs: string[] = []
   div.querySelectorAll('img').forEach(el => {
     const src = el.getAttribute('src')
-    if (src) imgs.push(src)
+    if (!src) return
+    // Garder uniquement les vraies images — exclure PDF/doc/zip/etc.
+    const isDataImage = src.startsWith('data:image/')
+    const isImageUrl = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(src)
+    const isHttpImage = src.startsWith('http') &&
+      !/\.(pdf|doc|docx|xls|xlsx|zip|rar|ppt|pptx|txt|xml)(\?.*)?$/i.test(src)
+    if (isDataImage || isImageUrl || isHttpImage) imgs.push(src)
   })
   return imgs
 }
