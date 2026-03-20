@@ -159,6 +159,25 @@ export default function DashboardPage() {
     window.location.href = '/api/linkedin/auth'
   }
 
+  const handleDisconnectLinkedIn = async () => {
+    if (!user) return
+    const supabase = createClient()
+    await supabase.from('profiles').update({
+      linkedin_access_token: null,
+      linkedin_user_id: null,
+      linkedin_name: null,
+      linkedin_picture_url: null,
+      linkedin_connected: false,
+    }).eq('id', user.id)
+    setProfile(prev => prev ? {
+      ...prev,
+      linkedin_connected: false,
+      linkedin_name: undefined,
+      linkedin_user_id: undefined,
+      linkedin_picture_url: undefined,
+    } : prev)
+  }
+
   const scheduledCount = posts.filter(p => p.status === 'scheduled').length
   const publishedCount = posts.filter(p => p.status === 'published').length
 
@@ -211,9 +230,18 @@ export default function DashboardPage() {
                   <Linkedin className="w-5 h-5" />
                   <span className="font-medium">LinkedIn connecté</span>
                 </div>
-                <p className="text-xs text-gray-500 ml-7">
-                  {profile.linkedin_name || profile.full_name || 'Compte vérifié'}
-                </p>
+                <div className="flex items-center justify-between ml-7 mt-0.5">
+                  <p className="text-xs text-gray-500 truncate max-w-[110px]">
+                    {profile.linkedin_name || profile.full_name || 'Compte vérifié'}
+                  </p>
+                  <button
+                    onClick={handleDisconnectLinkedIn}
+                    className="text-xs text-red-400 hover:text-red-600 transition-colors font-medium flex-shrink-0"
+                    title="Déconnecter LinkedIn"
+                  >
+                    ✕ Déco
+                  </button>
+                </div>
               </div>
             ) : (
               <>
