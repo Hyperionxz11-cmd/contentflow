@@ -79,8 +79,15 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
     })
   }, [currentDate])
 
+  const toLocalDateStr = (date: Date): string => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
   const getPostsForDate = (date: Date): Post[] => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = toLocalDateStr(date)
     return posts.filter(p => p.scheduled_at.startsWith(dateStr))
   }
 
@@ -267,7 +274,7 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
       >
         {displayDays.map(({ date, currentMonth }, idx) => {
           const dayPosts = getPostsForDate(date)
-          const dateStr = date.toISOString().split('T')[0]
+          const dateStr = toLocalDateStr(date)
           const today = isToday(date)
           const isHovered = hoveredDay === idx
 
@@ -404,3 +411,4 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
     </div>
   )
 }
+
