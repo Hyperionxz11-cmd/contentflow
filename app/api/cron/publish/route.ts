@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
         const result = await publishPost(
           post.linkedin_access_token,
           post.linkedin_user_id,
-          post.content
+          post.content,
+          Array.isArray(post.images) && post.images.length > 0 ? post.images : undefined
         )
         await supabase.rpc('mark_post_published', {
           p_post_id: post.post_id,
