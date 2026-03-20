@@ -10,6 +10,7 @@ import {
 import CalendarView from '@/components/calendar/CalendarView'
 import PostEditor from '@/components/post/PostEditor'
 import BulkImport from '@/components/dashboard/BulkImport'
+import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 import { defaultTemplates } from '@/lib/templates'
 
 interface Post {
@@ -17,7 +18,6 @@ interface Post {
   content: string
   scheduled_at: string
   status: 'scheduled' | 'published' | 'failed' | 'draft'
-  image_url?: string
 }
 
 interface Profile {
@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [showBulkImport, setShowBulkImport] = useState(false)
   const [selectedDate, setSelectedDate] = useState('')
   const [activeTab, setActiveTab] = useState<'calendar' | 'posts' | 'analytics'>('calendar')
+  const [previewPost, setPreviewPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -126,7 +127,7 @@ export default function DashboardPage() {
     setShowEditor(false)
   }
 
-  const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string; image_url?: string }[]) => {
+  const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string }[]) => {
     if (user) {
       const supabase = createClient()
       const toInsert = importedPosts.map(p => ({
@@ -134,7 +135,6 @@ export default function DashboardPage() {
         content: p.content,
         scheduled_at: p.scheduledAt,
         status: p.status,
-        image_url: p.image_url || null,
       }))
 
       const { data } = await supabase.from('posts').insert(toInsert).select()
@@ -144,7 +144,6 @@ export default function DashboardPage() {
           content: d.content,
           scheduled_at: d.scheduled_at,
           status: d.status,
-          image_url: d.image_url,
         }))])
       }
     }
@@ -313,38 +312,64 @@ export default function DashboardPage() {
 
         {activeTab === 'posts' && (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">Tous les posts</h3>
+              <span className="text-xs text-gray-400">Clique sur un post pour voir l'aperçu LinkedIn</span>
             </div>
             <div className="divide-y divide-gray-50">
               {posts.length === 0 ? (
                 <div className="p-12 text-center text-gray-400">
                   <p className="text-lg mb-2">Aucun post pour l'instant</p>
-                  <p className="text-sm">Clique sur "Nouveau post" pour commencer !</p>
+                  <p className="text-sm">Clique sur "Nouveau post" ou "Importer" pour commencer !</p>
                 </div>
               ) : (
-                posts.map(post => (
-                  <div key={post.id} className="px-6 py-4 flex items-start gap-4 hover:bg-gray-50/50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800 line-clamp-2">{post.content}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {new Date(post.scheduled_at).toLocaleDateString('fr-FR', {
-                          day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        })}
-                      </p>
+                posts.map(post => {
+                  const d = new Date(post.scheduled_at)
+                  const isPast = d < new Date()
+                  return (
+                    <div
+                      key={post.id}
+                      onClick={() => setPreviewPost(post)}
+                      className="px-6 py-4 flex items-start gap-4 hover:bg-blue-50/30 transition-colors cursor-pointer group"
+                    >
+                      {/* Date column */}
+                      <div className="flex-shrink-0 w-14 text-center">
+                        <p className="text-xl font-bold text-[var(--primary)] leading-none">{d.getDate()}</p>
+                        <p className="text-xs text-gray-400 uppercase mt-0.5">
+                          {d.toLocaleDateString('fr-FR', { month: 'short' })}
+                        </p>
+                        <p className="text-xs text-gray-400">{d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-800 line-clamp-2 group-hover:text-gray-900 transition-colors">
+                          {post.content.replace(/<[^>]+>/g, '').slice(0, 200)}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {post.content.replace(/<[^>]+>/g, '').length} caractères
+                        </p>
+                      </div>
+
+                      {/* Status + preview hint */}
+                      <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                          post.status === 'scheduled' ? 'bg-[var(--primary-light)] text-[var(--primary)]' :
+                          post.status === 'published' ? 'bg-emerald-50 text-emerald-600' :
+                          post.status === 'failed' ? 'bg-red-50 text-red-600' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {post.status === 'scheduled' ? '⏰ Programmé' :
+                           post.status === 'published' ? '✓ Publié' :
+                           post.status === 'failed' ? '✗ Échoué' : 'Brouillon'}
+                        </span>
+                        <span className="text-xs text-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                          Voir aperçu →
+                        </span>
+                      </div>
                     </div>
-                    <span className={`flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full ${
-                      post.status === 'scheduled' ? 'bg-[var(--primary-light)] text-[var(--primary)]' :
-                      post.status === 'published' ? 'bg-emerald-50 text-emerald-600' :
-                      post.status === 'failed' ? 'bg-red-50 text-red-600' :
-                      'bg-gray-100 text-gray-500'
-                    }`}>
-                      {post.status === 'scheduled' ? 'Programmé' :
-                       post.status === 'published' ? 'Publié' :
-                       post.status === 'failed' ? 'Échoué' : 'Brouillon'}
-                    </span>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
@@ -358,6 +383,18 @@ export default function DashboardPage() {
               Les analytics seront disponibles une fois que tu auras connecté ton LinkedIn et publié quelques posts.
             </p>
           </div>
+        )}
+
+        {/* LinkedIn Preview Modal */}
+        {previewPost && (
+          <LinkedInPreview
+            content={previewPost.content}
+            scheduledAt={previewPost.scheduled_at}
+            status={previewPost.status}
+            authorName={profile?.linkedin_name || profile?.full_name || 'André Isoz'}
+            authorHeadline="Conseiller financier | Brevet Fédéral"
+            onClose={() => setPreviewPost(null)}
+          />
         )}
 
         {/* Bulk Import Modal */}
