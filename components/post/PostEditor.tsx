@@ -9,11 +9,13 @@ interface PostEditorProps {
   onClose?: () => void
   initialDate?: string
   templates?: Array<{ title: string; content: string; category: string }>
+  authorAvatar?: string
+  authorName?: string
 }
 
 const font = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
 
-export default function PostEditor({ onSave, onClose, initialDate, templates = [] }: PostEditorProps) {
+export default function PostEditor({ onSave, onClose, initialDate, templates = [], authorAvatar, authorName }: PostEditorProps) {
   const [content, setContent] = useState('')
   const [scheduledDate, setScheduledDate] = useState(initialDate || '')
   const [scheduledTime, setScheduledTime] = useState('09:00')
@@ -180,7 +182,7 @@ export default function PostEditor({ onSave, onClose, initialDate, templates = [
           </>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
-            <LinkedInPreview content={content} />
+            <LinkedInPreview content={content} authorAvatar={authorAvatar} authorName={authorName} />
           </div>
         )}
 

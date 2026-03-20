@@ -691,6 +691,8 @@ export default function DashboardPage() {
               <BulkImport
                 onImport={handleBulkImport}
                 onClose={()=>setShowBulkImport(false)}
+                authorAvatar={profile?.linkedin_picture_url}
+                authorName={profile?.linkedin_name||profile?.full_name}
               />
             )}
           </AnimatePresence>
@@ -827,6 +829,8 @@ export default function DashboardPage() {
                     onClose={()=>setShowEditor(false)}
                     initialDate={selectedDate}
                     templates={defaultTemplates}
+                    authorAvatar={profile?.linkedin_picture_url}
+                    authorName={profile?.linkedin_name||profile?.full_name}
                   />
                 </motion.div>
               </motion.div>

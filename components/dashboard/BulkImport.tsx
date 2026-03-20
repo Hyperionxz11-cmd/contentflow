@@ -7,6 +7,8 @@ import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 interface BulkImportProps {
   onImport: (posts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => Promise<void> | void
   onClose: () => void
+  authorAvatar?: string
+  authorName?: string
 }
 
 function splitHtmlIntoPosts(html: string): string[] {
@@ -113,7 +115,7 @@ async function serverSplit(text: string, filename: string): Promise<string[]> {
 
 const font = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
 
-export default function BulkImport({ onImport, onClose }: BulkImportProps) {
+export default function BulkImport({ onImport, onClose, authorAvatar, authorName }: BulkImportProps) {
   const [step, setStep] = useState<'upload' | 'preview' | 'schedule'>('upload')
   const [posts, setPosts] = useState<string[]>([])
   const [isHtml, setIsHtml] = useState(false)
@@ -283,6 +285,8 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
         <LinkedInPreview
           content={getTextContent(previewIdx)}
           images={isHtml && !(previewIdx in editedContent) ? extractImagesFromHtml(posts[previewIdx]) : []}
+          authorAvatar={authorAvatar}
+          authorName={authorName}
           onClose={() => setPreviewIdx(null)}
         />
       )}
