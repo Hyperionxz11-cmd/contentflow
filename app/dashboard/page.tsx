@@ -18,6 +18,7 @@ interface Post {
   content: string
   scheduled_at: string
   status: 'scheduled' | 'published' | 'failed' | 'draft'
+  images?: string[]
 }
 
 interface Profile {
@@ -27,6 +28,7 @@ interface Profile {
   linkedin_connected: boolean
   linkedin_name?: string
   linkedin_user_id?: string
+  linkedin_picture_url?: string
   full_name?: string
 }
 
@@ -68,6 +70,7 @@ export default function DashboardPage() {
             linkedin_connected: profileData.linkedin_connected || !!profileData.linkedin_access_token,
             linkedin_name: profileData.linkedin_name,
             linkedin_user_id: profileData.linkedin_user_id,
+            linkedin_picture_url: profileData.linkedin_picture_url,
             full_name: profileData.full_name,
           } as Profile)
         }
@@ -127,7 +130,7 @@ export default function DashboardPage() {
     setShowEditor(false)
   }
 
-  const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string }[]) => {
+  const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => {
     if (user) {
       const supabase = createClient()
       const toInsert = importedPosts.map(p => ({
@@ -135,6 +138,7 @@ export default function DashboardPage() {
         content: p.content,
         scheduled_at: p.scheduledAt,
         status: p.status,
+        images: p.images && p.images.length > 0 ? p.images : [],
       }))
 
       const { data } = await supabase.from('posts').insert(toInsert).select()
@@ -144,6 +148,7 @@ export default function DashboardPage() {
           content: d.content,
           scheduled_at: d.scheduled_at,
           status: d.status,
+          images: d.images || [],
         }))])
       }
     }
@@ -393,6 +398,8 @@ export default function DashboardPage() {
             status={previewPost.status}
             authorName={profile?.linkedin_name || profile?.full_name || 'André Isoz'}
             authorHeadline="Conseiller financier | Brevet Fédéral"
+            authorAvatar={profile?.linkedin_picture_url}
+            images={previewPost.images || []}
             onClose={() => setPreviewPost(null)}
           />
         )}
