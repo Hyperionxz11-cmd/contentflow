@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileText, Calendar, Check, X, Loader2, Pencil, ChevronDown, ChevronUp, Image as ImageIcon } from 'lucide-react'
+import { Upload, FileText, Calendar, Check, X, Loader2, Pencil, ChevronDown, ChevronUp, Image as ImageIcon, Linkedin } from 'lucide-react'
+import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 
 interface BulkImportProps {
   onImport: (posts: { content: string; scheduledAt: string; status: string }[]) => void
@@ -109,6 +110,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   const [expandedPosts, setExpandedPosts] = useState<Set<number>>(new Set())
   const [editingPosts, setEditingPosts] = useState<Set<number>>(new Set())
   const [editedContent, setEditedContent] = useState<Record<number, string>>({})
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null)
 
   // ── Gestion fichier ───────────────────────────────────────
 
@@ -314,6 +316,13 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
   // ─────────────────────────────────────────────────────────
 
   return (
+    <>
+    {previewIdx !== null && (
+      <LinkedInPreview
+        content={getTextContent(previewIdx)}
+        onClose={() => setPreviewIdx(null)}
+      />
+    )}
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
 
@@ -495,6 +504,11 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
                             className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-[var(--primary)] hover:bg-[var(--primary-light)]/30 rounded-lg transition-colors">
                             <Pencil className="w-3 h-3" /> Modifier
                           </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
+                            className="flex items-center gap-1 px-3 py-1.5 text-[#0a66c2] text-xs hover:bg-blue-50 rounded-lg transition-colors font-medium">
+                            <Linkedin className="w-3 h-3" /> Aperçu
+                          </button>
                           <button onClick={e => toggleExpand(idx, e)}
                             className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors ml-auto">
                             {isExpanded ? <><ChevronUp className="w-3 h-3" />Réduire</> : <><ChevronDown className="w-3 h-3" />Voir tout</>}
@@ -589,5 +603,6 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
         </div>
       </div>
     </div>
+    </>
   )
 }
