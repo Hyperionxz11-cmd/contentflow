@@ -46,7 +46,7 @@ export default function LoginPage() {
       y: 0,
       transition: {
         duration: 0.6,
-        ease: [0.16, 1, 0.3, 1],
+        ease: "easeOut",
       },
     },
   }
@@ -58,7 +58,7 @@ export default function LoginPage() {
       x: 0,
       transition: {
         duration: 0.7,
-        ease: [0.16, 1, 0.3, 1],
+        ease: "easeOut",
         delay: 0.2,
       },
     },
@@ -71,7 +71,7 @@ export default function LoginPage() {
       x: 0,
       transition: {
         duration: 0.7,
-        ease: [0.16, 1, 0.3, 1],
+        ease: "easeOut",
       },
     },
   }
@@ -95,7 +95,7 @@ export default function LoginPage() {
       y: 0,
       transition: {
         duration: 0.5,
-        ease: [0.16, 1, 0.3, 1],
+        ease: "easeOut",
       },
     },
   }

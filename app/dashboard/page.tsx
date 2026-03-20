@@ -358,7 +358,7 @@ export default function DashboardPage() {
         <motion.aside
           initial={{x:-240}}
           animate={{x:0}}
-          transition={{duration:0.5,ease:[0.16,1,0.3,1]}}
+          transition={{duration:0.5,ease: "easeOut"}}
           style={{
             position:'fixed',
             left:0,
@@ -731,7 +731,7 @@ export default function DashboardPage() {
                   initial={{opacity:0,scale:0.95,y:20}}
                   animate={{opacity:1,scale:1,y:0}}
                   exit={{opacity:0,scale:0.95,y:20}}
-                  transition={{duration:0.3,ease:[0.16,1,0.3,1]}}
+                  transition={{duration:0.3,ease: "easeOut"}}
                   onClick={(e)=>e.stopPropagation()}
                   style={{
                     borderRadius:'16px',width:'100%',maxWidth:'480px',
@@ -836,7 +836,7 @@ export default function DashboardPage() {
                   initial={{opacity:0,scale:0.95,y:20}}
                   animate={{opacity:1,scale:1,y:0}}
                   exit={{opacity:0,scale:0.95,y:20}}
-                  transition={{duration:0.3,ease:[0.16,1,0.3,1]}}
+                  transition={{duration:0.3,ease: "easeOut"}}
                   onClick={(e)=>e.stopPropagation()}
                   style={{width:'100%',maxWidth:'720px',maxHeight:'90vh',overflow:'auto'}}
                 >
@@ -871,7 +871,7 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
     <motion.div
       initial={{opacity:0,y:20}}
       animate={{opacity:1,y:0}}
-      transition={{delay,duration:0.5,ease:[0.16,1,0.3,1]}}
+      transition={{delay,duration:0.5,ease: "easeOut"}}
       whileHover={{y:-3}}
       style={{
         background:'rgba(255,255,255,0.025)',

@@ -21,7 +21,7 @@ const FadeInUp = ({ children, delay = 0, duration = 0.6 }) => {
       transition={{
         duration,
         delay,
-        ease: [0.16, 1, 0.3, 1],
+        ease: "easeOut",
       }}
     >
       {children}
@@ -825,7 +825,7 @@ export default function Page() {
           <FeatureCard
             icon={Zap}
             title='Publication automatique'
-            description='Publiez directement sur LinkedIn à l\'heure choisie. Sans besoin d\'intervention manuelle.'
+            description="Publiez directement sur LinkedIn à l'heure choisie. Sans besoin d'intervention manuelle."
             delay={0.2}
           />
           <FeatureCard
@@ -837,7 +837,7 @@ export default function Page() {
           <FeatureCard
             icon={Sparkles}
             title='Prévisualisation réaliste'
-            description='Voyez exactement comment votre post s\'affichera sur LinkedIn avant publication.'
+            description={"Voyez exactement comment votre post s'affichera sur LinkedIn avant publication."}
             delay={0.4}
           />
           <FeatureCard
@@ -892,7 +892,7 @@ export default function Page() {
             initials='SM'
             name='Sophie Martin'
             role='Coach Business · 18K abonnés'
-            quote='ContentFlow a transformé ma stratégie LinkedIn. J\'ai doublé mon engagement en 3 mois et économisé 5h par semaine.'
+            quote={"ContentFlow a transformé ma stratégie LinkedIn. J'ai doublé mon engagement en 3 mois et économisé 5h par semaine."}
             avatarColor='#A78BFA'
             delay={0}
           />
@@ -908,7 +908,7 @@ export default function Page() {
             initials='CD'
             name='Camille Dupont'
             role='Consultante RH · 12K abonnés'
-            quote='Les templates m\'ont sauvé. Je n\'avais plus de blocage créatif, résultat : 3x plus de leads.'
+            quote="Les templates m'ont sauvé. Je n'avais plus de blocage créatif, résultat : 3x plus de leads."
             avatarColor='#10B981'
             delay={0.2}
           />
