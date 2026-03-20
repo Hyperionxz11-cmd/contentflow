@@ -19,19 +19,21 @@ interface CalendarViewProps {
 const DAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const MONTHS_FR = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ]
 
-const statusColors: Record<string, string> = {
-  scheduled: 'bg-[rgba(124,58,237,0.2)] text-[#A78BFA]',
-  published: 'bg-[rgba(16,185,129,0.2)] text-[#6EE7B7]',
-  failed: 'bg-[rgba(239,68,68,0.2)] text-[#FCA5A5]',
-  draft: 'bg-[rgba(255,255,255,0.07)] text-[#A1A1AA]',
+const statusStyle: Record<string, { background: string; color: string }> = {
+  scheduled: { background: 'rgba(10,102,194,0.1)', color: '#0A66C2' },
+  published: { background: 'rgba(5,150,105,0.1)', color: '#059669' },
+  failed:    { background: 'rgba(220,38,38,0.1)',  color: '#DC2626' },
+  draft:     { background: 'rgba(0,0,0,0.06)',     color: 'rgba(0,0,0,0.5)' },
 }
 
 export default function CalendarView({ posts, onDayClick, onPostClick }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<'month' | 'week'>('month')
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null)
+  const [hoveredView, setHoveredView] = useState<'month' | 'week' | null>(null)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -49,24 +51,19 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
-    const startOffset = (firstDay.getDay() + 6) % 7 // Monday start
+    const startOffset = (firstDay.getDay() + 6) % 7
     const days: Array<{ date: Date; currentMonth: boolean }> = []
 
-    // Previous month days
     for (let i = startOffset - 1; i >= 0; i--) {
-      const d = new Date(year, month, -i)
-      days.push({ date: d, currentMonth: false })
+      days.push({ date: new Date(year, month, -i), currentMonth: false })
     }
-    // Current month days
     for (let i = 1; i <= lastDay.getDate(); i++) {
       days.push({ date: new Date(year, month, i), currentMonth: true })
     }
-    // Fill remaining to complete grid
     const remaining = 42 - days.length
     for (let i = 1; i <= remaining; i++) {
       days.push({ date: new Date(year, month + 1, i), currentMonth: false })
     }
-
     return days
   }, [year, month])
 
@@ -75,7 +72,6 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
     const day = startOfWeek.getDay()
     const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1)
     startOfWeek.setDate(diff)
-
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startOfWeek)
       d.setDate(d.getDate() + i)
@@ -95,100 +91,310 @@ export default function CalendarView({ posts, onDayClick, onPostClick }: Calenda
 
   const displayDays = view === 'month' ? calendarDays : weekDays
 
+  const font = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+
   return (
-    <div className="bg-[#111116] rounded-xl border border-[rgba(255,255,255,0.07)] overflow-hidden">
+    <div
+      style={{
+        background: '#FFFFFF',
+        border: '1px solid rgba(0,0,0,0.08)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        fontFamily: font,
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(255,255,255,0.07)]">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold text-[#FAFAFA]" style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 20px',
+          borderBottom: '1px solid rgba(0,0,0,0.08)',
+        }}
+      >
+        {/* Left: month + nav */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h2
+            style={{
+              fontFamily: font,
+              fontWeight: 700,
+              fontSize: '18px',
+              color: 'rgba(0,0,0,0.9)',
+              margin: 0,
+              letterSpacing: '-0.01em',
+            }}
+          >
             {MONTHS_FR[month]} {year}
           </h2>
-          <div className="flex items-center gap-1">
-            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors">
-              <ChevronLeft className="w-5 h-5 text-[#71717A]" />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'rgba(0,0,0,0.55)',
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.06)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <ChevronLeft style={{ width: '16px', height: '16px' }} />
             </button>
+
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-1 text-xs font-medium text-[#A78BFA] border border-[#7C3AED] hover:bg-[rgba(124,58,237,0.1)] rounded-lg transition-colors"
+              style={{
+                padding: '4px 12px',
+                borderRadius: '9999px',
+                border: '1px solid #0A66C2',
+                background: 'transparent',
+                color: '#0A66C2',
+                fontSize: '12px',
+                fontWeight: 600,
+                fontFamily: font,
+                cursor: 'pointer',
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(10,102,194,0.06)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              Aujourd'hui
+              {"Aujourd'hui"}
             </button>
-            <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition-colors">
-              <ChevronRight className="w-5 h-5 text-[#71717A]" />
+
+            <button
+              onClick={() => navigate(1)}
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'rgba(0,0,0,0.55)',
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.06)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <ChevronRight style={{ width: '16px', height: '16px' }} />
             </button>
           </div>
         </div>
-        <div className="flex gap-1 bg-[#1C1C24] rounded-lg p-1">
-          <button
-            onClick={() => setView('week')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'week' ? 'bg-[#17171E] text-[#FAFAFA] shadow-sm' : 'text-[#71717A]'}`}
-          >
-            Semaine
-          </button>
-          <button
-            onClick={() => setView('month')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'month' ? 'bg-[#17171E] text-[#FAFAFA] shadow-sm' : 'text-[#71717A]'}`}
-          >
-            Mois
-          </button>
+
+        {/* Right: view toggle */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '2px',
+            background: 'rgba(0,0,0,0.05)',
+            borderRadius: '9999px',
+            padding: '3px',
+          }}
+        >
+          {(['week', 'month'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              onMouseEnter={() => setHoveredView(v)}
+              onMouseLeave={() => setHoveredView(null)}
+              style={{
+                padding: '5px 14px',
+                borderRadius: '9999px',
+                border: 'none',
+                fontSize: '12px',
+                fontWeight: 600,
+                fontFamily: font,
+                cursor: 'pointer',
+                transition: 'all 150ms',
+                background: view === v ? '#FFFFFF' : 'transparent',
+                color: view === v ? 'rgba(0,0,0,0.9)' : hoveredView === v ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.5)',
+                boxShadow: view === v ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+              }}
+            >
+              {v === 'week' ? 'Semaine' : 'Mois'}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-[rgba(255,255,255,0.07)]">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, 1fr)',
+          borderBottom: '1px solid rgba(0,0,0,0.08)',
+          background: '#FAFAFA',
+        }}
+      >
         {DAYS_FR.map(day => (
-          <div key={day} className="py-3 text-center text-xs font-semibold text-[#71717A] uppercase tracking-wider">
+          <div
+            key={day}
+            style={{
+              padding: '10px 0',
+              textAlign: 'center',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: 'rgba(0,0,0,0.4)',
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              fontFamily: font,
+            }}
+          >
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className={`grid grid-cols-7 ${view === 'week' ? 'min-h-[200px]' : ''}`}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, 1fr)',
+        }}
+      >
         {displayDays.map(({ date, currentMonth }, idx) => {
           const dayPosts = getPostsForDate(date)
           const dateStr = date.toISOString().split('T')[0]
+          const today = isToday(date)
+          const isHovered = hoveredDay === idx
 
           return (
             <div
               key={idx}
               onClick={() => onDayClick(dateStr)}
-              className={`
-                min-h-[100px] p-2 border-b border-r border-[rgba(255,255,255,0.04)] cursor-pointer transition-colors
-                hover:bg-[rgba(255,255,255,0.03)]
-                ${!currentMonth ? 'bg-[rgba(255,255,255,0.01)]' : ''}
-                ${isToday(date) ? 'bg-[rgba(124,58,237,0.08)]' : ''}
-              `}
+              onMouseEnter={() => setHoveredDay(idx)}
+              onMouseLeave={() => setHoveredDay(null)}
+              style={{
+                minHeight: view === 'week' ? '160px' : '100px',
+                padding: '8px',
+                borderBottom: '1px solid rgba(0,0,0,0.06)',
+                borderRight: '1px solid rgba(0,0,0,0.06)',
+                cursor: 'pointer',
+                transition: 'background 120ms',
+                background: today
+                  ? 'rgba(10,102,194,0.04)'
+                  : isHovered
+                  ? 'rgba(0,0,0,0.02)'
+                  : !currentMonth
+                  ? 'rgba(0,0,0,0.01)'
+                  : '#FFFFFF',
+              }}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`
-                  text-sm font-medium
-                  ${isToday(date) ? 'w-7 h-7 bg-[#7C3AED] text-[#FAFAFA] rounded-full flex items-center justify-center' : ''}
-                  ${!currentMonth ? 'text-[#3F3F46]' : 'text-[#FAFAFA]'}
-                `}>
+              {/* Day number */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '4px',
+                }}
+              >
+                <span
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    fontSize: '13px',
+                    fontWeight: today ? 700 : 400,
+                    fontFamily: font,
+                    background: today ? '#0A66C2' : 'transparent',
+                    color: today
+                      ? '#FFFFFF'
+                      : !currentMonth
+                      ? 'rgba(0,0,0,0.25)'
+                      : 'rgba(0,0,0,0.75)',
+                  }}
+                >
                   {date.getDate()}
                 </span>
-                {currentMonth && (
+
+                {currentMonth && isHovered && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDayClick(dateStr) }}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[rgba(124,58,237,0.15)] transition-all"
+                    onClick={e => {
+                      e.stopPropagation()
+                      onDayClick(dateStr)
+                    }}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'rgba(10,102,194,0.1)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                    }}
                   >
-                    <Plus className="w-3.5 h-3.5 text-[#7C3AED]" />
+                    <Plus style={{ width: '12px', height: '12px', color: '#0A66C2' }} />
                   </button>
                 )}
               </div>
-              <div className="space-y-1">
-                {dayPosts.slice(0, 3).map(post => (
-                  <button
-                    key={post.id}
-                    onClick={(e) => { e.stopPropagation(); onPostClick(post) }}
-                    className={`w-full text-left text-[10px] font-medium px-1.5 py-1 rounded truncate ${statusColors[post.status]}`}
-                  >
-                    {post.content.substring(0, 25)}...
-                  </button>
-                ))}
+
+              {/* Posts pills */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {dayPosts.slice(0, 3).map(post => {
+                  const s = statusStyle[post.status] || statusStyle.draft
+                  return (
+                    <button
+                      key={post.id}
+                      onClick={e => {
+                        e.stopPropagation()
+                        onPostClick(post)
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        fontFamily: font,
+                        padding: '3px 6px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                        background: s.background,
+                        color: s.color,
+                        transition: 'opacity 120ms',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                    >
+                      {post.content.substring(0, 22)}…
+                    </button>
+                  )
+                })}
                 {dayPosts.length > 3 && (
-                  <span className="text-[10px] text-[#71717A] font-medium">+{dayPosts.length - 3} autres</span>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      color: 'rgba(0,0,0,0.4)',
+                      fontFamily: font,
+                      paddingLeft: '2px',
+                    }}
+                  >
+                    +{dayPosts.length - 3} autres
+                  </span>
                 )}
               </div>
             </div>
