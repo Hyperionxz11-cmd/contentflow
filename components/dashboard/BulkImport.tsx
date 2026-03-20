@@ -5,7 +5,7 @@ import { Upload, FileText, Calendar, Check, X, Loader2, Pencil, ChevronDown, Che
 import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 
 interface BulkImportProps {
-  onImport: (posts: { content: string; scheduledAt: string; status: string }[]) => void
+  onImport: (posts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => void
   onClose: () => void
 }
 
@@ -69,6 +69,19 @@ function htmlToText(html: string): string {
 /** Compte les images dans un bout de HTML */
 function countImages(html: string): number {
   return (html.match(/<img/g) || []).length
+}
+
+/** Extrait les src d'images d'un HTML (base64 ou URL) */
+function extractImagesFromHtml(html: string): string[] {
+  if (typeof window === 'undefined') return []
+  const div = document.createElement('div')
+  div.innerHTML = html
+  const imgs: string[] = []
+  div.querySelectorAll('img').forEach(el => {
+    const src = el.getAttribute('src')
+    if (src) imgs.push(src)
+  })
+  return imgs
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -306,7 +319,14 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
     let currentDate = new Date(`${startDate}T${startTime}:00`)
     const scheduled = selected.map((i, n) => {
       if (n > 0) currentDate = getNextDate(currentDate, frequency)
-      return { content: getTextContent(i), scheduledAt: currentDate.toISOString(), status: 'scheduled' }
+      // Extraire les images si le post est en HTML et non modifié
+      const images = isHtml && !(i in editedContent) ? extractImagesFromHtml(posts[i]) : []
+      return {
+        content: getTextContent(i),
+        scheduledAt: currentDate.toISOString(),
+        status: 'scheduled',
+        images,
+      }
     })
     onImport(scheduled)
   }
@@ -320,6 +340,7 @@ export default function BulkImport({ onImport, onClose }: BulkImportProps) {
     {previewIdx !== null && (
       <LinkedInPreview
         content={getTextContent(previewIdx)}
+        images={isHtml && !(previewIdx in editedContent) ? extractImagesFromHtml(posts[previewIdx]) : []}
         onClose={() => setPreviewIdx(null)}
       />
     )}
