@@ -16,6 +16,23 @@ import BulkImport from '@/components/dashboard/BulkImport'
 import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 import { defaultTemplates } from '@/lib/templates'
 
+const LINKEDIN_COLORS = {
+  background: '#F3F2EF',
+  white: '#FFFFFF',
+  borderColor: 'rgba(0,0,0,0.08)',
+  primaryBlue: '#0A66C2',
+  hoverBlue: '#004182',
+  textPrimary: 'rgba(0,0,0,0.9)',
+  textSecondary: 'rgba(0,0,0,0.6)',
+  lightBlueBg: '#EAF0F8',
+  green: '#057642',
+  greenBg: '#E9F5EE',
+  red: '#CC1016',
+  redBg: '#FCEAEA',
+}
+
+const LINKEDIN_FONT = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+
 interface Post {
   id: string
   content: string
@@ -69,7 +86,6 @@ export default function DashboardPage() {
         }
         setUser(user)
 
-        // Fetch profile
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -90,7 +106,6 @@ export default function DashboardPage() {
           } as Profile)
         }
 
-        // Fetch posts
         const { data: userPosts } = await supabase
           .from('posts')
           .select('*')
@@ -128,7 +143,6 @@ export default function DashboardPage() {
       status: post.status === 'publish_now' ? 'published' : 'scheduled',
     }
 
-    // Save to Supabase if connected
     if (user) {
       const supabase = createClient()
       const { data } = await supabase.from('posts').insert({
@@ -318,391 +332,315 @@ export default function DashboardPage() {
   const totalCount = posts.length
   const draftCount = posts.filter(p => p.status === 'draft').length
 
-  const today = new Date()
-  const dateStr = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const capitalizedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
-
   if (loading) {
     return (
-      <div style={{minHeight:'100vh',background:'#050508',display:'flex',alignItems:'center',justifyContent:'center'}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'24px'}}>
-          <div style={{position:'relative',width:'56px',height:'56px'}}>
-            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid rgba(124,58,237,0.15)'}} />
-            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid transparent',borderTopColor:'#A78BFA',animation:'spin 1s linear infinite'}} />
-            <div style={{position:'absolute',inset:'8px',borderRadius:'50%',background:'rgba(124,58,237,0.15)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <Zap style={{width:'18px',height:'18px',color:'#A78BFA'}} />
-            </div>
-          </div>
-          <div>
-            <p style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB',textAlign:'center'}}>ContentFlow</p>
-            <p style={{fontSize:'12px',color:'#9CA3AF',letterSpacing:'0.1em',textTransform:'uppercase',textAlign:'center',marginTop:'4px'}}>Chargement…</p>
-          </div>
+      <div style={{minHeight:'100vh',background:LINKEDIN_COLORS.background,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:LINKEDIN_FONT}}>
+        <div style={{textAlign:'center'}}>
+          <div style={{
+            width:'40px',height:'40px',borderRadius:'50%',
+            border:'3px solid rgba(10,102,194,0.2)',
+            borderTopColor:LINKEDIN_COLORS.primaryBlue,
+            animation:'spin 0.8s linear infinite',
+            margin:'0 auto 16px'
+          }} />
+          <p style={{color:LINKEDIN_COLORS.textSecondary,fontSize:'14px'}}>Chargement…</p>
         </div>
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
 
   return (
-    <div style={{minHeight:'100vh',background:'#050508',position:'relative',overflow:'hidden'}}>
-      {/* Background orbs */}
-      <div style={{position:'absolute',top:'-40%',left:'-10%',width:'400px',height:'400px',borderRadius:'50%',background:'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)',filter:'blur(80px)',zIndex:0}} />
-      <div style={{position:'absolute',bottom:'-20%',right:'-15%',width:'350px',height:'350px',borderRadius:'50%',background:'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)',filter:'blur(100px)',zIndex:0}} />
+    <div style={{minHeight:'100vh',background:LINKEDIN_COLORS.background,fontFamily:LINKEDIN_FONT}}>
+      <nav style={{
+        position:'fixed',top:0,left:0,right:0,height:'52px',
+        background:LINKEDIN_COLORS.white,
+        borderBottom:`1px solid ${LINKEDIN_COLORS.borderColor}`,
+        zIndex:100,display:'flex',alignItems:'center',
+        padding:'0 20px',gap:'8px'
+      }}>
+        <div style={{display:'flex',alignItems:'center',gap:'6px',marginRight:'8px'}}>
+          <div style={{width:'36px',height:'36px',borderRadius:'6px',background:LINKEDIN_COLORS.primaryBlue,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <Zap style={{width:'18px',height:'18px',color:LINKEDIN_COLORS.white}} />
+          </div>
+          <span style={{fontWeight:700,fontSize:'18px',color:LINKEDIN_COLORS.primaryBlue,letterSpacing:'-0.01em'}}>
+            ContentFlow
+          </span>
+        </div>
 
-      <div style={{position:'relative',zIndex:1,display:'flex',minHeight:'100vh'}}>
-        {/* SIDEBAR */}
-        <motion.aside
-          initial={{x:-240}}
-          animate={{x:0}}
-          transition={{duration:0.5,ease: "easeOut"}}
-          style={{
-            position:'fixed',
-            left:0,
-            top:0,
-            height:'100vh',
-            width:'240px',
-            background:'#080812',
-            borderRight:'1px solid rgba(124,58,237,0.15)',
-            boxShadow:'inset -1px 0 0 rgba(255,255,255,0.04), 4px 0 20px rgba(0,0,0,0.3)',
-            display:'flex',
-            flexDirection:'column',
-            zIndex:40,
-          }}
-        >
-          {/* Logo */}
-          <motion.div
-            initial={{opacity:0,y:-10}}
-            animate={{opacity:1,y:0}}
-            transition={{delay:0.1,duration:0.5}}
-            style={{padding:'24px 24px 20px'}}
+        <div style={{flex:1}} />
+
+        {[
+          {id:'calendar' as const,icon:CalendarIcon,label:'Calendrier'},
+          {id:'posts' as const,icon:LayoutGrid,label:'Posts'},
+          {id:'analytics' as const,icon:BarChart3,label:'Analytics'},
+        ].map(item=>(
+          <button key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            style={{
+              display:'flex',flexDirection:'column',alignItems:'center',
+              padding:'6px 16px',borderRadius:'4px',cursor:'pointer',
+              color:activeTab===item.id?LINKEDIN_COLORS.textPrimary:LINKEDIN_COLORS.textSecondary,
+              border:'none',background:'none',fontFamily:LINKEDIN_FONT,
+              fontSize:'11px',fontWeight:600,gap:'2px',
+              borderBottom:activeTab===item.id?`2px solid ${LINKEDIN_COLORS.textPrimary}`:'2px solid transparent'
+            }}
           >
-            <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'32px'}}>
-              <div style={{
-                width:'32px',height:'32px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',
-                background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-                boxShadow:'0 0 20px rgba(124,58,237,0.6)',
-                flexShrink:0
-              }}>
-                <Zap style={{width:'16px',height:'16px',color:'white'}} />
-              </div>
-              <span style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB',letterSpacing:'-0.01em'}}>ContentFlow</span>
-            </div>
+            <item.icon style={{width:'20px',height:'20px'}} />
+            {item.label}
+          </button>
+        ))}
 
-            {/* Nav */}
-            <nav style={{display:'flex',flexDirection:'column',gap:'2px'}}>
-              {[
-                { id: 'calendar' as const, icon: CalendarIcon, label: 'Calendrier' },
-                { id: 'posts' as const, icon: LayoutGrid, label: 'Mes posts' },
-                { id: 'analytics' as const, icon: BarChart3, label: 'Analytics' },
-              ].map((item,idx) => (
-                <motion.button
-                  key={item.id}
-                  initial={{opacity:0,x:-20}}
-                  animate={{opacity:1,x:0}}
-                  transition={{delay:0.15+idx*0.05,duration:0.4}}
-                  onClick={() => setActiveTab(item.id)}
-                  style={{
-                    width:'100%',
-                    display:'flex',
-                    alignItems:'center',
-                    gap:'12px',
-                    padding:'8px 12px',
-                    borderRadius:'10px',
-                    fontSize:'13px',
-                    fontWeight:500,
-                    textAlign:'left',
-                    border:'none',
-                    cursor:'pointer',
-                    transition:'all 0.3s cubic-bezier(0.16,1,0.3,1)',
-                    background:activeTab===item.id?'rgba(124,58,237,0.12)':'transparent',
-                    color:activeTab===item.id?'#A78BFA':'#9CA3AF',
-                    boxShadow:activeTab===item.id?'inset 0 0 20px rgba(124,58,237,0.06)':'none',
-                    position:'relative'
-                  }}
-                  onMouseEnter={(e)=>{
-                    if(activeTab!==item.id) {
-                      e.currentTarget.style.background='rgba(124,58,237,0.06)'
-                      e.currentTarget.style.color='#C4B5FD'
-                    }
-                  }}
-                  onMouseLeave={(e)=>{
-                    if(activeTab!==item.id) {
-                      e.currentTarget.style.background='transparent'
-                      e.currentTarget.style.color='#9CA3AF'
-                    }
-                  }}
-                >
-                  <item.icon style={{
-                    width:'16px',
-                    height:'16px',
-                    filter:activeTab===item.id?'drop-shadow(0 0 8px rgba(124,58,237,0.8))':'none'
-                  }} />
-                  {item.label}
-                </motion.button>
-              ))}
-            </nav>
-          </motion.div>
+        <div style={{flex:1}} />
 
-          {/* LinkedIn + Plan sections */}
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:0.3,duration:0.5}}
-            style={{flex:1,overflow:'auto',padding:'0 16px'}}
-          >
-            {/* LinkedIn */}
-            <div style={{
-              marginTop:'16px',
-              padding:'16px',
-              borderRadius:'12px',
-              background:'rgba(255,255,255,0.025)',
-              border:'1px solid rgba(255,255,255,0.06)',
-              fontSize:'13px'
-            }}>
-              {profile?.linkedin_connected?(
-                <div>
-                  {/* Photo LinkedIn + nom */}
-                  <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
-                    {profile.linkedin_picture_url ? (
-                      <img
-                        src={profile.linkedin_picture_url}
-                        alt="LinkedIn"
-                        style={{width:'36px',height:'36px',borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(16,185,129,0.4)',flexShrink:0}}
-                      />
-                    ) : (
-                      <div style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#7C3AED,#A78BFA)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>
-                        {(profile.linkedin_name||profile.full_name||'?').charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
-                        <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#10B981',flexShrink:0}} />
-                        <span style={{fontSize:'10px',fontWeight:600,color:'#10B981'}}>Connecté</span>
-                      </div>
-                      <p style={{fontSize:'11px',color:'#D1D5DB',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'2px',fontWeight:500}}>
-                        {profile.linkedin_name||profile.full_name||'Compte vérifié'}
-                      </p>
-                    </div>
-                    <button onClick={handleDisconnectLinkedIn} style={{fontSize:'10px',fontWeight:500,color:'#EF4444',background:'none',border:'none',cursor:'pointer',flexShrink:0}}>
-                      Déco
-                    </button>
-                  </div>
-                </div>
-              ):(
-                <div>
-                  <p style={{fontSize:'11px',color:'#9CA3AF',marginBottom:'12px'}}>Connecte LinkedIn pour publier</p>
-                  <button
-                    onClick={handleConnectLinkedIn}
-                    style={{
-                      width:'100%',
-                      display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',
-                      padding:'8px 12px',borderRadius:'8px',fontSize:'12px',fontWeight:600,
-                      background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-                      color:'white',border:'none',cursor:'pointer',
-                      boxShadow:'0 0 16px rgba(124,58,237,0.3)',transition:'all 0.3s'
-                    }}
-                    onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 0 24px rgba(124,58,237,0.5)'}}
-                    onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 0 16px rgba(124,58,237,0.3)'}}
-                  >
-                    <Linkedin style={{width:'14px',height:'14px'}} />
-                    Connecter
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Plan */}
-            <div style={{
-              marginTop:'12px',
-              padding:'16px',
-              borderRadius:'12px',
-              background:'rgba(255,255,255,0.025)',
-              border:'1px solid rgba(255,255,255,0.06)',
-            }}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:'11px'}}>
-                <span style={{color:'#9CA3AF'}}>Plan actuel</span>
-                <span style={{fontSize:'10px',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#A78BFA'}}>
-                  {profile?.plan||'Free'}
-                </span>
-              </div>
-              {(!profile||profile.plan==='free')&&(
-                <button
-                  onClick={()=>router.push('/pricing')}
-                  style={{
-                    width:'100%',marginTop:'12px',padding:'8px 12px',borderRadius:'8px',
-                    fontSize:'11px',fontWeight:600,border:'1px solid #A78BFA',
-                    color:'#A78BFA',background:'transparent',cursor:'pointer',transition:'all 0.3s'
-                  }}
-                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.1)'}}
-                  onMouseLeave={(e)=>{e.currentTarget.style.background='transparent'}}
-                >
-                  Passer en Premium ↗
-                </button>
-              )}
-            </div>
-          </motion.div>
-
-          {/* User footer */}
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:0.4,duration:0.5}}
-            style={{padding:'16px',borderTop:'1px solid rgba(255,255,255,0.04)',marginTop:'auto'}}
-          >
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'8px',minWidth:0}}>
-                <div style={{
-                  width:'32px',height:'32px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',
-                  background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-                  color:'white',fontSize:'11px',fontWeight:700,flexShrink:0
-                }}>
-                  {user?.email?.charAt(0).toUpperCase()||'U'}
-                </div>
-                <span style={{fontSize:'12px',color:'#D1D5DB',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                  {user?.email}
-                </span>
-              </div>
-              <button onClick={handleLogout} style={{padding:'6px',borderRadius:'8px',color:'#9CA3AF',background:'none',border:'none',cursor:'pointer',transition:'all 0.3s'}}>
-                <LogOut style={{width:'16px',height:'16px'}} />
-              </button>
-            </div>
-          </motion.div>
-        </motion.aside>
-
-        {/* MAIN CONTENT */}
-        <motion.main
-          initial={{opacity:0}}
-          animate={{opacity:1}}
-          transition={{delay:0.2,duration:0.5}}
-          style={{marginLeft:'240px',padding:'32px',width:'calc(100% - 240px)',minHeight:'100vh'}}
-        >
-          {/* Header */}
+        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
           <div style={{
-            display:'flex',justifyContent:'space-between',alignItems:'flex-start',
-            paddingBottom:'24px',borderBottom:'1px solid rgba(255,255,255,0.05)',
-            marginBottom:'32px'
+            width:'34px',height:'34px',borderRadius:'50%',
+            background:LINKEDIN_COLORS.primaryBlue,display:'flex',alignItems:'center',justifyContent:'center',
+            color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'13px'
           }}>
-            <motion.div initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} transition={{delay:0.3,duration:0.5}}>
-              <p style={{fontSize:'12px',color:'#9CA3AF',letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:'monospace',fontWeight:500}}>
-                {capitalizedDate}
-              </p>
-              <h1 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'28px',letterSpacing:'-0.02em',marginTop:'4px',color:'#E5E7EB'}}>
-                Bonjour, <span style={{background:'linear-gradient(135deg,#A78BFA 0%,#7C3AED 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
-                  {profile?.full_name?.split(' ')[0]||'André'}
-                </span> 👋
-              </h1>
-            </motion.div>
+            {(profile?.full_name||profile?.email||'U')[0].toUpperCase()}
+          </div>
+          <button onClick={handleLogout} style={{
+            display:'flex',alignItems:'center',gap:'4px',
+            padding:'6px 12px',borderRadius:'9999px',
+            border:`1px solid rgba(0,0,0,0.3)`,background:'none',
+            color:LINKEDIN_COLORS.textSecondary,fontSize:'14px',fontWeight:600,
+            cursor:'pointer',fontFamily:LINKEDIN_FONT
+          }}>
+            <LogOut style={{width:'14px',height:'14px'}} />
+            Quitter
+          </button>
+        </div>
+      </nav>
 
-            <motion.div
-              initial={{opacity:0,y:-10}}
-              animate={{opacity:1,y:0}}
-              transition={{delay:0.35,duration:0.5}}
-              style={{display:'flex',gap:'12px'}}
-            >
-              <button
-                onClick={()=>setShowBulkImport(true)}
-                style={{
-                  display:'flex',alignItems:'center',gap:'8px',padding:'10px 16px',borderRadius:'10px',
-                  fontSize:'14px',fontWeight:500,border:'1px solid rgba(255,255,255,0.1)',
-                  color:'#D1D5DB',background:'rgba(255,255,255,0.02)',cursor:'pointer',transition:'all 0.3s'
-                }}
-                onMouseEnter={(e)=>{
-                  e.currentTarget.style.background='rgba(255,255,255,0.05)'
-                  e.currentTarget.style.borderColor='rgba(124,58,237,0.3)'
-                }}
-                onMouseLeave={(e)=>{
-                  e.currentTarget.style.background='rgba(255,255,255,0.02)'
-                  e.currentTarget.style.borderColor='rgba(255,255,255,0.1)'
-                }}
-              >
-                <Upload style={{width:'16px',height:'16px'}} />
-                Importer
-              </button>
-              <button
-                onClick={()=>{setSelectedDate(new Date().toISOString().split('T')[0]);setShowEditor(true)}}
-                style={{
-                  display:'flex',alignItems:'center',gap:'8px',padding:'10px 20px',borderRadius:'10px',
-                  fontSize:'14px',fontWeight:600,background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-                  color:'white',border:'none',cursor:'pointer',
-                  boxShadow:'0 4px 20px rgba(124,58,237,0.3)',transition:'all 0.3s'
-                }}
-                onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 8px 32px rgba(124,58,237,0.4)'}}
-                onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 4px 20px rgba(124,58,237,0.3)'}}
-              >
-                <Plus style={{width:'16px',height:'16px'}} />
-                Nouveau post
-              </button>
-            </motion.div>
+      <div style={{
+        marginTop:'52px',
+        minHeight:'calc(100vh - 52px)',
+        background:LINKEDIN_COLORS.background,
+        display:'flex',
+        justifyContent:'center',
+        padding:'24px 16px',
+        gap:'20px'
+      }}>
+        <aside style={{
+          width:'225px',flexShrink:0,
+          position:'sticky',top:'72px',
+          alignSelf:'flex-start',
+          display:'flex',flexDirection:'column',gap:'8px'
+        }}>
+          <div style={{
+            background:LINKEDIN_COLORS.white,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,
+            borderRadius:'8px',overflow:'hidden',textAlign:'center'
+          }}>
+            <div style={{height:'56px',background:`linear-gradient(135deg, ${LINKEDIN_COLORS.primaryBlue} 0%, ${LINKEDIN_COLORS.hoverBlue} 100%)`}} />
+            <div style={{marginTop:'-20px',display:'flex',justifyContent:'center'}}>
+              <div style={{
+                width:'40px',height:'40px',borderRadius:'50%',
+                background:LINKEDIN_COLORS.primaryBlue,border:`2px solid ${LINKEDIN_COLORS.white}`,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'16px'
+              }}>
+                {(profile?.full_name||profile?.email||'U')[0].toUpperCase()}
+              </div>
+            </div>
+            <div style={{padding:'8px 16px 16px'}}>
+              <p style={{fontWeight:700,fontSize:'14px',color:LINKEDIN_COLORS.textPrimary}}>
+                {profile?.full_name||profile?.email}
+              </p>
+              <p style={{fontSize:'11px',color:'rgba(0,0,0,0.5)',marginTop:'2px'}}>
+                Content Creator
+              </p>
+            </div>
+            <div style={{borderTop:`1px solid ${LINKEDIN_COLORS.borderColor}`,padding:'12px 16px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                <span style={{fontSize:'12px',color:LINKEDIN_COLORS.textSecondary}}>Posts créés</span>
+                <span style={{fontSize:'12px',fontWeight:700,color:LINKEDIN_COLORS.primaryBlue}}>{posts.length}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between'}}>
+                <span style={{fontSize:'12px',color:LINKEDIN_COLORS.textSecondary}}>Publiés</span>
+                <span style={{fontSize:'12px',fontWeight:700,color:LINKEDIN_COLORS.green}}>{publishedCount}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Stat Cards */}
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:0.4,duration:0.5}}
-            style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))',gap:'16px',marginBottom:'32px'}}
-          >
-            {[
-              {icon:FileText,value:totalCount,label:'Posts créés',color:'#A78BFA',delay:0.5},
-              {icon:Clock,value:scheduledCount,label:'Posts programmés',color:'#60A5FA',delay:0.55},
-              {icon:CheckCircle2,value:publishedCount,label:'Publiés',color:'#34D399',delay:0.6},
-            ].map((stat,idx)=>(
-              <StatCard key={idx} icon={stat.icon} value={stat.value} label={stat.label} color={stat.color} delay={stat.delay} />
-            ))}
-          </motion.div>
-
-          {/* Tabs Content */}
-          <AnimatePresence mode="wait">
-            {activeTab==='calendar'&&(
-              <motion.div key="calendar" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
-                <CalendarView
-                  posts={posts}
-                  onDayClick={handleDayClick}
-                  onPostClick={(post)=>setPreviewPost(post as Post)}
-                />
-              </motion.div>
-            )}
-
-            {activeTab==='posts'&&(
-              <motion.div key="posts" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
-                <PostsTable
-                  posts={posts}
-                  currentPage={currentPage}
-                  setCurrentPage={setCurrentPage}
-                  POSTS_PER_PAGE={POSTS_PER_PAGE}
-                  confirmDeleteId={confirmDeleteId}
-                  setConfirmDeleteId={setConfirmDeleteId}
-                  deletingId={deletingId}
-                  retryingId={retryingId}
-                  handleDeletePost={handleDeletePost}
-                  handleRetryPost={handleRetryPost}
-                  setPreviewPost={setPreviewPost}
-                  openEditModal={openEditModal}
-                />
-              </motion.div>
-            )}
-
-            {activeTab==='analytics'&&(
-              <motion.div key="analytics" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
-                <div style={{
-                  borderRadius:'16px',padding:'48px',textAlign:'center',
-                  background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)'
-                }}>
-                  <BarChart3 style={{width:'64px',height:'64px',margin:'0 auto 20px',color:'#9CA3AF'}} />
-                  <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'18px',color:'#E5E7EB',marginBottom:'8px'}}>Analytics bientôt disponibles</h3>
-                  <p style={{fontSize:'14px',color:'#9CA3AF',maxWidth:'400px',margin:'0 auto'}}>
-                    Les analytics seront disponibles une fois que tu auras connecté ton LinkedIn et publié quelques posts.
-                  </p>
+          <div style={{
+            background:LINKEDIN_COLORS.white,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,
+            borderRadius:'8px',padding:'12px 16px'
+          }}>
+            <p style={{fontSize:'13px',fontWeight:600,color:'rgba(0,0,0,0.7)',marginBottom:'8px'}}>
+              Compte LinkedIn
+            </p>
+            {profile?.linkedin_connected?(
+              <div>
+                <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
+                  <div style={{width:'8px',height:'8px',borderRadius:'50%',background:LINKEDIN_COLORS.green}} />
+                  <span style={{fontSize:'13px',color:LINKEDIN_COLORS.green,fontWeight:600}}>Connecté</span>
                 </div>
-              </motion.div>
+                <p style={{fontSize:'12px',color:LINKEDIN_COLORS.textSecondary,marginBottom:'8px'}}>
+                  {profile.linkedin_name}
+                </p>
+                <button onClick={handleDisconnectLinkedIn} style={{
+                  fontSize:'12px',color:LINKEDIN_COLORS.textSecondary,
+                  border:'none',background:'none',cursor:'pointer',
+                  textDecoration:'underline',fontFamily:LINKEDIN_FONT
+                }}>
+                  Déconnecter
+                </button>
+              </div>
+            ):(
+              <div>
+                <p style={{fontSize:'12px',color:LINKEDIN_COLORS.textSecondary,marginBottom:'10px'}}>
+                  Connectez LinkedIn pour publier automatiquement
+                </p>
+                <button onClick={handleConnectLinkedIn} style={{
+                  width:'100%',padding:'8px',borderRadius:'9999px',
+                  background:LINKEDIN_COLORS.primaryBlue,color:LINKEDIN_COLORS.white,
+                  fontSize:'13px',fontWeight:600,border:'none',cursor:'pointer',
+                  fontFamily:LINKEDIN_FONT
+                }}>
+                  Connecter LinkedIn
+                </button>
+              </div>
             )}
-          </AnimatePresence>
+          </div>
+        </aside>
 
-          {/* Modals */}
+        <main style={{flex:1,maxWidth:'760px',display:'flex',flexDirection:'column',gap:'12px'}}>
+          <div style={{
+            background:LINKEDIN_COLORS.white,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,
+            borderRadius:'8px',padding:'16px'
+          }}>
+            <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+              <div style={{
+                width:'40px',height:'40px',borderRadius:'50%',
+                background:LINKEDIN_COLORS.primaryBlue,flexShrink:0,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'16px'
+              }}>
+                {(profile?.full_name||'U')[0].toUpperCase()}
+              </div>
+              <button
+                onClick={() => setShowEditor(true)}
+                style={{
+                  flex:1,padding:'12px 16px',borderRadius:'9999px',
+                  border:`1px solid rgba(0,0,0,0.4)`,background:'none',
+                  color:LINKEDIN_COLORS.textSecondary,fontSize:'15px',
+                  textAlign:'left',cursor:'pointer',
+                  fontFamily:LINKEDIN_FONT,
+                  transition:'background 120ms ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                Rédiger un post...
+              </button>
+            </div>
+            <div style={{display:'flex',gap:'4px',marginTop:'12px',paddingTop:'12px',borderTop:`1px solid ${LINKEDIN_COLORS.borderColor}`}}>
+              <button onClick={() => setShowEditor(true)} style={{
+                display:'flex',alignItems:'center',gap:'6px',
+                padding:'8px 14px',borderRadius:'4px',border:'none',background:'none',
+                cursor:'pointer',color:LINKEDIN_COLORS.textSecondary,fontSize:'14px',fontWeight:600,
+                fontFamily:LINKEDIN_FONT,
+                transition:'background 120ms ease'
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,0.04)'}
+              onMouseLeave={e=>e.currentTarget.style.background='none'}>
+                <Plus style={{width:'18px',height:'18px',color:'#378FE9'}} />
+                Nouveau post
+              </button>
+              <button onClick={() => setShowBulkImport(true)} style={{
+                display:'flex',alignItems:'center',gap:'6px',
+                padding:'8px 14px',borderRadius:'4px',border:'none',background:'none',
+                cursor:'pointer',color:LINKEDIN_COLORS.textSecondary,fontSize:'14px',fontWeight:600,
+                fontFamily:LINKEDIN_FONT,
+                transition:'background 120ms ease'
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,0.04)'}
+              onMouseLeave={e=>e.currentTarget.style.background='none'}>
+                <Upload style={{width:'18px',height:'18px',color:'#5F9B41'}} />
+                Import en masse
+              </button>
+            </div>
+          </div>
+
+          <div style={{
+            background:LINKEDIN_COLORS.white,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,
+            borderRadius:'8px',overflow:'hidden'
+          }}>
+            <div style={{
+              padding:'16px 20px 0',
+              display:'flex',gap:'0',borderBottom:`1px solid ${LINKEDIN_COLORS.borderColor}`
+            }}>
+              {['calendar','posts','analytics'].map(tab=>(
+                <button key={tab}
+                  onClick={() => setActiveTab(tab as any)}
+                  style={{
+                    padding:'12px 16px',
+                    border:'none',background:'none',
+                    fontSize:'14px',fontWeight:600,
+                    color:activeTab===tab?LINKEDIN_COLORS.textPrimary:LINKEDIN_COLORS.textSecondary,
+                    cursor:'pointer',
+                    borderBottom:activeTab===tab?`2px solid ${LINKEDIN_COLORS.primaryBlue}`:'2px solid transparent',
+                    fontFamily:LINKEDIN_FONT,
+                    transition:'all 120ms ease',
+                    marginBottom:'-1px'
+                  }}
+                >
+                  {tab==='calendar'?'Calendrier':tab==='posts'?'Mes posts':'Analytics'}
+                </button>
+              ))}
+            </div>
+
+            <div style={{padding:'20px'}}>
+              <AnimatePresence mode="wait">
+                {activeTab==='calendar'&&(
+                  <motion.div key="calendar" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
+                    <CalendarView
+                      posts={posts}
+                      onDayClick={handleDayClick}
+                      onPostClick={(post)=>setPreviewPost(post as Post)}
+                    />
+                  </motion.div>
+                )}
+
+                {activeTab==='posts'&&(
+                  <motion.div key="posts" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
+                    <PostsTable
+                      posts={posts}
+                      currentPage={currentPage}
+                      setCurrentPage={setCurrentPage}
+                      POSTS_PER_PAGE={POSTS_PER_PAGE}
+                      confirmDeleteId={confirmDeleteId}
+                      setConfirmDeleteId={setConfirmDeleteId}
+                      deletingId={deletingId}
+                      retryingId={retryingId}
+                      handleDeletePost={handleDeletePost}
+                      handleRetryPost={handleRetryPost}
+                      setPreviewPost={setPreviewPost}
+                      openEditModal={openEditModal}
+                    />
+                  </motion.div>
+                )}
+
+                {activeTab==='analytics'&&(
+                  <motion.div key="analytics" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
+                    <div style={{
+                      borderRadius:'8px',padding:'48px',textAlign:'center',
+                      background:LINKEDIN_COLORS.lightBlueBg,border:`1px solid ${LINKEDIN_COLORS.borderColor}`
+                    }}>
+                      <BarChart3 style={{width:'64px',height:'64px',margin:'0 auto 20px',color:LINKEDIN_COLORS.textSecondary}} />
+                      <h3 style={{fontWeight:700,fontSize:'18px',color:LINKEDIN_COLORS.textPrimary,marginBottom:'8px'}}>Analytics bientôt disponibles</h3>
+                      <p style={{fontSize:'14px',color:LINKEDIN_COLORS.textSecondary,maxWidth:'400px',margin:'0 auto'}}>
+                        Les analytics seront disponibles une fois que tu auras connecté ton LinkedIn et publié quelques posts.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
           <AnimatePresence>
             {previewPost&&(
               <LinkedInPreview
@@ -745,74 +683,74 @@ export default function DashboardPage() {
                   initial={{opacity:0,scale:0.95,y:20}}
                   animate={{opacity:1,scale:1,y:0}}
                   exit={{opacity:0,scale:0.95,y:20}}
-                  transition={{duration:0.3,ease: "easeOut"}}
+                  transition={{duration:0.3,ease:"easeOut"}}
                   onClick={(e)=>e.stopPropagation()}
                   style={{
-                    borderRadius:'16px',width:'100%',maxWidth:'480px',
-                    background:'#1A1A22',boxShadow:'0 25px 64px rgba(0,0,0,0.8)',
-                    border:'1px solid rgba(255,255,255,0.05)',overflow:'hidden'
+                    borderRadius:'8px',width:'100%',maxWidth:'480px',
+                    background:LINKEDIN_COLORS.white,boxShadow:'0 16px 40px rgba(0,0,0,0.16)',
+                    border:`1px solid ${LINKEDIN_COLORS.borderColor}`,overflow:'hidden'
                   }}
                 >
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-                    <h2 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB'}}>Modifier le post</h2>
-                    <button onClick={()=>setEditingPost(null)} style={{padding:'8px',borderRadius:'8px',color:'#9CA3AF',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:`1px solid ${LINKEDIN_COLORS.borderColor}`}}>
+                    <h2 style={{fontWeight:700,fontSize:'16px',color:LINKEDIN_COLORS.textPrimary}}>Modifier le post</h2>
+                    <button onClick={()=>setEditingPost(null)} style={{padding:'8px',borderRadius:'8px',color:LINKEDIN_COLORS.primaryBlue,background:'none',border:'none',cursor:'pointer'}}>
                       <X style={{width:'18px',height:'18px'}} />
                     </button>
                   </div>
                   <div style={{padding:'20px',display:'flex',flexDirection:'column',gap:'16px'}}>
                     <div>
-                      <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Contenu</label>
+                      <label style={{display:'block',fontSize:'13px',fontWeight:600,color:LINKEDIN_COLORS.textPrimary,marginBottom:'8px'}}>Contenu</label>
                       <textarea
                         value={editContent}
                         onChange={e=>setEditContent(e.target.value)}
                         rows={10}
                         style={{
-                          width:'100%',padding:'12px 14px',borderRadius:'10px',fontSize:'13px',resize:'none',fontFamily:'monospace',
-                          outline:'none',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',
-                          color:'#E5E7EB',transition:'all 0.3s'
+                          width:'100%',padding:'12px 14px',borderRadius:'6px',fontSize:'13px',resize:'none',fontFamily:LINKEDIN_FONT,
+                          outline:'none',background:LINKEDIN_COLORS.lightBlueBg,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,
+                          color:LINKEDIN_COLORS.textPrimary,transition:'all 120ms ease'
                         }}
-                        onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
-                        onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
+                        onFocus={(e)=>e.currentTarget.style.borderColor=LINKEDIN_COLORS.primaryBlue}
+                        onBlur={(e)=>e.currentTarget.style.borderColor=LINKEDIN_COLORS.borderColor}
                       />
-                      <p style={{fontSize:'11px',marginTop:'6px',textAlign:'right',color:'#9CA3AF'}}>{editContent.length} caractères</p>
+                      <p style={{fontSize:'11px',marginTop:'6px',textAlign:'right',color:LINKEDIN_COLORS.textSecondary}}>{editContent.length} caractères</p>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
                       <div>
-                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Date</label>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:LINKEDIN_COLORS.textPrimary,marginBottom:'8px'}}>Date</label>
                         <input
                           type="date"
                           value={editDate}
                           onChange={e=>setEditDate(e.target.value)}
                           style={{
-                            width:'100%',padding:'10px 12px',borderRadius:'10px',fontSize:'13px',outline:'none',
-                            background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',color:'#E5E7EB',transition:'all 0.3s'
+                            width:'100%',padding:'10px 12px',borderRadius:'6px',fontSize:'13px',outline:'none',
+                            background:LINKEDIN_COLORS.lightBlueBg,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,color:LINKEDIN_COLORS.textPrimary,transition:'all 120ms ease'
                           }}
-                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
-                          onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
+                          onFocus={(e)=>e.currentTarget.style.borderColor=LINKEDIN_COLORS.primaryBlue}
+                          onBlur={(e)=>e.currentTarget.style.borderColor=LINKEDIN_COLORS.borderColor}
                         />
                       </div>
                       <div>
-                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Heure</label>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:LINKEDIN_COLORS.textPrimary,marginBottom:'8px'}}>Heure</label>
                         <input
                           type="time"
                           value={editTime}
                           onChange={e=>setEditTime(e.target.value)}
                           style={{
-                            width:'100%',padding:'10px 12px',borderRadius:'10px',fontSize:'13px',outline:'none',
-                            background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',color:'#E5E7EB',transition:'all 0.3s'
+                            width:'100%',padding:'10px 12px',borderRadius:'6px',fontSize:'13px',outline:'none',
+                            background:LINKEDIN_COLORS.lightBlueBg,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,color:LINKEDIN_COLORS.textPrimary,transition:'all 120ms ease'
                           }}
-                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
-                          onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
+                          onFocus={(e)=>e.currentTarget.style.borderColor=LINKEDIN_COLORS.primaryBlue}
+                          onBlur={(e)=>e.currentTarget.style.borderColor=LINKEDIN_COLORS.borderColor}
                         />
                       </div>
                     </div>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'12px',padding:'16px 24px',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'12px',padding:'16px 24px',borderTop:`1px solid ${LINKEDIN_COLORS.borderColor}`}}>
                     <button
                       onClick={()=>setEditingPost(null)}
                       style={{
-                        padding:'8px 16px',fontSize:'13px',borderRadius:'8px',color:'#9CA3AF',
-                        background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',transition:'all 0.3s'
+                        padding:'8px 16px',fontSize:'13px',borderRadius:'6px',color:LINKEDIN_COLORS.textSecondary,
+                        background:'none',border:`1px solid ${LINKEDIN_COLORS.borderColor}`,cursor:'pointer',transition:'all 120ms ease',fontFamily:LINKEDIN_FONT
                       }}
                     >
                       Annuler
@@ -822,9 +760,9 @@ export default function DashboardPage() {
                       disabled={savingEdit}
                       style={{
                         display:'flex',alignItems:'center',gap:'8px',padding:'8px 18px',fontSize:'13px',fontWeight:600,
-                        borderRadius:'8px',background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-                        color:'white',border:'none',cursor:'pointer',opacity:savingEdit?0.7:1,transition:'all 0.3s',
-                        boxShadow:'0 4px 16px rgba(124,58,237,0.3)'
+                        borderRadius:'6px',background:LINKEDIN_COLORS.primaryBlue,
+                        color:LINKEDIN_COLORS.white,border:'none',cursor:'pointer',opacity:savingEdit?0.7:1,transition:'all 120ms ease',
+                        fontFamily:LINKEDIN_FONT
                       }}
                     >
                       {savingEdit?<Loader2 style={{width:'14px',height:'14px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'14px',height:'14px'}} />}
@@ -850,7 +788,7 @@ export default function DashboardPage() {
                   initial={{opacity:0,scale:0.95,y:20}}
                   animate={{opacity:1,scale:1,y:0}}
                   exit={{opacity:0,scale:0.95,y:20}}
-                  transition={{duration:0.3,ease: "easeOut"}}
+                  transition={{duration:0.3,ease:"easeOut"}}
                   onClick={(e)=>e.stopPropagation()}
                   style={{width:'100%',maxWidth:'720px',maxHeight:'90vh',overflow:'auto'}}
                 >
@@ -864,75 +802,50 @@ export default function DashboardPage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.main>
+        </main>
+
+        <aside style={{
+          width:'220px',flexShrink:0,
+          position:'sticky',top:'72px',
+          alignSelf:'flex-start',
+          display:'flex',flexDirection:'column',gap:'8px'
+        }}>
+          <div style={{background:LINKEDIN_COLORS.white,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,borderRadius:'8px',padding:'16px'}}>
+            <h3 style={{fontSize:'14px',fontWeight:700,color:LINKEDIN_COLORS.textPrimary,marginBottom:'12px'}}>
+              Vue d'ensemble
+            </h3>
+            <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+              {[
+                {label:'Posts totaux',value:posts.length,color:LINKEDIN_COLORS.textPrimary},
+                {label:'Programmés',value:scheduledCount,color:LINKEDIN_COLORS.primaryBlue},
+                {label:'Publiés',value:publishedCount,color:LINKEDIN_COLORS.green},
+                {label:'Brouillons',value:draftCount,color:LINKEDIN_COLORS.textSecondary},
+              ].map(stat=>(
+                <div key={stat.label} style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:'13px',color:LINKEDIN_COLORS.textSecondary}}>{stat.label}</span>
+                  <span style={{fontSize:'15px',fontWeight:700,color:stat.color}}>{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{background:LINKEDIN_COLORS.white,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,borderRadius:'8px',padding:'16px'}}>
+            <h3 style={{fontSize:'13px',fontWeight:700,color:LINKEDIN_COLORS.textSecondary,marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+              💡 Conseil
+            </h3>
+            <p style={{fontSize:'13px',color:LINKEDIN_COLORS.textSecondary,lineHeight:'1.5'}}>
+              Les posts publiés entre 8h et 10h ont 3x plus d'engagement sur LinkedIn.
+            </p>
+          </div>
+        </aside>
       </div>
 
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
-        @keyframes shimmer {
-          0% { background-position: -1000% 0; }
-          100% { background-position: 1000% 0; }
-        }
       `}</style>
     </div>
-  )
-}
-
-function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value: number; label: string; color: string; delay: number }) {
-  return (
-    <motion.div
-      initial={{opacity:0,y:20}}
-      animate={{opacity:1,y:0}}
-      transition={{delay,duration:0.5,ease: "easeOut"}}
-      whileHover={{y:-3}}
-      style={{
-        background:'rgba(255,255,255,0.025)',
-        border:'1px solid rgba(255,255,255,0.06)',
-        borderRadius:'16px',
-        padding:'24px',
-        position:'relative',
-        overflow:'hidden',
-        cursor:'default',
-      }}
-    >
-      <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',background:`linear-gradient(90deg,transparent,${color},transparent)`}} />
-      <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.02) 50%,transparent 60%)',backgroundSize:'200%',animation:'shimmer 3s linear infinite'}} />
-
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',position:'relative',zIndex:1}}>
-        <div>
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:delay+0.2,duration:0.6}}
-            style={{
-              fontSize:'36px',fontWeight:800,fontFamily:'Syne,sans-serif',letterSpacing:'-0.03em',
-              lineHeight:1,background:`linear-gradient(135deg,#FFFFFF 0%,${color} 100%)`,
-              WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'
-            }}
-          >
-            {value}
-          </motion.div>
-          <div style={{fontSize:'13px',color:'#9CA3AF',marginTop:'6px',fontWeight:500}}>
-            {label}
-          </div>
-        </div>
-        <motion.div
-          initial={{scale:0}}
-          animate={{scale:1}}
-          transition={{delay:delay+0.1,duration:0.4,type:'spring'}}
-          style={{
-            width:'40px',height:'40px',borderRadius:'10px',
-            background:`rgba(${hexToRgb(color)},0.1)`,
-            display:'flex',alignItems:'center',justifyContent:'center',
-            border:`1px solid ${color}40`
-          }}
-        >
-          <Icon style={{width:'18px',height:'18px',color}} />
-        </motion.div>
-      </div>
-    </motion.div>
   )
 }
 
@@ -941,16 +854,16 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
   const paginated=posts.slice((currentPage-1)*POSTS_PER_PAGE,currentPage*POSTS_PER_PAGE)
 
   return (
-    <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.4}} style={{borderRadius:'16px',overflow:'hidden',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)'}}>
-      <div style={{padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-        <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB'}}>Tous les posts</h3>
-        <span style={{fontSize:'12px',color:'#9CA3AF'}}>{posts.length} post{posts.length>1?'s':''} au total</span>
+    <div style={{borderRadius:'8px',overflow:'hidden',background:LINKEDIN_COLORS.white,border:`1px solid ${LINKEDIN_COLORS.borderColor}`}}>
+      <div style={{padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${LINKEDIN_COLORS.borderColor}`}}>
+        <h3 style={{fontWeight:700,fontSize:'16px',color:LINKEDIN_COLORS.textPrimary}}>Tous les posts</h3>
+        <span style={{fontSize:'12px',color:LINKEDIN_COLORS.textSecondary}}>{posts.length} post{posts.length>1?'s':''} au total</span>
       </div>
-      <div style={{borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+      <div>
         {posts.length===0?(
           <div style={{padding:'48px 24px',textAlign:'center'}}>
-            <p style={{fontSize:'16px',marginBottom:'8px',fontWeight:500,color:'#E5E7EB'}}>Aucun post pour l'instant</p>
-            <p style={{fontSize:'13px',color:'#9CA3AF'}}>Clique sur "Nouveau post" ou "Importer" pour commencer !</p>
+            <p style={{fontSize:'16px',marginBottom:'8px',fontWeight:600,color:LINKEDIN_COLORS.textPrimary}}>Aucun post pour l'instant</p>
+            <p style={{fontSize:'13px',color:LINKEDIN_COLORS.textSecondary}}>Clique sur "Nouveau post" ou "Importer" pour commencer !</p>
           </div>
         ):(
           <>
@@ -959,64 +872,85 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
               const isConfirmingDelete=confirmDeleteId===post.id
               const isDeleting=deletingId===post.id
               const isRetrying=retryingId===post.id
-              const statusBg={'scheduled':'rgba(124,58,237,0.1)','published':'rgba(52,211,153,0.1)','failed':'rgba(239,68,68,0.1)','draft':'rgba(255,255,255,0.05)'}[post.status]||'rgba(255,255,255,0.05)'
-              const statusColor={'scheduled':'#A78BFA','published':'#34D399','failed':'#EF4444','draft':'#9CA3AF'}[post.status]||'#9CA3AF'
+              const statusBg={'scheduled':LINKEDIN_COLORS.lightBlueBg,'published':LINKEDIN_COLORS.greenBg,'failed':LINKEDIN_COLORS.redBg,'draft':'rgba(0,0,0,0.05)'}[post.status]||'rgba(0,0,0,0.05)'
+              const statusColor={'scheduled':LINKEDIN_COLORS.primaryBlue,'published':LINKEDIN_COLORS.green,'failed':LINKEDIN_COLORS.red,'draft':LINKEDIN_COLORS.textSecondary}[post.status]||LINKEDIN_COLORS.textSecondary
               const statusLabel={'scheduled':'⏰ Programmé','published':'✓ Publié','failed':'✗ Échoué','draft':'Brouillon'}[post.status]||'Brouillon'
               return (
-                <motion.div key={post.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3}} style={{padding:'20px 24px',display:'flex',alignItems:'flex-start',gap:'16px',borderBottom:'1px solid rgba(255,255,255,0.05)',background:'transparent',transition:'background 0.3s',cursor:'default'}} onMouseEnter={(e)=>e.currentTarget.style.background='rgba(124,58,237,0.03)'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
-                  <div style={{flexShrink:0,width:'56px',textAlign:'center'}}>
-                    <p style={{fontSize:'18px',fontWeight:700,lineHeight:1,color:'#A78BFA',fontFamily:'Syne,sans-serif'}}>{d.getDate()}</p>
-                    <p style={{fontSize:'10px',textTransform:'uppercase',marginTop:'4px',color:'#9CA3AF'}}>{d.toLocaleDateString('fr-FR',{month:'short'})}</p>
-                    <p style={{fontSize:'10px',color:'#9CA3AF'}}>{d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</p>
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <p style={{fontSize:'13px',color:'#D1D5DB',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{post.content.replace(/<[^>]+>/g,'').slice(0,200)}</p>
-                    <div style={{display:'flex',alignItems:'center',gap:'12px',marginTop:'8px'}}>
-                      <span style={{fontSize:'12px',color:'#9CA3AF'}}>{post.content.replace(/<[^>]+>/g,'').length} car.</span>
-                      {post.images&&post.images.length>0&&(<span style={{fontSize:'12px',color:'#A78BFA'}}>🖼 {post.images.length} image{post.images.length>1?'s':''}</span>)}
+                <div key={post.id} style={{padding:'16px 24px',display:'flex',alignItems:'flex-start',gap:'12px',borderBottom:`1px solid ${LINKEDIN_COLORS.borderColor}`,background:'transparent',transition:'background 120ms ease'}} onMouseEnter={(e)=>e.currentTarget.style.background='rgba(0,0,0,0.02)'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                  <div style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <div style={{
+                      width:'40px',height:'40px',borderRadius:'50%',
+                      background:LINKEDIN_COLORS.primaryBlue,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      color:LINKEDIN_COLORS.white,fontWeight:700,fontSize:'15px'
+                    }}>
+                      {(post.content.charAt(0)||'C').toUpperCase()}
                     </div>
                   </div>
-                  <div style={{flexShrink:0,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px'}}>
-                    <span style={{fontSize:'11px',fontWeight:600,padding:'4px 12px',borderRadius:'6px',background:statusBg,color:statusColor}}>{statusLabel}</span>
-                    {isConfirmingDelete?(
-                      <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
-                        <span style={{fontSize:'11px',color:'#9CA3AF',marginRight:'4px'}}>Supprimer ?</span>
-                        <button onClick={()=>handleDeletePost(post.id)} disabled={isDeleting} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'6px',background:'#EF4444',color:'white',border:'none',cursor:'pointer',opacity:isDeleting?0.6:1,transition:'all 0.3s'}}>
-                          {isDeleting?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'12px',height:'12px'}} />}
-                          Oui
-                        </button>
-                        <button onClick={()=>setConfirmDeleteId(null)} style={{padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#9CA3AF',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',transition:'all 0.3s'}}>Non</button>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'6px'}}>
+                      <div>
+                        <span style={{fontWeight:700,fontSize:'14px',color:LINKEDIN_COLORS.textPrimary}}>
+                          Post ·
+                        </span>
+                        <span style={{fontSize:'13px',color:LINKEDIN_COLORS.textSecondary}}>
+                          {d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}
+                        </span>
                       </div>
-                    ):(
-                      <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
-                        <button onClick={()=>setPreviewPost(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Eye style={{width:'12px',height:'12px'}} />Aperçu</button>
-                        {post.status!=='published'&&(<button onClick={()=>openEditModal(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Pencil style={{width:'12px',height:'12px'}} />Modifier</button>)}
-                        {post.status==='failed'&&(<button onClick={()=>handleRetryPost(post)} disabled={isRetrying} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:500,borderRadius:'6px',color:'#FCD34D',background:'rgba(245,158,11,0.1)',border:'none',cursor:'pointer',opacity:isRetrying?0.6:1,transition:'all 0.3s'}}>{isRetrying?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:'↺'}Réessayer</button>)}
-                        <button onClick={()=>setConfirmDeleteId(post.id)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#EF4444',background:'rgba(239,68,68,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Trash2 style={{width:'12px',height:'12px'}} /></button>
+                      <span style={{
+                        padding:'2px 10px',borderRadius:'9999px',fontSize:'12px',fontWeight:600,
+                        background:statusBg,color:statusColor
+                      }}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p style={{fontSize:'14px',color:LINKEDIN_COLORS.textPrimary,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.5'}}>
+                      {post.content.replace(/<[^>]+>/g,'').slice(0,250)}
+                    </p>
+                    <div style={{display:'flex',gap:'12px',marginTop:'8px'}}>
+                      <button onClick={()=>setPreviewPost(post)} style={{fontSize:'13px',color:LINKEDIN_COLORS.textSecondary,border:'none',background:'none',cursor:'pointer',fontWeight:600,display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'4px'}}>
+                        <Eye style={{width:'14px',height:'14px'}} /> Aperçu
+                      </button>
+                      {post.status!=='published'&&(
+                        <button onClick={()=>openEditModal(post)} style={{fontSize:'13px',color:LINKEDIN_COLORS.textSecondary,border:'none',background:'none',cursor:'pointer',fontWeight:600,display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'4px'}}>
+                          <Pencil style={{width:'14px',height:'14px'}} /> Modifier
+                        </button>
+                      )}
+                      {post.status==='failed'&&(
+                        <button onClick={()=>handleRetryPost(post)} disabled={isRetrying} style={{fontSize:'13px',color:'#B8860B',border:'none',background:'none',cursor:'pointer',fontWeight:600,display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'4px',opacity:isRetrying?0.6:1}}>
+                          {isRetrying?<Loader2 style={{width:'14px',height:'14px',animation:'spin 1s linear infinite'}} />:<RefreshCw style={{width:'14px',height:'14px'}} />}Réessayer
+                        </button>
+                      )}
+                      <button onClick={()=>setConfirmDeleteId(post.id)} style={{fontSize:'13px',color:LINKEDIN_COLORS.red,border:'none',background:'none',cursor:'pointer',fontWeight:600,display:'flex',alignItems:'center',gap:'4px',padding:'4px 8px',borderRadius:'4px'}}>
+                        <Trash2 style={{width:'14px',height:'14px'}} />
+                      </button>
+                    </div>
+                    {isConfirmingDelete&&(
+                      <div style={{marginTop:'8px',display:'flex',gap:'8px',alignItems:'center'}}>
+                        <span style={{fontSize:'12px',color:LINKEDIN_COLORS.textSecondary}}>Êtes-vous sûr ?</span>
+                        <button onClick={()=>handleDeletePost(post.id)} disabled={isDeleting} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'4px',background:LINKEDIN_COLORS.red,color:LINKEDIN_COLORS.white,border:'none',cursor:'pointer',opacity:isDeleting?0.6:1}}>
+                          {isDeleting?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'12px',height:'12px'}} />}
+                          Supprimer
+                        </button>
+                        <button onClick={()=>setConfirmDeleteId(null)} style={{padding:'4px 10px',fontSize:'11px',borderRadius:'4px',color:LINKEDIN_COLORS.textSecondary,background:LINKEDIN_COLORS.lightBlueBg,border:'none',cursor:'pointer'}}>Annuler</button>
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               )
             })}
             {totalPages>1&&(
-              <div style={{padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
-                <span style={{fontSize:'12px',color:'#9CA3AF'}}>Page {currentPage}/{totalPages} · {posts.length} posts</span>
+              <div style={{padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:`1px solid ${LINKEDIN_COLORS.borderColor}`}}>
+                <span style={{fontSize:'12px',color:LINKEDIN_COLORS.textSecondary}}>Page {currentPage}/{totalPages} · {posts.length} posts</span>
                 <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                  <button onClick={()=>setCurrentPage(Math.max(1,currentPage-1))} disabled={currentPage===1} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#D1D5DB',border:'1px solid rgba(255,255,255,0.1)',background:'transparent',cursor:'pointer',opacity:currentPage===1?0.4:1,transition:'all 0.3s'}}>← Précédent</button>
-                  <button onClick={()=>setCurrentPage(Math.min(totalPages,currentPage+1))} disabled={currentPage===totalPages} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#D1D5DB',border:'1px solid rgba(255,255,255,0.1)',background:'transparent',cursor:'pointer',opacity:currentPage===totalPages?0.4:1,transition:'all 0.3s'}}>Suivant →</button>
+                  <button onClick={()=>setCurrentPage(Math.max(1,currentPage-1))} disabled={currentPage===1} style={{padding:'6px 12px',fontSize:'12px',fontWeight:600,borderRadius:'6px',color:LINKEDIN_COLORS.textPrimary,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,background:LINKEDIN_COLORS.white,cursor:'pointer',opacity:currentPage===1?0.4:1}}>← Précédent</button>
+                  <button onClick={()=>setCurrentPage(Math.min(totalPages,currentPage+1))} disabled={currentPage===totalPages} style={{padding:'6px 12px',fontSize:'12px',fontWeight:600,borderRadius:'6px',color:LINKEDIN_COLORS.textPrimary,border:`1px solid ${LINKEDIN_COLORS.borderColor}`,background:LINKEDIN_COLORS.white,cursor:'pointer',opacity:currentPage===totalPages?0.4:1}}>Suivant →</button>
                 </div>
               </div>
             )}
           </>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }
-
-function hexToRgb(hex: string): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  return result ? `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}` : '124,58,237'
-}
-

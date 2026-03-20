@@ -1,1128 +1,937 @@
 'use client'
 
 import {
-  Calendar, Upload, Zap, ArrowRight, Check, Play,
-  Star, Sparkles, Shield, BarChart3,
+  Zap, BarChart3, CalendarIcon, Upload, Eye, Shield,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { motion, useInView } from 'framer-motion'
+import { motion } from 'framer-motion'
 
-// ──────────────────── ANIMATIONS ────────────────────
+// ──────────────────── FEATURES DATA ────────────────────
 
-const FadeInUp = ({ children, delay = 0, duration = 0.6 }) => {
-  const ref = useRef(null)
-  const inView = useInView(ref, { once: true, margin: '-80px' })
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{
-        duration,
-        delay,
-        ease: "easeOut",
-      }}
-    >
-      {children}
-    </motion.div>
-  )
-}
+const features = [
+  {
+    icon: Upload,
+    title: 'Import DOCX en masse',
+    description: 'Importez vos posts depuis Word. Détection automatique des séparateurs et images intégrées.',
+  },
+  {
+    icon: CalendarIcon,
+    title: 'Calendrier de publication',
+    description: 'Visualisez et gérez tous vos posts sur un calendrier intuitif. Drag & drop à venir.',
+  },
+  {
+    icon: Zap,
+    title: 'Publication automatique',
+    description: 'Publiez directement sur LinkedIn à l\'heure choisie, sans aucune intervention manuelle.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Analytics détaillées',
+    description: 'Suivez vos performances en temps réel. Identifiez les créneaux horaires les plus efficaces.',
+  },
+  {
+    icon: Eye,
+    title: 'Prévisualisation réaliste',
+    description: 'Voyez exactement comment votre post apparaîtra sur LinkedIn avant de le publier.',
+  },
+  {
+    icon: Shield,
+    title: 'Sécurité & RGPD',
+    description: 'Hébergement européen, conformité RGPD complète. Vos données restent confidentielles.',
+  },
+]
 
-const FloatingOrb = ({ top, left, size, color, delay, duration = 20 }) => {
-  return (
-    <motion.div
-      style={{
-        position: 'absolute',
-        top,
-        left,
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        backgroundColor: color,
-        filter: `blur(${size / 2}px)`,
-        pointerEvents: 'none',
-      }}
-      animate={{
-        y: [0, -40, 0],
-        x: [0, 30, 0],
-        opacity: [0.3, 0.5, 0.3],
-      }}
-      transition={{
-        duration,
-        delay,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      }}
-    />
-  )
-}
-
-const StatCard = ({ value, label, delay }) => (
-  <FadeInUp delay={delay} duration={0.6}>
-    <div style={{
-      textAlign: 'center',
-      padding: '32px 16px',
-      borderRadius: '16px',
-      background: 'rgba(255,255,255,0.025)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      backdropFilter: 'blur(10px)',
-    }}>
-      <motion.div style={{
-        fontFamily: 'Syne, sans-serif',
-        fontWeight: 800,
-        fontSize: 'clamp(28px, 5vw, 42px)',
-        background: 'linear-gradient(120deg, #A78BFA 0%, #7C3AED 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-        marginBottom: '8px',
-      }}>
-        {value}
-      </motion.div>
-      <p style={{
-        fontSize: '13px',
-        color: 'rgba(240,240,255,0.5)',
-        fontWeight: 500,
-        letterSpacing: '0.05em',
-        textTransform: 'uppercase',
-      }}>
-        {label}
-      </p>
-    </div>
-  </FadeInUp>
-)
-
-const FeatureCard = ({ icon: Icon, title, description, delay }) => (
-  <FadeInUp delay={delay}>
-    <motion.div
-      whileHover={{ y: -8, boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 40px rgba(124,58,237,0.15)' }}
-      style={{
-        padding: '32px',
-        borderRadius: '20px',
-        background: 'rgba(255,255,255,0.025)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        position: 'relative',
-        overflow: 'hidden',
-        cursor: 'default',
-        height: '100%',
-      }}
-    >
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '1px',
-        background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.6), transparent)',
-      }} />
-      <div style={{
-        width: '48px',
-        height: '48px',
-        borderRadius: '12px',
-        background: 'rgba(124,58,237,0.12)',
-        border: '1px solid rgba(124,58,237,0.2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: '20px',
-      }}>
-        <Icon style={{ width: '22px', height: '22px', color: '#A78BFA' }} />
-      </div>
-      <h3 style={{
-        fontFamily: 'Syne, sans-serif',
-        fontWeight: 700,
-        fontSize: '18px',
-        marginBottom: '12px',
-        color: '#F0F0FF',
-      }}>
-        {title}
-      </h3>
-      <p style={{
-        color: 'rgba(240,240,255,0.4)',
-        fontSize: '14px',
-        lineHeight: 1.7,
-      }}>
-        {description}
-      </p>
-    </motion.div>
-  </FadeInUp>
-)
-
-const TestimonialCard = ({ name, role, quote, delay, initials, avatarColor }) => (
-  <FadeInUp delay={delay}>
-    <motion.div
-      whileHover={{ boxShadow: '0 20px 50px rgba(124,58,237,0.2), 0 0 1px 1px rgba(124,58,237,0.3)' }}
-      style={{
-        padding: '28px',
-        borderRadius: '16px',
-        background: 'rgba(255,255,255,0.025)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '16px',
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          background: avatarColor,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontWeight: 700,
-          fontSize: '14px',
-        }}>
-          {initials}
-        </div>
-        <div>
-          <p style={{
-            fontWeight: 600,
-            color: '#F0F0FF',
-            fontSize: '14px',
-            margin: 0,
-          }}>
-            {name}
-          </p>
-          <p style={{
-            fontSize: '12px',
-            color: 'rgba(240,240,255,0.5)',
-            margin: 0,
-            marginTop: '2px',
-          }}>
-            {role}
-          </p>
-        </div>
-      </div>
-      <div style={{
-        display: 'flex',
-        gap: '2px',
-        marginBottom: '14px',
-      }}>
-        {[...Array(5)].map((_, i) => (
-          <Star
-            key={i}
-            size={14}
-            style={{ fill: '#FCD34D', color: '#FCD34D' }}
-          />
-        ))}
-      </div>
-      <p style={{
-        fontSize: '14px',
-        color: 'rgba(240,240,255,0.7)',
-        lineHeight: 1.7,
-        fontStyle: 'italic',
-        margin: 0,
-      }}>
-        "{quote}"
-      </p>
-    </motion.div>
-  </FadeInUp>
-)
-
-const PricingCard = ({ name, price, description, features, isHighlight, delay, onClick = undefined }) => (
-  <FadeInUp delay={delay}>
-    <motion.div
-      whileHover={{ y: -4 }}
-      style={{
-        padding: '40px 32px',
-        borderRadius: '20px',
-        background: isHighlight
-          ? 'rgba(124,58,237,0.1)'
-          : 'rgba(255,255,255,0.025)',
-        border: isHighlight
-          ? '1px solid rgba(124,58,237,0.4)'
-          : '1px solid rgba(255,255,255,0.06)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {isHighlight && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '1px',
-          background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.8), transparent)',
-        }} />
-      )}
-      {isHighlight && (
-        <div style={{
-          display: 'inline-block',
-          padding: '4px 12px',
-          borderRadius: '99px',
-          background: 'rgba(124,58,237,0.15)',
-          border: '1px solid rgba(124,58,237,0.3)',
-          color: '#A78BFA',
-          fontSize: '11px',
-          fontWeight: 600,
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase',
-          marginBottom: '16px',
-        }}>
-          Le plus populaire
-        </div>
-      )}
-      <h3 style={{
-        fontFamily: 'Syne, sans-serif',
-        fontWeight: 800,
-        fontSize: '24px',
-        color: '#F0F0FF',
-        marginBottom: '8px',
-        marginTop: isHighlight ? 0 : '24px',
-      }}>
-        {name}
-      </h3>
-      <p style={{
-        fontSize: '13px',
-        color: 'rgba(240,240,255,0.5)',
-        marginBottom: '24px',
-      }}>
-        {description}
-      </p>
-      <div style={{
-        fontSize: '32px',
-        fontWeight: 800,
-        color: '#F0F0FF',
-        marginBottom: '24px',
-      }}>
-        {price === '0' ? 'Gratuit' : `€${price}`}
-        {price !== '0' && <span style={{ fontSize: '14px', color: 'rgba(240,240,255,0.5)' }}>/mois</span>}
-      </div>
-      <button onClick={onClick} style={{
-        width: '100%',
-        padding: '12px 24px',
-        borderRadius: '10px',
-        border: 'none',
-        fontWeight: 600,
-        fontSize: '14px',
-        cursor: 'pointer',
-        marginBottom: '32px',
-        background: isHighlight
-          ? 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)'
-          : 'rgba(255,255,255,0.06)',
-        color: isHighlight ? 'white' : '#F0F0FF',
-        transition: 'all 0.3s ease',
-      }}>
-        {isHighlight ? 'Démarrer gratuitement' : 'En savoir plus'}
-      </button>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-      }}>
-        {features.map((feature, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '10px',
-            fontSize: '13px',
-            color: 'rgba(240,240,255,0.7)',
-          }}>
-            <Check size={16} style={{ color: '#A78BFA', marginTop: '2px', flexShrink: 0 }} />
-            <span>{feature}</span>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-  </FadeInUp>
-)
+const testimonials = [
+  {
+    quote: 'ContentFlow a transformé ma stratégie LinkedIn. Je gagne 5 heures par semaine et mes posts obtiennent 3x plus d\'engagement.',
+    name: 'Marie Dupont',
+    role: 'Directrice Marketing B2B',
+    initials: 'MD',
+    color: '#0A66C2',
+  },
+  {
+    quote: 'L\'import en masse depuis Word est un game-changer. Plus besoin de copier-coller manuellement chaque post.',
+    name: 'Thomas Lefevre',
+    role: 'Content Creator',
+    initials: 'TL',
+    color: '#057642',
+  },
+  {
+    quote: 'La plateforme est intuitive et le support est exceptionnel. Exactement ce qu\'il me fallait pour scaler ma présence.',
+    name: 'Aisha Williams',
+    role: 'Personal Branding Coach',
+    initials: 'AW',
+    color: '#E16B0D',
+  },
+]
 
 // ──────────────────── PAGE ────────────────────
 
-export default function Page() {
-  const [isNavOpen, setIsNavOpen] = useState(false)
-  const router = useRouter()
-
+export default function Home() {
   return (
-    <div style={{
-      background: '#050508',
-      color: '#F0F0FF',
-      fontFamily: 'Outfit, sans-serif',
-      overflow: 'hidden',
-    }}>
-      {/* Animated background orbs */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden' }}>
-        <FloatingOrb
-          top='-10%'
-          left='-5%'
-          size='700px'
-          color='rgba(124,58,237,0.35)'
-          delay={0}
-          duration={25}
-        />
-        <FloatingOrb
-          top='-15%'
-          left='80%'
-          size='600px'
-          color='rgba(79,70,229,0.25)'
-          delay={5}
-          duration={30}
-        />
-        <FloatingOrb
-          top='60%'
-          left='40%'
-          size='500px'
-          color='rgba(147,51,234,0.2)'
-          delay={10}
-          duration={35}
-        />
-      </div>
+    <div style={{ background: '#F3F2EF', fontFamily: "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
 
-      {/* Navigation */}
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0 }}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          padding: '16px 48px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'rgba(5,5,8,0.7)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
-        }}
-      >
-        <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '18px' }}>
-          ContentFlow
-        </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '48px',
-        }}>
-          <div style={{ display: 'flex', gap: '32px', fontSize: '13px' }}>
-            <Link href='#features' style={{ color: '#F0F0FF', textDecoration: 'none', opacity: 0.7 }}>
-              Fonctionnalités
-            </Link>
-            <Link href='#pricing' style={{ color: '#F0F0FF', textDecoration: 'none', opacity: 0.7 }}>
-              Tarifs
-            </Link>
-          </div>
-          <button onClick={() => router.push('/login')} style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            border: '1px solid rgba(124,58,237,0.4)',
-            background: 'rgba(124,58,237,0.1)',
-            color: '#A78BFA',
-            fontWeight: 600,
-            fontSize: '13px',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-          }}>
-            Connexion
-          </button>
-        </div>
-      </motion.nav>
-
-      {/* Hero Section */}
-      <section style={{
-        position: 'relative',
-        zIndex: 1,
-        minHeight: '100vh',
+      {/* NAVBAR */}
+      <nav style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        background: 'rgba(255,255,255,0.98)',
+        backdropFilter: 'blur(8px)',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+        padding: '0 24px',
+        height: '52px',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: '120px 48px 80px',
-        textAlign: 'center',
+        gap: '16px',
       }}>
-        {/* Badge */}
-        <motion.div
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: 'auto' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            background: '#0A66C2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Zap style={{ width: '16px', height: '16px', color: 'white' }} />
+          </div>
+          <span style={{
+            fontWeight: 700,
+            fontSize: '18px',
+            color: '#0A66C2',
+            letterSpacing: '-0.01em',
+          }}>
+            ContentFlow
+          </span>
+        </div>
+
+        {/* Links */}
+        <Link href="#features" style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: 'rgba(0,0,0,0.6)',
+          textDecoration: 'none',
+          transition: 'color 150ms ease',
+        }}
+        onMouseEnter={(e) => e.target.style.color = 'rgba(0,0,0,0.9)'}
+        onMouseLeave={(e) => e.target.style.color = 'rgba(0,0,0,0.6)'}
+        >
+          Fonctionnalités
+        </Link>
+        <Link href="#pricing" style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: 'rgba(0,0,0,0.6)',
+          textDecoration: 'none',
+          transition: 'color 150ms ease',
+        }}
+        onMouseEnter={(e) => e.target.style.color = 'rgba(0,0,0,0.9)'}
+        onMouseLeave={(e) => e.target.style.color = 'rgba(0,0,0,0.6)'}
+        >
+          Tarifs
+        </Link>
+
+        {/* CTAs */}
+        <Link href="/login" style={{
+          padding: '7px 20px',
+          borderRadius: '9999px',
+          border: '1.5px solid rgba(0,0,0,0.3)',
+          color: 'rgba(0,0,0,0.6)',
+          fontSize: '15px',
+          fontWeight: 600,
+          textDecoration: 'none',
+          transition: 'all 150ms ease',
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.borderColor = '#0A66C2'
+          e.target.style.color = '#0A66C2'
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.borderColor = 'rgba(0,0,0,0.3)'
+          e.target.style.color = 'rgba(0,0,0,0.6)'
+        }}
+        >
+          Connexion
+        </Link>
+        <Link href="/signup" style={{
+          padding: '7px 20px',
+          borderRadius: '9999px',
+          background: '#0A66C2',
+          color: 'white',
+          fontSize: '15px',
+          fontWeight: 600,
+          textDecoration: 'none',
+          transition: 'background 150ms ease',
+        }}
+        onMouseEnter={(e) => e.target.style.background = '#004182'}
+        onMouseLeave={(e) => e.target.style.background = '#0A66C2'}
+        >
+          Rejoindre
+        </Link>
+      </nav>
+
+      {/* HERO SECTION */}
+      <section style={{
+        background: '#FFFFFF',
+        padding: '80px 24px 96px',
+        textAlign: 'center',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+      }}>
+        <motion.div style={{ maxWidth: '760px', margin: '0 auto' }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          style={{
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+        >
+          {/* Badge */}
+          <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
             padding: '6px 16px',
-            borderRadius: '99px',
-            background: 'rgba(124,58,237,0.1)',
-            border: '1px solid rgba(124,58,237,0.25)',
-            color: '#A78BFA',
-            fontSize: '12px',
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            marginBottom: '24px',
-          }}
-        >
-          <Sparkles size={14} />
-          Scheduling professionnel
-        </motion.div>
-
-        {/* Main heading */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          style={{
-            fontFamily: 'Syne, sans-serif',
-            fontWeight: 800,
-            fontSize: 'clamp(48px, 7vw, 96px)',
-            lineHeight: 1.0,
-            letterSpacing: '-0.04em',
-            color: '#F0F0FF',
-            maxWidth: '840px',
-            marginBottom: '28px',
-            margin: '0 auto 28px',
-          }}
-        >
-          Publiez sur LinkedIn{' '}
-          <span style={{
-            background: 'linear-gradient(120deg, #FFFFFF 0%, #C4B5FD 30%, #A78BFA 60%, #7C3AED 100%)',
-            backgroundSize: '200% auto',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            animation: 'text-shine 4s linear infinite',
+            borderRadius: '9999px',
+            border: '1px solid rgba(10,102,194,0.3)',
+            background: '#EAF0F8',
+            marginBottom: '32px',
           }}>
-            sans effort.
-          </span>
-        </motion.h1>
-
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          style={{
-            fontSize: '18px',
-            fontFamily: 'Outfit, sans-serif',
-            fontWeight: 300,
-            color: 'rgba(240,240,255,0.6)',
-            maxWidth: '600px',
-            marginBottom: '40px',
-            margin: '0 auto 40px',
-          }}
-        >
-          Planifiez vos contenus LinkedIn en quelques clics. Calendrier visuel, publication automatique et analytics en temps réel.
-        </motion.p>
-
-        {/* CTA Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          style={{
-            display: 'flex',
-            gap: '16px',
-            justifyContent: 'center',
-            marginBottom: '48px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <button onClick={() => router.push('/login')} style={{
-            padding: '12px 32px',
-            borderRadius: '10px',
-            border: 'none',
-            fontWeight: 600,
-            fontSize: '14px',
-            cursor: 'pointer',
-            background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease',
-            boxShadow: '0 0 40px rgba(124,58,237,0.4)',
-          }}>
-            Commencer gratuitement
-            <ArrowRight size={16} />
-          </button>
-          <button onClick={() => router.push('/login')} style={{
-            padding: '12px 32px',
-            borderRadius: '10px',
-            border: '1px solid rgba(255,255,255,0.15)',
-            fontWeight: 600,
-            fontSize: '14px',
-            cursor: 'pointer',
-            background: 'rgba(255,255,255,0.05)',
-            color: '#F0F0FF',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease',
-          }}>
-            <Play size={16} />
-            Voir la démo
-          </button>
-        </motion.div>
-
-        {/* Social Proof */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '32px',
-            justifyContent: 'center',
-            padding: '20px 32px',
-            borderRadius: '14px',
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            marginBottom: '80px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ display: 'flex', marginRight: '-8px' }}>
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: `linear-gradient(135deg, hsl(${280 + i * 20}, 100%, 50%), hsl(${300 + i * 20}, 100%, 40%))`,
-                    border: '2px solid #050508',
-                  }}
-                />
-              ))}
-            </div>
+            <span style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: '#0A66C2',
+            }} />
             <span style={{
               fontSize: '13px',
-              color: 'rgba(240,240,255,0.7)',
-              fontWeight: 500,
+              fontWeight: 600,
+              color: '#0A66C2',
             }}>
-              +5 000 créateurs actifs
+              Nouveau · Publication LinkedIn automatisée
             </span>
           </div>
+
+          {/* H1 */}
+          <h1 style={{
+            fontFamily: "'Source Serif 4', Georgia, serif",
+            fontWeight: 700,
+            fontSize: 'clamp(40px, 6vw, 68px)',
+            lineHeight: 1.15,
+            letterSpacing: '-0.02em',
+            color: 'rgba(0,0,0,0.9)',
+            marginBottom: '20px',
+            margin: '0 auto 20px',
+          }}>
+            Planifiez votre présence LinkedIn,{' '}
+            <span style={{ color: '#0A66C2' }}>automatiquement</span>
+          </h1>
+
+          {/* Subtitle */}
+          <p style={{
+            fontSize: '18px',
+            color: 'rgba(0,0,0,0.6)',
+            lineHeight: '1.6',
+            maxWidth: '540px',
+            margin: '0 auto 36px',
+          }}>
+            Importez depuis Word, programmez vos posts et publiez automatiquement sur LinkedIn.
+            Concentrez-vous sur votre message, on s'occupe du reste.
+          </p>
+
+          {/* CTA buttons */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            marginBottom: '40px',
+          }}>
+            <Link href="/signup" style={{
+              padding: '13px 28px',
+              borderRadius: '9999px',
+              background: '#0A66C2',
+              color: 'white',
+              fontSize: '16px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'background 150ms ease, box-shadow 150ms ease',
+              boxShadow: '0 4px 12px rgba(10,102,194,0.25)',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#004182'
+              e.target.style.boxShadow = '0 8px 24px rgba(10,102,194,0.35)'
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#0A66C2'
+              e.target.style.boxShadow = '0 4px 12px rgba(10,102,194,0.25)'
+            }}
+            >
+              Commencer gratuitement →
+            </Link>
+            <Link href="#features" style={{
+              padding: '12px 28px',
+              borderRadius: '9999px',
+              border: '1.5px solid rgba(0,0,0,0.3)',
+              color: 'rgba(0,0,0,0.7)',
+              fontSize: '16px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.borderColor = '#0A66C2'
+              e.target.style.color = '#0A66C2'
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.borderColor = 'rgba(0,0,0,0.3)'
+              e.target.style.color = 'rgba(0,0,0,0.7)'
+            }}
+            >
+              Voir les fonctionnalités
+            </Link>
+          </div>
+
+          {/* Social proof */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            fontSize: '13px',
+            justifyContent: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
           }}>
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                size={14}
-                style={{ fill: '#FCD34D', color: '#FCD34D' }}
-              />
-            ))}
-            <span style={{ color: 'rgba(240,240,255,0.7)', marginLeft: '4px' }}>
-              4.9/5
-            </span>
-          </div>
-        </motion.div>
-
-        {/* Dashboard Mockup */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 40 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '900px',
-            perspective: '1200px',
-          }}
-        >
-          <motion.div
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 4, repeat: Infinity }}
-            style={{
-              borderRadius: '24px',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-              border: '1px solid rgba(124,58,237,0.2)',
-              padding: '24px',
-              backdropFilter: 'blur(20px)',
-              boxShadow: '0 0 80px rgba(124,58,237,0.2), inset 0 0 40px rgba(255,255,255,0.05)',
-            }}
-          >
-            <div style={{
-              borderRadius: '16px',
-              background: 'rgba(5,5,8,0.8)',
-              padding: '32px',
-              minHeight: '400px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              gap: '12px',
-            }}>
-              {/* Calendar grid mockup */}
-              {[...Array(35)].map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    aspectRatio: '1',
-                    borderRadius: '8px',
-                    background: i % 5 === 0
-                      ? 'rgba(124,58,237,0.15)'
-                      : 'rgba(255,255,255,0.03)',
-                    border: i % 5 === 0
-                      ? '1px solid rgba(124,58,237,0.3)'
-                      : '1px solid rgba(255,255,255,0.05)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {i % 7 && (
-                    <span style={{
-                      fontSize: '11px',
-                      color: 'rgba(240,240,255,0.3)',
-                    }}>
-                      {(i % 28) + 1}
-                    </span>
-                  )}
+            {/* Stacked avatars */}
+            <div style={{ display: 'flex' }}>
+              {['#0A66C2', '#057642', '#E16B0D', '#CC1016', '#5F9B41'].map((color, i) => (
+                <div key={i} style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: color,
+                  border: '2px solid white',
+                  marginLeft: i > 0 ? '-8px' : 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                }}>
+                  {['A', 'M', 'T', 'J', 'C'][i]}
                 </div>
               ))}
             </div>
-          </motion.div>
-
-          {/* Floating stat bubbles */}
-          <motion.div
-            animate={{ y: -20 }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              position: 'absolute',
-              top: '-40px',
-              right: '40px',
-              padding: '12px 20px',
-              borderRadius: '12px',
-              background: 'rgba(124,58,237,0.15)',
-              border: '1px solid rgba(124,58,237,0.3)',
-              fontSize: '12px',
-              fontWeight: 600,
-              zIndex: 10,
-            }}
-          >
-            📈 +340% engagement
-          </motion.div>
-
-          <motion.div
-            animate={{ y: 20 }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              position: 'absolute',
-              bottom: '-60px',
-              left: '60px',
-              padding: '12px 20px',
-              borderRadius: '12px',
-              background: 'rgba(79,70,229,0.15)',
-              border: '1px solid rgba(79,70,229,0.3)',
-              fontSize: '12px',
-              fontWeight: 600,
-              zIndex: 10,
-            }}
-          >
-            ✓ Auto-publication activée
-          </motion.div>
+            <p style={{
+              fontSize: '14px',
+              color: 'rgba(0,0,0,0.6)',
+              fontWeight: 500,
+            }}>
+              <strong style={{ color: 'rgba(0,0,0,0.9)' }}>5,000+</strong> créateurs LinkedIn font confiance à ContentFlow
+            </p>
+          </div>
         </motion.div>
       </section>
 
-      {/* Stats Band */}
+      {/* STATS BAND */}
       <section style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: '100px 48px',
-        maxWidth: '1200px',
-        margin: '0 auto',
+        background: '#FFFFFF',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+        padding: '32px 24px',
       }}>
         <div style={{
+          maxWidth: '900px',
+          margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '24px',
+          textAlign: 'center',
         }}>
-          <StatCard value='12 000+' label='Posts créés' delay={0} />
-          <StatCard value='98%' label='Taux de succès' delay={0.1} />
-          <StatCard value='5 000+' label='Utilisateurs' delay={0.2} />
-          <StatCard value='2 min' label='Temps de setup' delay={0.3} />
+          {[
+            { value: '12K+', label: 'Posts créés par nos utilisateurs' },
+            { value: '5h', label: 'Gagnées par semaine en moyenne' },
+            { value: '3x', label: 'Plus d\'engagement LinkedIn' },
+          ].map((stat, i) => (
+            <motion.div key={i}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1, duration: 0.4, ease: 'easeOut' }}
+            >
+              <p style={{
+                fontFamily: "'Source Serif 4', serif",
+                fontSize: '36px',
+                fontWeight: 700,
+                color: '#0A66C2',
+                lineHeight: 1,
+              }}>
+                {stat.value}
+              </p>
+              <p style={{
+                fontSize: '14px',
+                color: 'rgba(0,0,0,0.55)',
+                marginTop: '6px',
+              }}>
+                {stat.label}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id='features' style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: '100px 48px',
-        maxWidth: '1200px',
-        margin: '0 auto',
+      {/* FEATURES SECTION */}
+      <section id="features" style={{
+        background: '#F3F2EF',
+        padding: '72px 24px',
       }}>
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '64px',
-        }}>
-          <motion.span
-            initial={{ opacity: 0, y: 10 }}
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 16px',
-              borderRadius: '99px',
-              background: 'rgba(124,58,237,0.1)',
-              border: '1px solid rgba(124,58,237,0.25)',
-              color: '#A78BFA',
-              fontSize: '12px',
-              fontWeight: 600,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              marginBottom: '16px',
-            }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            style={{ textAlign: 'center', marginBottom: '48px' }}
           >
-            Fonctionnalités
-          </motion.span>
-          <FadeInUp>
             <h2 style={{
-              fontFamily: 'Syne, sans-serif',
-              fontWeight: 800,
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              color: '#F0F0FF',
+              fontFamily: "'Source Serif 4', serif",
+              fontSize: 'clamp(28px, 4vw, 40px)',
+              fontWeight: 700,
+              color: 'rgba(0,0,0,0.9)',
+              letterSpacing: '-0.02em',
+              marginBottom: '8px',
             }}>
-              Tout ce dont vous avez{' '}
-              <span style={{
-                background: 'linear-gradient(120deg, #A78BFA 0%, #7C3AED 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>
-                besoin
-              </span>
+              Tout ce dont vous avez besoin
             </h2>
-          </FadeInUp>
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px',
-        }}>
-          <FeatureCard
-            icon={Calendar}
-            title='Calendrier éditorial'
-            description='Planifiez vos posts sur un calendrier visuel. Glissez-déposez pour réorganiser facilement.'
-            delay={0}
-          />
-          <FeatureCard
-            icon={Upload}
-            title='Import en masse'
-            description='Importez vos contenus depuis Word, Excel ou CSV. Publication automatique selon votre planning.'
-            delay={0.1}
-          />
-          <FeatureCard
-            icon={Zap}
-            title='Publication automatique'
-            description="Publiez directement sur LinkedIn à l'heure choisie. Sans besoin d'intervention manuelle."
-            delay={0.2}
-          />
-          <FeatureCard
-            icon={BarChart3}
-            title='Analytics détaillées'
-            description='Suivi en temps réel de vos performances. Identifiez les meilleurs horaires de publication.'
-            delay={0.3}
-          />
-          <FeatureCard
-            icon={Sparkles}
-            title='Prévisualisation réaliste'
-            description={"Voyez exactement comment votre post s'affichera sur LinkedIn avant publication."}
-            delay={0.4}
-          />
-          <FeatureCard
-            icon={Shield}
-            title='Sécurité & confidentialité'
-            description='Hébergement européen, conformité RGPD complète. Vos données restent confidentielles.'
-            delay={0.5}
-          />
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: '100px 48px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-      }}>
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '64px',
-        }}>
-          <FadeInUp>
-            <h2 style={{
-              fontFamily: 'Syne, sans-serif',
-              fontWeight: 800,
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              color: '#F0F0FF',
-            }}>
-              Ce que les utilisateurs en{' '}
-              <span style={{
-                background: 'linear-gradient(120deg, #A78BFA 0%, #7C3AED 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>
-                disent
-              </span>
-            </h2>
-          </FadeInUp>
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px',
-        }}>
-          <TestimonialCard
-            initials='SM'
-            name='Sophie Martin'
-            role='Coach Business · 18K abonnés'
-            quote={"ContentFlow a transformé ma stratégie LinkedIn. J'ai doublé mon engagement en 3 mois et économisé 5h par semaine."}
-            avatarColor='#A78BFA'
-            delay={0}
-          />
-          <TestimonialCard
-            initials='TR'
-            name='Thomas Renard'
-            role='Fondateur SaaS · 9K abonnés'
-            quote='La prévisualisation est bluffante. Je planifie tout mon contenu du mois en 2h le dimanche.'
-            avatarColor='#7C3AED'
-            delay={0.1}
-          />
-          <TestimonialCard
-            initials='CD'
-            name='Camille Dupont'
-            role='Consultante RH · 12K abonnés'
-            quote="Les templates m'ont sauvé. Je n'avais plus de blocage créatif, résultat : 3x plus de leads."
-            avatarColor='#10B981'
-            delay={0.2}
-          />
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id='pricing' style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: '100px 48px',
-        maxWidth: '1000px',
-        margin: '0 auto',
-      }}>
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '64px',
-        }}>
-          <FadeInUp>
-            <h2 style={{
-              fontFamily: 'Syne, sans-serif',
-              fontWeight: 800,
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              color: '#F0F0FF',
-            }}>
-              Tarifs{' '}
-              <span style={{
-                background: 'linear-gradient(120deg, #A78BFA 0%, #7C3AED 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>
-                simples et transparents
-              </span>
-            </h2>
-          </FadeInUp>
-          <FadeInUp delay={0.1}>
             <p style={{
               fontSize: '16px',
-              color: 'rgba(240,240,255,0.6)',
-              marginTop: '16px',
+              color: 'rgba(0,0,0,0.55)',
             }}>
-              Aucune carte de crédit requise. Commencez gratuitement.
+              Une plateforme complète pour dominer LinkedIn
             </p>
-          </FadeInUp>
-        </div>
+          </motion.div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '32px',
-        }}>
-          <PricingCard
-            name='Free'
-            price='0'
-            description='Pour découvrir ContentFlow'
-            isHighlight={false}
-            onClick={() => router.push('/login')}
-            features={[
-              '3 posts programmés par semaine',
-              'Calendrier simplifié',
-              'Support par email',
-              'Export basique des données',
-            ]}
-            delay={0}
-          />
-          <PricingCard
-            name='Premium'
-            price='29'
-            description='Pour les créateurs sérieux'
-            isHighlight={true}
-            onClick={() => router.push('/login')}
-            features={[
-              'Posts illimités',
-              'Calendrier avancé',
-              'Import en masse',
-              'Analytics détaillées',
-              'Priorité support',
-              'API access',
-            ]}
-            delay={0.1}
-          />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '16px',
+          }}>
+            {features.map((feature, i) => {
+              const Icon = feature.icon
+              return (
+                <motion.div key={i}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.07, duration: 0.4, ease: 'easeOut' }}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: '8px',
+                    padding: '24px',
+                    transition: 'box-shadow 200ms ease, transform 200ms ease',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    background: '#EAF0F8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '16px',
+                  }}>
+                    <Icon style={{ width: '20px', height: '20px', color: '#0A66C2' }} />
+                  </div>
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    color: 'rgba(0,0,0,0.9)',
+                    marginBottom: '8px',
+                  }}>
+                    {feature.title}
+                  </h3>
+                  <p style={{
+                    fontSize: '14px',
+                    color: 'rgba(0,0,0,0.55)',
+                    lineHeight: '1.6',
+                  }}>
+                    {feature.description}
+                  </p>
+                </motion.div>
+              )
+            })}
+          </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* TESTIMONIALS */}
       <section style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: '80px 48px',
-        maxWidth: '800px',
-        margin: '0 auto',
-        textAlign: 'center',
+        background: '#FFFFFF',
+        padding: '72px 24px',
+        borderTop: '1px solid rgba(0,0,0,0.08)',
       }}>
-        <FadeInUp>
-          <h2 style={{
-            fontFamily: 'Syne, sans-serif',
-            fontWeight: 800,
-            fontSize: 'clamp(32px, 4vw, 52px)',
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
-            color: '#F0F0FF',
-            marginBottom: '24px',
+        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            style={{
+              fontFamily: "'Source Serif 4', serif",
+              fontSize: 'clamp(28px, 4vw, 40px)',
+              fontWeight: 700,
+              color: 'rgba(0,0,0,0.9)',
+              textAlign: 'center',
+              marginBottom: '48px',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Ce que disent nos utilisateurs
+          </motion.h2>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '16px',
           }}>
-            Prêt à transformer votre LinkedIn ?
-          </h2>
-        </FadeInUp>
-        <FadeInUp delay={0.1}>
-          <p style={{
-            fontSize: '16px',
-            color: 'rgba(240,240,255,0.6)',
-            marginBottom: '40px',
-          }}>
-            Rejoignez 5000+ créateurs qui publient smarter avec ContentFlow.
-          </p>
-        </FadeInUp>
-        <FadeInUp delay={0.2}>
-          <button onClick={() => router.push('/login')} style={{
-            padding: '14px 40px',
-            borderRadius: '10px',
-            border: 'none',
-            fontWeight: 600,
-            fontSize: '15px',
-            cursor: 'pointer',
-            background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-            color: 'white',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease',
-            boxShadow: '0 0 40px rgba(124,58,237,0.4)',
-          }}>
-            Commencer gratuitement
-            <ArrowRight size={18} />
-          </button>
-        </FadeInUp>
+            {testimonials.map((t, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4, ease: 'easeOut' }}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid rgba(0,0,0,0.1)',
+                  borderRadius: '8px',
+                  padding: '24px',
+                  transition: 'box-shadow 200ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                {/* Stars */}
+                <div style={{ color: '#F5A623', marginBottom: '12px', fontSize: '14px' }}>★★★★★</div>
+                <p style={{
+                  fontSize: '14px',
+                  color: 'rgba(0,0,0,0.75)',
+                  lineHeight: '1.6',
+                  marginBottom: '16px',
+                }}>
+                  "{t.quote}"
+                </p>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: t.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                  }}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      color: 'rgba(0,0,0,0.9)',
+                      margin: 0,
+                    }}>
+                      {t.name}
+                    </p>
+                    <p style={{
+                      fontSize: '12px',
+                      color: 'rgba(0,0,0,0.5)',
+                      margin: '4px 0 0 0',
+                    }}>
+                      {t.role}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* Footer */}
+      {/* PRICING */}
+      <section id="pricing" style={{
+        background: '#F3F2EF',
+        padding: '72px 24px',
+      }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            style={{ textAlign: 'center', marginBottom: '48px' }}
+          >
+            <h2 style={{
+              fontFamily: "'Source Serif 4', serif",
+              fontSize: 'clamp(28px, 4vw, 40px)',
+              fontWeight: 700,
+              color: 'rgba(0,0,0,0.9)',
+              letterSpacing: '-0.02em',
+              marginBottom: '8px',
+            }}>
+              Tarifs simples et transparents
+            </h2>
+            <p style={{
+              fontSize: '16px',
+              color: 'rgba(0,0,0,0.55)',
+            }}>
+              Commencez gratuitement, passez à Premium quand vous êtes prêt
+            </p>
+          </motion.div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            maxWidth: '900px',
+            margin: '0 auto',
+            gap: '16px',
+          }}>
+            {/* Free Plan */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              style={{
+                background: '#FFFFFF',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '8px',
+                padding: '28px',
+              }}
+            >
+              <p style={{
+                fontWeight: 700,
+                fontSize: '18px',
+                color: 'rgba(0,0,0,0.9)',
+                marginBottom: '12px',
+              }}>
+                Gratuit
+              </p>
+              <p style={{
+                fontSize: '32px',
+                fontWeight: 800,
+                color: 'rgba(0,0,0,0.9)',
+                margin: '12px 0',
+              }}>
+                0€<span style={{
+                  fontSize: '16px',
+                  fontWeight: 400,
+                  color: 'rgba(0,0,0,0.5)',
+                }}>/mois</span>
+              </p>
+              <ul style={{
+                listStyle: 'none',
+                marginBottom: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: 0,
+              }}>
+                {['5 posts/mois', 'Calendrier basique', '1 compte LinkedIn'].map((f) => (
+                  <li key={f} style={{
+                    fontSize: '14px',
+                    color: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ color: '#057642', fontWeight: 700 }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/signup" style={{
+                display: 'block',
+                textAlign: 'center',
+                padding: '10px',
+                borderRadius: '9999px',
+                border: '1.5px solid #0A66C2',
+                color: '#0A66C2',
+                fontWeight: 600,
+                fontSize: '15px',
+                textDecoration: 'none',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#EAF0F8'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent'
+              }}
+              >
+                Commencer
+              </Link>
+            </motion.div>
+
+            {/* Premium Plan — Highlighted */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1, duration: 0.4, ease: 'easeOut' }}
+              style={{
+                background: '#FFFFFF',
+                border: '2px solid #0A66C2',
+                borderRadius: '8px',
+                padding: '28px',
+                position: 'relative',
+                boxShadow: '0 8px 24px rgba(10,102,194,0.15)',
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                top: '-12px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: '#0A66C2',
+                color: 'white',
+                padding: '3px 14px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+              }}>
+                Le plus populaire
+              </div>
+              <p style={{
+                fontWeight: 700,
+                fontSize: '18px',
+                color: '#0A66C2',
+                marginBottom: '12px',
+              }}>
+                Premium
+              </p>
+              <p style={{
+                fontSize: '32px',
+                fontWeight: 800,
+                color: 'rgba(0,0,0,0.9)',
+                margin: '12px 0',
+              }}>
+                29€<span style={{
+                  fontSize: '16px',
+                  fontWeight: 400,
+                  color: 'rgba(0,0,0,0.5)',
+                }}>/mois</span>
+              </p>
+              <ul style={{
+                listStyle: 'none',
+                marginBottom: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: 0,
+              }}>
+                {['Posts illimités', 'Import DOCX', 'Analytics avancées', 'Support prioritaire'].map((f) => (
+                  <li key={f} style={{
+                    fontSize: '14px',
+                    color: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ color: '#057642', fontWeight: 700 }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/signup" style={{
+                display: 'block',
+                textAlign: 'center',
+                padding: '10px',
+                borderRadius: '9999px',
+                background: '#0A66C2',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '15px',
+                textDecoration: 'none',
+                transition: 'background 150ms ease',
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#004182'}
+              onMouseLeave={(e) => e.target.style.background = '#0A66C2'}
+              >
+                Commencer
+              </Link>
+            </motion.div>
+
+            {/* Team Plan */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.4, ease: 'easeOut' }}
+              style={{
+                background: '#FFFFFF',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '8px',
+                padding: '28px',
+              }}
+            >
+              <p style={{
+                fontWeight: 700,
+                fontSize: '18px',
+                color: 'rgba(0,0,0,0.9)',
+                marginBottom: '12px',
+              }}>
+                Équipe
+              </p>
+              <p style={{
+                fontSize: '32px',
+                fontWeight: 800,
+                color: 'rgba(0,0,0,0.9)',
+                margin: '12px 0',
+              }}>
+                79€<span style={{
+                  fontSize: '16px',
+                  fontWeight: 400,
+                  color: 'rgba(0,0,0,0.5)',
+                }}>/mois</span>
+              </p>
+              <ul style={{
+                listStyle: 'none',
+                marginBottom: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: 0,
+              }}>
+                {['Tout Premium', '5 comptes LinkedIn', 'Collaboration équipe', 'API access'].map((f) => (
+                  <li key={f} style={{
+                    fontSize: '14px',
+                    color: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ color: '#057642', fontWeight: 700 }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/signup" style={{
+                display: 'block',
+                textAlign: 'center',
+                padding: '10px',
+                borderRadius: '9999px',
+                border: '1.5px solid #0A66C2',
+                color: '#0A66C2',
+                fontWeight: 600,
+                fontSize: '15px',
+                textDecoration: 'none',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#EAF0F8'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent'
+              }}
+              >
+                Commencer
+              </Link>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
       <footer style={{
-        position: 'relative',
-        zIndex: 1,
-        padding: '60px 48px 40px',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        marginTop: '80px',
+        background: '#FFFFFF',
+        borderTop: '1px solid rgba(0,0,0,0.1)',
+        padding: '32px 24px',
       }}>
         <div style={{
-          maxWidth: '1200px',
+          maxWidth: '1000px',
           margin: '0 auto',
-          textAlign: 'center',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
         }}>
-          <p style={{
-            fontFamily: 'Syne, sans-serif',
-            fontWeight: 800,
-            fontSize: '16px',
-            marginBottom: '32px',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}>
-            ContentFlow
-          </p>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '4px',
+              background: '#0A66C2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Zap style={{ width: '14px', height: '14px', color: 'white' }} />
+            </div>
+            <span style={{
+              fontWeight: 700,
+              color: '#0A66C2',
+              fontSize: '16px',
+            }}>
+              ContentFlow
+            </span>
+          </div>
           <p style={{
             fontSize: '13px',
-            color: 'rgba(240,240,255,0.5)',
-            marginBottom: '32px',
+            color: 'rgba(0,0,0,0.4)',
+            margin: 0,
           }}>
-            Publiez sur LinkedIn. Libérez votre productivité.
+            © 2025 ContentFlow · Tous droits réservés
           </p>
           <div style={{
             display: 'flex',
-            gap: '24px',
-            justifyContent: 'center',
-            marginBottom: '32px',
-            fontSize: '12px',
+            gap: '20px',
           }}>
-            <Link href='#' style={{ color: 'rgba(240,240,255,0.5)', textDecoration: 'none' }}>
-              Conditions
-            </Link>
-            <Link href='#' style={{ color: 'rgba(240,240,255,0.5)', textDecoration: 'none' }}>
+            <Link href="#" style={{
+              fontSize: '13px',
+              color: 'rgba(0,0,0,0.5)',
+              textDecoration: 'none',
+              transition: 'color 150ms ease',
+            }}
+            onMouseEnter={(e) => e.target.style.color = 'rgba(0,0,0,0.9)'}
+            onMouseLeave={(e) => e.target.style.color = 'rgba(0,0,0,0.5)'}
+            >
               Confidentialité
             </Link>
-            <Link href='#' style={{ color: 'rgba(240,240,255,0.5)', textDecoration: 'none' }}>
-              Contact
+            <Link href="#" style={{
+              fontSize: '13px',
+              color: 'rgba(0,0,0,0.5)',
+              textDecoration: 'none',
+              transition: 'color 150ms ease',
+            }}
+            onMouseEnter={(e) => e.target.style.color = 'rgba(0,0,0,0.9)'}
+            onMouseLeave={(e) => e.target.style.color = 'rgba(0,0,0,0.5)'}
+            >
+              CGU
             </Link>
           </div>
-          <p style={{
-            fontSize: '12px',
-            color: 'rgba(240,240,255,0.3)',
-          }}>
-            © 2026 ContentFlow. Tous droits réservés.
-          </p>
         </div>
       </footer>
-
-      {/* Global Animation Styles */}
-      <style jsx>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
-
-        @keyframes text-shine {
-          0% {
-            background-position: 200% center;
-          }
-          100% {
-            background-position: -200% center;
-          }
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-      `}</style>
     </div>
   )
 }
-
