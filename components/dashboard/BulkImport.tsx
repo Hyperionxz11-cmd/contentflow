@@ -729,12 +729,12 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
 
           {/* ── STEP 3 : Schedule ── */}
           {step === 'schedule' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
 
               {/* Smart slots (premium) */}
               {isPremium && (
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-4">
                     <Clock className="w-4 h-4 text-[#0A66C2]" />
                     <h3 className="text-sm font-semibold text-gray-800">
                       {publishedPosts.filter(p => p.status === 'published').length >= 3
@@ -742,25 +742,25 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                         : '💡 Créneaux LinkedIn recommandés'}
                     </h3>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-3">
                     {smartSlots.map((slot, i) => (
                       <button
                         key={i}
                         onClick={() => applySmartSlot(slot)}
-                        className="p-3 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:border-[#0A66C2] hover:bg-blue-50 transition-all text-left group"
+                        className="p-4 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:border-[#0A66C2] hover:bg-blue-50 transition-all text-left group"
                       >
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <Star className={`w-3 h-3 ${i === 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Star className={`w-3.5 h-3.5 ${i === 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />
                           <span className="text-xs font-bold text-gray-700">{slot.dayLabel} {slot.hour}h</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1 mb-1">
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
                           <div
-                            className="h-1 rounded-full bg-blue-500 transition-all"
+                            className="h-1.5 rounded-full bg-[#0A66C2] transition-all"
                             style={{ width: `${slot.score}%` }}
                           />
                         </div>
-                        <p className="text-[10px] text-gray-500 leading-tight truncate">{slot.label}</p>
-                        <p className="text-[10px] text-[#0A66C2] opacity-0 group-hover:opacity-100 transition-opacity font-medium mt-0.5">Appliquer →</p>
+                        <p className="text-[11px] text-gray-500 leading-tight truncate">{slot.label}</p>
+                        <p className="text-[11px] text-[#0A66C2] opacity-0 group-hover:opacity-100 transition-opacity font-semibold mt-1">Appliquer →</p>
                       </button>
                     ))}
                   </div>
@@ -768,17 +768,17 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               )}
 
               {!isPremium && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                  <Clock className="w-4 h-4 text-[#0A66C2] flex-shrink-0" />
-                  <p className="text-xs text-[#004182]">
-                    <strong>Créneaux intelligents Premium :</strong> Détection automatique des meilleurs horaires basée sur l'analyse de tes posts publiés.
+                <div className="flex items-center gap-4 p-5 bg-blue-50 rounded-xl border border-blue-100">
+                  <Clock className="w-5 h-5 text-[#0A66C2] flex-shrink-0" />
+                  <p className="text-sm text-[#004182]">
+                    <strong>Créneaux intelligents Premium :</strong> Détection automatique des meilleurs horaires basée sur l&apos;analyse de tes posts publiés.
                   </p>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Fréquence de publication</label>
-                <div className="grid grid-cols-2 gap-3">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Fréquence de publication</label>
+                <div className="grid grid-cols-2 gap-4">
                   {[
                     { id: 'daily' as const, label: 'Quotidien', desc: '1 post/jour' },
                     { id: '3x_week' as const, label: '3x / semaine', desc: 'Lun, Mer, Ven' },
@@ -786,35 +786,35 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                     { id: 'weekly' as const, label: 'Hebdomadaire', desc: '1 post/semaine' },
                   ].map(f => (
                     <button key={f.id} onClick={() => setFrequency(f.id)}
-                      className={`p-4 rounded-xl border text-left transition-all ${
+                      className={`px-5 py-4 rounded-xl border text-left transition-all ${
                         frequency === f.id ? 'border-[var(--primary)] bg-[var(--primary-light)]/30' : 'border-gray-200 hover:border-gray-300'
                       }`}>
-                      <p className="text-sm font-medium text-gray-900">{f.label}</p>
-                      <p className="text-xs text-gray-400">{f.desc}</p>
+                      <p className="text-sm font-semibold text-gray-900">{f.label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{f.desc}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Date de début</label>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Heure</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Heure</label>
                   <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
                 </div>
               </div>
 
-              <div className="p-4 bg-blue-50 rounded-xl">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="p-5 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-2 mb-3">
                   <Calendar className="w-4 h-4 text-[var(--primary)]" />
-                  <span className="text-sm font-medium text-[var(--primary)]">Résumé</span>
+                  <span className="text-sm font-semibold text-[var(--primary)]">Résumé</span>
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 leading-relaxed">
                   {selectedPosts.size} posts programmés{' '}
                   {frequency === 'daily' ? 'tous les jours'
                     : frequency === '3x_week' ? '3x par semaine (Lun, Mer, Ven)'
@@ -825,7 +825,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                   à {startTime}.
                 </p>
                 {totalImages > 0 && (
-                  <p className="text-sm text-blue-600 mt-1.5 font-medium">
+                  <p className="text-sm text-blue-600 mt-2 font-medium">
                     🖼 {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — elles seront uploadées et incluses dans les posts LinkedIn.
                   </p>
                 )}
@@ -835,23 +835,23 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div className="px-7 py-5 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
           {step !== 'upload' && (
             <button onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
-              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
+              className="px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
               Retour
             </button>
           )}
           <div className="ml-auto">
             {step === 'preview' && (
               <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
-                className="px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-40">
+                className="px-7 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-40">
                 Programmer ({selectedPosts.size} posts)
               </button>
             )}
             {step === 'schedule' && (
               <button onClick={handleSchedule} disabled={scheduling}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-60">
+                className="flex items-center gap-2 px-7 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-60">
                 {scheduling ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />{totalImages > 0 ? `Upload images (${totalImages})…` : 'Programmation…'}</>
                 ) : (
