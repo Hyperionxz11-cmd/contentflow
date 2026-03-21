@@ -490,12 +490,12 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
               {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Aperçu des posts' : 'Programmer'}
             </h2>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 mt-0.5">
               {step === 'upload'
                 ? 'Glisse un fichier Word ou texte avec tes posts'
                 : step === 'preview'
@@ -503,50 +503,51 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                 : 'Choisis la fréquence et la date de début'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+          <button onClick={onClose} className="p-2.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
 
           {/* ── STEP 1 : Upload ── */}
           {step === 'upload' && (
-            <div>
+            <div className="space-y-6">
               <div
                 onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
+                className={`border-2 border-dashed rounded-2xl p-16 text-center transition-colors ${
                   dragOver ? 'border-[var(--primary)] bg-[var(--primary-light)]' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
                 {loading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-10 h-10 text-[var(--primary)] animate-spin" />
-                    <p className="text-sm text-gray-500">{loadingMsg}</p>
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="w-12 h-12 text-[var(--primary)] animate-spin" />
+                    <p className="text-sm text-gray-500 mt-1">{loadingMsg}</p>
                   </div>
                 ) : (
                   <>
-                    <Upload className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-                    <p className="text-sm text-gray-600 mb-2">Glisse ton fichier ici ou</p>
-                    <label className="inline-block px-4 py-2 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg cursor-pointer hover:bg-[var(--primary-dark)] transition-colors">
-                      Parcourir
+                    <Upload className="w-12 h-12 text-gray-300 mx-auto mb-5" />
+                    <p className="text-base text-gray-600 mb-1 font-medium">Glisse ton fichier ici</p>
+                    <p className="text-sm text-gray-400 mb-5">ou parcours tes fichiers</p>
+                    <label className="inline-block px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-full cursor-pointer hover:bg-[var(--primary-dark)] transition-colors">
+                      Choisir un fichier
                       <input type="file" className="hidden" accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
                     </label>
-                    <p className="text-xs text-gray-400 mt-3">Formats : .docx, .txt, .md — Images intégrées automatiquement</p>
+                    <p className="text-xs text-gray-400 mt-5">Formats supportés : .docx, .txt, .md — Images intégrées automatiquement</p>
                   </>
                 )}
               </div>
 
-              {error && <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>}
+              {error && <div className="p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">{error}</div>}
 
-              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Comment formater ton fichier ?</h3>
-                <p className="text-xs text-gray-500 leading-relaxed">
+              <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Comment formater ton fichier ?</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">
                   Les fichiers Word (.docx) sont analysés automatiquement — images incluses.
-                  Pour les fichiers texte, sépare chaque post avec <code className="bg-gray-200 px-1 rounded">---</code> ou une ligne vide.
+                  Pour les fichiers texte, sépare chaque post avec <code className="bg-gray-200 px-1.5 py-0.5 rounded text-xs">---</code> ou une ligne vide.
                 </p>
               </div>
             </div>
@@ -554,8 +555,8 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
 
           {/* ── STEP 2 : Preview ── */}
           {step === 'preview' && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 mb-4">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-5">
                 <FileText className="w-4 h-4 text-gray-400" />
                 <span className="text-sm text-gray-500">{filename}</span>
                 {isHtml && (
@@ -586,9 +587,9 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               )}
 
               {!isPremium && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
                   <Sparkles className="w-4 h-4 text-[#0A66C2] flex-shrink-0" />
-                  <p className="text-xs text-[#004182]">
+                  <p className="text-sm text-[#004182]">
                     <strong>Feature Premium :</strong> Reformulation IA contextuelle — 3 variantes optimisées LinkedIn par post (Storytelling, Liste, Hook+CTA)
                   </p>
                 </div>
@@ -617,7 +618,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                     }`}
                   >
                     {/* Card header */}
-                    <div className="flex items-start gap-3 p-4 pb-2">
+                    <div className="flex items-start gap-3 p-5 pb-3">
                       <div
                         className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
                           isEditing ? 'border-2 border-amber-400 bg-white'
@@ -668,15 +669,15 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                     </div>
 
                     {/* Action bar */}
-                    <div className="flex items-center gap-1 px-4 pb-3 pt-1" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5 px-5 pb-4 pt-1" onClick={e => e.stopPropagation()}>
                       {isEditing ? (
                         <>
                           <button onClick={e => saveEdit(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--primary-dark)] transition-colors">
+                            className="flex items-center gap-1.5 px-4 py-2 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--primary-dark)] transition-colors">
                             <Check className="w-3 h-3" /> Enregistrer
                           </button>
                           <button onClick={e => cancelEdit(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
                             <X className="w-3 h-3" /> Annuler
                           </button>
                         </>
@@ -687,7 +688,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                             <button
                               onClick={e => handleAIReformulate(idx, e)}
                               disabled={isAiLoading}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-[#0A66C2] text-xs font-semibold rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-[#0A66C2] text-xs font-semibold rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
                               title="Reformulation IA — 3 variantes LinkedIn"
                             >
                               {isAiLoading ? (
@@ -699,23 +700,23 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                           ) : (
                             <button
                               onClick={e => e.stopPropagation()}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-gray-50 text-gray-400 text-xs rounded-lg cursor-not-allowed"
+                              className="flex items-center gap-1.5 px-4 py-2 bg-gray-50 text-gray-400 text-xs rounded-lg cursor-not-allowed"
                               title="Disponible en plan Premium"
                             >
                               <Sparkles className="w-3 h-3" />Premium
                             </button>
                           )}
                           <button onClick={e => startEdit(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-[var(--primary)] hover:bg-[var(--primary-light)]/30 rounded-lg transition-colors">
+                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-[var(--primary)] hover:bg-[var(--primary-light)]/30 rounded-lg transition-colors">
                             <Pencil className="w-3 h-3" /> Modifier
                           </button>
                           <button
                             onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
-                            className="flex items-center gap-1 px-3 py-1.5 text-[#0a66c2] text-xs hover:bg-blue-50 rounded-lg transition-colors font-medium">
+                            className="flex items-center gap-1.5 px-4 py-2 text-[#0a66c2] text-xs hover:bg-blue-50 rounded-lg transition-colors font-medium">
                             <Linkedin className="w-3 h-3" /> Aperçu
                           </button>
                           <button onClick={e => toggleExpand(idx, e)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors ml-auto">
+                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors ml-auto">
                             {isExpanded ? <><ChevronUp className="w-3 h-3" />Réduire</> : <><ChevronDown className="w-3 h-3" />Voir tout</>}
                           </button>
                         </>
@@ -835,7 +836,7 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
         </div>
 
         {/* Footer */}
-        <div className="px-7 py-5 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div className="px-8 py-5 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
           {step !== 'upload' && (
             <button onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
               className="px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
