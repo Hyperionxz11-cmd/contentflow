@@ -432,13 +432,8 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
   // Render
   // ─────────────────────────────────────────────────────────
 
-  // Steps config
-  const steps = [
-    { id: 'upload', label: 'Import', num: 1 },
-    { id: 'preview', label: 'Sélection', num: 2 },
-    { id: 'schedule', label: 'Programmer', num: 3 },
-  ]
-  const currentStepIdx = steps.findIndex(s => s.id === step)
+  const SF = '-apple-system, "SF Pro Display", BlinkMacSystemFont, "Helvetica Neue", sans-serif'
+  const currentStepIdx = step === 'upload' ? 0 : step === 'preview' ? 1 : 2
 
   return (
     <>
@@ -455,137 +450,128 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
 
     {/* AI Variants Modal */}
     {aiModalIdx !== null && aiVariants && (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-          <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-[#0A66C2]" />
-              </div>
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)', zIndex:80, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', fontFamily:SF }}>
+        <div style={{ background:'#fff', borderRadius:'28px', boxShadow:'0 40px 80px -20px rgba(0,0,0,0.22)', width:'100%', maxWidth:'600px', maxHeight:'85vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          {/* Header */}
+          <div style={{ padding:'28px 28px 20px', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div>
-                <h3 className="text-base font-bold text-gray-900">3 variantes générées par IA</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Clique pour appliquer au post {(aiModalIdx ?? 0) + 1}</p>
+                <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', color:'#0A66C2', marginBottom:'4px' }}>Intelligence Artificielle</p>
+                <h3 style={{ fontSize:'22px', fontWeight:700, color:'#1d1d1f', letterSpacing:'-0.3px', margin:0 }}>3 variantes générées</h3>
               </div>
+              <button onClick={() => { setAiModalIdx(null); setAiVariants(null) }}
+                style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#f2f2f7', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#86868b' }}>
+                <X style={{ width:'16px', height:'16px' }} />
+              </button>
             </div>
-            <button onClick={() => { setAiModalIdx(null); setAiVariants(null) }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div style={{ flex:1, overflowY:'auto', padding:'20px 28px', display:'flex', flexDirection:'column', gap:'12px' }}>
             {aiVariants.map((v, i) => (
-              <button
-                key={i}
-                onClick={() => applyVariant(v)}
-                className="w-full text-left p-5 rounded-xl border-2 border-gray-100 hover:border-[#0A66C2] hover:bg-blue-50/20 transition-all group"
+              <button key={i} onClick={() => applyVariant(v)}
+                style={{ width:'100%', textAlign:'left', padding:'20px', borderRadius:'18px', background:'#f5f5f7', border:'2px solid transparent', cursor:'pointer', transition:'all 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#0A66C2'; (e.currentTarget as HTMLButtonElement).style.background = '#f0f7ff' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f7' }}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-3 py-1 bg-blue-50 text-[#004182] text-xs font-bold rounded-full border border-blue-100">{v.format}</span>
-                  <span className="text-xs text-gray-400">{v.description}</span>
-                  <span className="ml-auto flex items-center gap-1 text-xs text-[#0A66C2] opacity-0 group-hover:opacity-100 font-semibold transition-opacity">Appliquer <ArrowRight className="w-3 h-3" /></span>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px' }}>
+                  <span style={{ padding:'3px 10px', background:'rgba(10,102,194,0.1)', color:'#0A66C2', fontSize:'11px', fontWeight:700, borderRadius:'999px', letterSpacing:'0.04em' }}>{v.format}</span>
+                  <span style={{ fontSize:'12px', color:'#86868b' }}>{v.description}</span>
+                  <span style={{ marginLeft:'auto', fontSize:'12px', color:'#0A66C2', fontWeight:600, display:'flex', alignItems:'center', gap:'4px' }}>Appliquer <ArrowRight style={{ width:'12px', height:'12px' }} /></span>
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-6 leading-relaxed">{v.content}</p>
-                <p className="text-xs text-gray-400 mt-3 border-t border-gray-100 pt-2">{v.content.length} caractères</p>
+                <p style={{ fontSize:'14px', color:'#1d1d1f', lineHeight:1.6, margin:0, display:'-webkit-box', WebkitLineClamp:5, WebkitBoxOrient:'vertical', overflow:'hidden', whiteSpace:'pre-wrap' }}>{v.content}</p>
+                <p style={{ fontSize:'11px', color:'#86868b', marginTop:'10px', paddingTop:'10px', borderTop:'1px solid rgba(0,0,0,0.06)' }}>{v.content.length} caractères</p>
               </button>
             ))}
           </div>
-          <div className="px-7 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-            <p className="text-xs text-gray-400 text-center">✨ Powered by Claude AI · Reformulation contextuelle LinkedIn</p>
+          <div style={{ padding:'16px 28px', borderTop:'1px solid rgba(0,0,0,0.06)', textAlign:'center' }}>
+            <p style={{ fontSize:'11px', color:'#86868b', margin:0 }}>✦ Powered by Claude AI</p>
           </div>
         </div>
       </div>
     )}
 
     {/* ── MAIN MODAL ── */}
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', fontFamily:SF }}>
+      <div style={{ background:'#fff', borderRadius:'28px', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.04)', width:'100%', maxWidth:'680px', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-        {/* ── TOP BAR : title + close ── */}
-        <div className="flex items-center justify-between px-8 pt-6 pb-0 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#0A66C2] flex items-center justify-center flex-shrink-0">
-              <FileText className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 leading-tight">Import de posts en masse</h2>
-              <p className="text-xs text-gray-400">Depuis un fichier Word ou texte</p>
-            </div>
+        {/* ── HEADER ── */}
+        <div style={{ padding:'28px 28px 0', display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexShrink:0 }}>
+          <div>
+            <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', color:'#0A66C2', margin:'0 0 6px' }}>ContentFlow</p>
+            <h2 style={{ fontSize:'26px', fontWeight:700, letterSpacing:'-0.5px', color:'#1d1d1f', margin:0, lineHeight:1.1 }}>
+              {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Sélectionner les posts' : 'Planifier la publication'}
+            </h2>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors">
-            <X className="w-5 h-5" />
+          <button onClick={onClose}
+            style={{ width:'34px', height:'34px', borderRadius:'50%', background:'#f2f2f7', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#86868b', flexShrink:0, marginTop:'4px' }}>
+            <X style={{ width:'16px', height:'16px' }} />
           </button>
         </div>
 
-        {/* ── STEP INDICATOR ── */}
-        <div className="flex items-center gap-0 px-8 pt-5 pb-5 flex-shrink-0">
-          {steps.map((s, i) => (
-            <div key={s.id} className="flex items-center flex-1">
-              <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  i < currentStepIdx
-                    ? 'bg-[#0A66C2] text-white'
-                    : i === currentStepIdx
-                    ? 'bg-[#0A66C2] text-white ring-4 ring-blue-100'
-                    : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {i < currentStepIdx ? <Check className="w-3.5 h-3.5" /> : s.num}
-                </div>
-                <span className={`text-xs font-semibold ${i === currentStepIdx ? 'text-[#0A66C2]' : i < currentStepIdx ? 'text-gray-500' : 'text-gray-300'}`}>
-                  {s.label}
-                </span>
-              </div>
-              {i < steps.length - 1 && (
-                <div className={`flex-1 h-px mx-3 transition-all ${i < currentStepIdx ? 'bg-[#0A66C2]' : 'bg-gray-200'}`} />
-              )}
+        {/* ── STEP DOTS ── */}
+        <div style={{ padding:'20px 28px 0', display:'flex', alignItems:'center', gap:'8px', flexShrink:0 }}>
+          {['Import', 'Sélection', 'Programmer'].map((label, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+              <div style={{
+                width: i === currentStepIdx ? '28px' : '8px',
+                height:'8px',
+                borderRadius:'999px',
+                background: i <= currentStepIdx ? '#0A66C2' : '#d1d1d6',
+                transition:'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+                flexShrink:0,
+              }} />
+              {i < 2 && <div style={{ width:'20px', height:'1px', background:'#d1d1d6', flexShrink:0 }} />}
             </div>
           ))}
+          <span style={{ fontSize:'12px', color:'#86868b', marginLeft:'4px' }}>
+            {step === 'upload' ? 'Import' : step === 'preview' ? 'Sélection' : 'Programmer'}
+          </span>
         </div>
 
-        {/* ── DIVIDER ── */}
-        <div className="h-px bg-gray-100 flex-shrink-0" />
-
         {/* ── CONTENT ── */}
-        <div className="flex-1 overflow-y-auto px-8 py-7">
+        <div style={{ flex:1, overflowY:'auto', padding:'24px 28px' }}>
 
-          {/* ── STEP 1 : Upload ── */}
+          {/* ─── STEP 1 : Upload ─── */}
           {step === 'upload' && (
-            <div className="space-y-6">
-              {/* Drag & drop zone */}
+            <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+              {/* Drop zone */}
               <div
                 onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-2xl text-center transition-all cursor-pointer ${
-                  dragOver
-                    ? 'border-[#0A66C2] bg-blue-50/60'
-                    : 'border-gray-200 hover:border-[#0A66C2]/50 hover:bg-gray-50/50'
-                }`}
+                style={{
+                  background: dragOver ? 'rgba(10,102,194,0.04)' : '#f5f5f7',
+                  borderRadius:'20px',
+                  border: dragOver ? '2px dashed #0A66C2' : '2px dashed transparent',
+                  transition:'all 0.2s',
+                  cursor:'pointer',
+                }}
               >
-                <label className="block p-14 cursor-pointer">
-                  <input type="file" className="hidden" accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
+                <label style={{ display:'block', padding:'48px 24px', cursor:'pointer', textAlign:'center' }}>
+                  <input type="file" style={{ display:'none' }} accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
                   {loading ? (
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
-                        <Loader2 className="w-8 h-8 text-[#0A66C2] animate-spin" />
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'16px' }}>
+                      <div style={{ width:'64px', height:'64px', borderRadius:'20px', background:'rgba(10,102,194,0.08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <Loader2 style={{ width:'28px', height:'28px', color:'#0A66C2', animation:'spin 1s linear infinite' }} />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-700">{loadingMsg}</p>
-                        <p className="text-xs text-gray-400 mt-1">Merci de patienter…</p>
+                        <p style={{ fontSize:'15px', fontWeight:600, color:'#1d1d1f', margin:'0 0 4px' }}>{loadingMsg}</p>
+                        <p style={{ fontSize:'13px', color:'#86868b', margin:0 }}>Analyse en cours…</p>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-4">
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${dragOver ? 'bg-[#0A66C2]' : 'bg-gray-100'}`}>
-                        <Upload className={`w-7 h-7 transition-colors ${dragOver ? 'text-white' : 'text-gray-400'}`} />
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'14px' }}>
+                      <div style={{ width:'64px', height:'64px', borderRadius:'20px', background: dragOver ? 'rgba(10,102,194,0.12)' : 'rgba(0,0,0,0.06)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }}>
+                        <Upload style={{ width:'26px', height:'26px', color: dragOver ? '#0A66C2' : '#86868b', transition:'all 0.2s' }} />
                       </div>
-                      <div>
-                        <p className="text-base font-semibold text-gray-800">Glisse ton fichier ici</p>
-                        <p className="text-sm text-gray-400 mt-1">ou clique pour parcourir tes fichiers</p>
+                      <div style={{ textAlign:'center' }}>
+                        <p style={{ fontSize:'17px', fontWeight:600, color:'#1d1d1f', margin:'0 0 4px', letterSpacing:'-0.2px' }}>Glisse ton fichier ici</p>
+                        <p style={{ fontSize:'14px', color:'#86868b', margin:0 }}>ou clique pour parcourir</p>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', justifyContent:'center' }}>
                         {['.docx', '.txt', '.md'].map(ext => (
-                          <span key={ext} className="px-2.5 py-1 bg-white border border-gray-200 text-xs text-gray-500 rounded-full font-medium shadow-sm">{ext}</span>
+                          <span key={ext} style={{ padding:'4px 10px', background:'rgba(0,0,0,0.06)', borderRadius:'999px', fontSize:'12px', fontWeight:600, color:'#48484a', letterSpacing:'0.02em' }}>{ext}</span>
                         ))}
-                        <span className="px-2.5 py-1 bg-blue-50 border border-blue-100 text-xs text-[#0A66C2] rounded-full font-medium">Images auto</span>
+                        <span style={{ padding:'4px 10px', background:'rgba(10,102,194,0.1)', borderRadius:'999px', fontSize:'12px', fontWeight:600, color:'#0A66C2' }}>images auto</span>
                       </div>
                     </div>
                   )}
@@ -593,89 +579,60 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               </div>
 
               {error && (
-                <div className="flex items-center gap-3 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'14px 16px', background:'rgba(255,59,48,0.06)', borderRadius:'14px', color:'#cc0000', fontSize:'14px' }}>
+                  <AlertCircle style={{ width:'16px', height:'16px', flexShrink:0 }} />
                   {error}
                 </div>
               )}
 
-              {/* How-to section */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
-                      <FileText className="w-3.5 h-3.5 text-gray-500" />
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700">Fichier Word .docx</span>
+              {/* Tips */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+                {[
+                  { title:'Fichier Word .docx', desc:'Analysé automatiquement. Les images sont extraites et incluses dans chaque post.' },
+                  { title:'Fichier texte .txt / .md', desc:'Sépare chaque post avec --- ou une ligne vide entre les sections.' },
+                ].map((tip, i) => (
+                  <div key={i} style={{ padding:'16px', background:'#f5f5f7', borderRadius:'16px' }}>
+                    <p style={{ fontSize:'13px', fontWeight:600, color:'#1d1d1f', margin:'0 0 6px' }}>{tip.title}</p>
+                    <p style={{ fontSize:'12px', color:'#86868b', margin:0, lineHeight:1.5 }}>{tip.desc}</p>
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Analysé automatiquement. Les images sont extraites et incluses dans chaque post LinkedIn.
-                  </p>
-                </div>
-                <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
-                      <FileText className="w-3.5 h-3.5 text-gray-500" />
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700">Fichier texte .txt / .md</span>
-                  </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    Sépare chaque post avec <code className="bg-gray-200 px-1.5 py-0.5 rounded font-mono">---</code> ou une ligne vide entre les sections.
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* ── STEP 2 : Preview ── */}
+          {/* ─── STEP 2 : Preview ─── */}
           {step === 'preview' && (
-            <div className="space-y-4">
-              {/* File info + controls bar */}
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 text-gray-400" />
+            <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+              {/* File pill + controls */}
+              <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 14px', background:'#f5f5f7', borderRadius:'14px' }}>
+                <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'#e5e5ea', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <FileText style={{ width:'15px', height:'15px', color:'#48484a' }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-700 truncate">{filename}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-xs text-gray-400">{posts.length} posts détectés</span>
-                    {isHtml && (
-                      <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-full">
-                        <ImageIcon className="w-2.5 h-2.5" /> images
-                      </span>
-                    )}
-                    {isPremium && (
-                      <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-blue-50 text-[#0A66C2] rounded-full font-medium">
-                        <Sparkles className="w-2.5 h-2.5" /> IA
-                      </span>
-                    )}
-                  </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ fontSize:'13px', fontWeight:600, color:'#1d1d1f', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{filename}</p>
+                  <p style={{ fontSize:'11px', color:'#86868b', margin:0 }}>{posts.length} posts · {selectedPosts.size} sélectionnés</p>
                 </div>
-                <button
-                  onClick={() => setSelectedPosts(
-                    selectedPosts.size === posts.length ? new Set() : new Set(posts.map((_, i) => i))
-                  )}
-                  className="text-xs text-[#0A66C2] font-semibold hover:underline flex-shrink-0 px-3 py-1.5 hover:bg-blue-50 rounded-lg transition-colors"
-                >
+                <button onClick={() => setSelectedPosts(selectedPosts.size === posts.length ? new Set() : new Set(posts.map((_, i) => i)))}
+                  style={{ fontSize:'12px', fontWeight:600, color:'#0A66C2', background:'none', border:'none', cursor:'pointer', flexShrink:0, padding:'4px 8px' }}>
                   {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
               </div>
 
               {aiError && (
-                <div className="flex items-center gap-2 p-4 bg-red-50 rounded-xl text-red-600 text-sm border border-red-100">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{aiError}</span>
+                <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'12px 16px', background:'rgba(255,59,48,0.06)', borderRadius:'12px', fontSize:'13px', color:'#cc0000' }}>
+                  <AlertCircle style={{ width:'15px', height:'15px', flexShrink:0 }} />
+                  {aiError}
                 </div>
               )}
 
               {!isPremium && (
-                <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-50/30 rounded-xl border border-blue-100">
-                  <div className="w-8 h-8 rounded-lg bg-[#0A66C2]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Sparkles className="w-4 h-4 text-[#0A66C2]" />
+                <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px 16px', background:'rgba(10,102,194,0.05)', borderRadius:'16px' }}>
+                  <div style={{ width:'36px', height:'36px', borderRadius:'12px', background:'rgba(10,102,194,0.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <Sparkles style={{ width:'16px', height:'16px', color:'#0A66C2' }} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#004182]">Reformulation IA — Feature Premium</p>
-                    <p className="text-xs text-[#0A66C2]/80 mt-0.5">3 variantes optimisées LinkedIn par post : Storytelling, Liste à valeur, Hook+CTA</p>
+                    <p style={{ fontSize:'13px', fontWeight:600, color:'#0A66C2', margin:'0 0 2px' }}>Reformulation IA — Premium</p>
+                    <p style={{ fontSize:'12px', color:'#86868b', margin:0 }}>3 variantes optimisées par post : Storytelling, Liste, Hook+CTA</p>
                   </div>
                 </div>
               )}
@@ -692,124 +649,72 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                 const textLen = isModified ? displayContent.length : htmlToText(displayContent).length
 
                 return (
-                  <div
-                    key={idx}
-                    onClick={() => !isEditing && togglePost(idx)}
-                    className={`rounded-xl border-2 transition-all overflow-hidden ${
-                      isEditing
-                        ? 'border-amber-300 cursor-default'
-                        : isSelected
-                        ? 'border-[#0A66C2] shadow-sm cursor-pointer'
-                        : 'border-gray-200 opacity-50 cursor-pointer hover:opacity-75 hover:border-gray-300'
-                    }`}
-                  >
-                    {/* Card top stripe */}
-                    {isSelected && !isEditing && (
-                      <div className="h-0.5 bg-[#0A66C2] w-full" />
-                    )}
-
-                    {/* Card header */}
-                    <div className="flex items-start gap-3 px-5 pt-4 pb-3">
-                      <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border-2 transition-all ${
-                          isEditing ? 'border-amber-400 bg-white'
-                            : isSelected ? 'bg-[#0A66C2] border-[#0A66C2]'
-                            : 'border-gray-300 bg-white'
-                        }`}
-                        onClick={e => { e.stopPropagation(); if (!isEditing) togglePost(idx) }}
-                      >
-                        {isSelected && !isEditing && <Check className="w-2.5 h-2.5 text-white" />}
+                  <div key={idx} onClick={() => !isEditing && togglePost(idx)}
+                    style={{
+                      borderRadius:'18px',
+                      background: isEditing ? '#fffbf0' : isSelected ? '#fff' : '#f5f5f7',
+                      boxShadow: isSelected && !isEditing ? '0 2px 12px rgba(0,0,0,0.08), 0 0 0 2px rgba(10,102,194,0.3)' : isEditing ? '0 0 0 2px rgba(251,191,36,0.6)' : 'none',
+                      transition:'all 0.2s',
+                      cursor: isEditing ? 'default' : 'pointer',
+                      overflow:'hidden',
+                      opacity: (!isSelected && !isEditing) ? 0.55 : 1,
+                    }}>
+                    {/* Card body */}
+                    <div style={{ display:'flex', alignItems:'flex-start', gap:'12px', padding:'16px 16px 12px' }}>
+                      {/* Checkbox */}
+                      <div onClick={e => { e.stopPropagation(); if (!isEditing) togglePost(idx) }}
+                        style={{ width:'20px', height:'20px', borderRadius:'50%', flexShrink:0, marginTop:'2px', display:'flex', alignItems:'center', justifyContent:'center', background: isSelected && !isEditing ? '#0A66C2' : 'rgba(0,0,0,0.08)', border: isEditing ? '2px solid rgba(251,191,36,0.8)' : 'none', transition:'all 0.15s', cursor:'pointer' }}>
+                        {isSelected && !isEditing && <Check style={{ width:'11px', height:'11px', color:'#fff' }} />}
                       </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Post {idx + 1}</span>
-                          {isModified && (
-                            <span className="text-xs px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full font-medium border border-amber-200">modifié</span>
-                          )}
-                          {imgCount > 0 && (
-                            <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">
-                              <ImageIcon className="w-2.5 h-2.5" />{imgCount} img
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-300 ml-auto">{textLen} car.</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'8px' }}>
+                          <span style={{ fontSize:'11px', fontWeight:700, letterSpacing:'0.06em', color:'#86868b', textTransform:'uppercase' }}>Post {idx + 1}</span>
+                          {isModified && <span style={{ fontSize:'11px', padding:'2px 8px', background:'rgba(251,191,36,0.15)', color:'#b45309', borderRadius:'999px', fontWeight:600 }}>modifié</span>}
+                          {imgCount > 0 && <span style={{ fontSize:'11px', padding:'2px 8px', background:'rgba(10,102,194,0.08)', color:'#0A66C2', borderRadius:'999px', display:'flex', alignItems:'center', gap:'3px' }}><ImageIcon style={{ width:'10px', height:'10px' }} />{imgCount}</span>}
+                          <span style={{ fontSize:'11px', color:'#c7c7cc', marginLeft:'auto' }}>{textLen} car.</span>
                         </div>
-
                         {isEditing ? (
-                          <textarea
-                            value={editedContent[idx] ?? ''}
-                            onChange={e => setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))}
-                            onClick={e => e.stopPropagation()}
-                            className="w-full text-sm text-gray-700 border border-amber-300 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 bg-amber-50/20 font-mono leading-relaxed"
-                            rows={10}
-                            autoFocus
-                          />
+                          <textarea value={editedContent[idx] ?? ''} onChange={e => setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))} onClick={e => e.stopPropagation()}
+                            style={{ width:'100%', fontSize:'13px', color:'#1d1d1f', border:'none', borderRadius:'10px', padding:'10px', resize:'none', outline:'none', background:'rgba(251,191,36,0.08)', fontFamily:'ui-monospace, monospace', lineHeight:1.6 }}
+                            rows={9} autoFocus />
                         ) : isHtml && !isModified ? (
-                          <div
-                            className={`post-html-content text-sm text-gray-700 leading-relaxed ${!isExpanded ? 'max-h-20 overflow-hidden' : ''}`}
-                            style={{
-                              maskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent 100%)' : 'none',
-                              WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent 100%)' : 'none'
-                            }}
-                            dangerouslySetInnerHTML={{ __html: displayContent }}
-                          />
+                          <div className="post-html-content" style={{ fontSize:'13px', color:'#3a3a3c', lineHeight:1.6, maxHeight: isExpanded ? 'none' : '72px', overflow:'hidden', maskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent)' : 'none', WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent)' : 'none' }} dangerouslySetInnerHTML={{ __html: displayContent }} />
                         ) : (
-                          <p className={`text-sm text-gray-700 whitespace-pre-wrap leading-relaxed ${!isExpanded ? 'line-clamp-3' : ''}`}>
-                            {displayContent}
-                          </p>
+                          <p style={{ fontSize:'13px', color:'#3a3a3c', lineHeight:1.6, margin:0, overflow:'hidden', display:'-webkit-box', WebkitLineClamp: isExpanded ? 999 : 3, WebkitBoxOrient:'vertical', whiteSpace:'pre-wrap' }}>{displayContent}</p>
                         )}
                       </div>
                     </div>
-
                     {/* Action bar */}
-                    <div className="flex items-center gap-1 px-4 py-3 border-t border-gray-100 bg-gray-50/50" onClick={e => e.stopPropagation()}>
+                    <div onClick={e => e.stopPropagation()} style={{ display:'flex', alignItems:'center', gap:'4px', padding:'8px 12px 12px', flexWrap:'wrap' }}>
                       {isEditing ? (
                         <>
-                          <button onClick={e => saveEdit(idx, e)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-[#0A66C2] text-white text-xs font-semibold rounded-full hover:bg-[#004182] transition-colors">
-                            <Check className="w-3 h-3" /> Enregistrer
+                          <button onClick={e => saveEdit(idx, e)} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 14px', background:'#0A66C2', color:'#fff', fontSize:'12px', fontWeight:600, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                            <Check style={{ width:'12px', height:'12px' }} /> Enregistrer
                           </button>
-                          <button onClick={e => cancelEdit(idx, e)}
-                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors">
-                            <X className="w-3 h-3" /> Annuler
+                          <button onClick={e => cancelEdit(idx, e)} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 14px', background:'rgba(0,0,0,0.06)', color:'#48484a', fontSize:'12px', fontWeight:500, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                            <X style={{ width:'12px', height:'12px' }} /> Annuler
                           </button>
                         </>
                       ) : (
                         <>
                           {isPremium ? (
-                            <button
-                              onClick={e => handleAIReformulate(idx, e)}
-                              disabled={isAiLoading}
-                              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0A66C2]/10 text-[#0A66C2] text-xs font-semibold rounded-full hover:bg-[#0A66C2]/20 transition-colors disabled:opacity-50"
-                              title="Reformulation IA — 3 variantes LinkedIn"
-                            >
-                              {isAiLoading ? (
-                                <><Loader2 className="w-3 h-3 animate-spin" />IA…</>
-                              ) : (
-                                <><Sparkles className="w-3 h-3" />Reformuler</>
-                              )}
+                            <button onClick={e => handleAIReformulate(idx, e)} disabled={isAiLoading}
+                              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', background:'rgba(10,102,194,0.08)', color:'#0A66C2', fontSize:'12px', fontWeight:600, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                              {isAiLoading ? <><Loader2 style={{ width:'11px', height:'11px', animation:'spin 1s linear infinite' }} />IA…</> : <><Sparkles style={{ width:'11px', height:'11px' }} />Reformuler</>}
                             </button>
                           ) : (
-                            <button
-                              onClick={e => e.stopPropagation()}
-                              className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 text-gray-400 text-xs rounded-full cursor-not-allowed"
-                              title="Disponible en plan Premium"
-                            >
-                              <Sparkles className="w-3 h-3" />Premium
+                            <button style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', background:'rgba(0,0,0,0.04)', color:'#c7c7cc', fontSize:'12px', border:'none', borderRadius:'999px', cursor:'not-allowed' }}>
+                              <Sparkles style={{ width:'11px', height:'11px' }} />Premium
                             </button>
                           )}
-                          <button onClick={e => startEdit(idx, e)}
-                            className="flex items-center gap-1.5 px-3.5 py-2 text-gray-500 text-xs hover:text-gray-800 hover:bg-gray-200 rounded-full transition-colors">
-                            <Pencil className="w-3 h-3" /> Modifier
+                          <button onClick={e => startEdit(idx, e)} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', background:'rgba(0,0,0,0.04)', color:'#48484a', fontSize:'12px', fontWeight:500, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                            <Pencil style={{ width:'11px', height:'11px' }} />Modifier
                           </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
-                            className="flex items-center gap-1.5 px-3.5 py-2 text-[#0A66C2] text-xs hover:bg-blue-50 rounded-full transition-colors font-medium">
-                            <Linkedin className="w-3 h-3" /> Aperçu LI
+                          <button onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', background:'rgba(10,102,194,0.06)', color:'#0A66C2', fontSize:'12px', fontWeight:600, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                            <Linkedin style={{ width:'11px', height:'11px' }} />Aperçu
                           </button>
-                          <button onClick={e => toggleExpand(idx, e)}
-                            className="flex items-center gap-1.5 px-3.5 py-2 text-gray-400 text-xs hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors ml-auto">
-                            {isExpanded ? <><ChevronUp className="w-3 h-3" />Réduire</> : <><ChevronDown className="w-3 h-3" />Voir tout</>}
+                          <button onClick={e => toggleExpand(idx, e)} style={{ display:'flex', alignItems:'center', gap:'4px', padding:'6px 10px', background:'none', color:'#86868b', fontSize:'12px', border:'none', borderRadius:'999px', cursor:'pointer', marginLeft:'auto' }}>
+                            {isExpanded ? <><ChevronUp style={{ width:'12px', height:'12px' }} />Réduire</> : <><ChevronDown style={{ width:'12px', height:'12px' }} />Voir tout</>}
                           </button>
                         </>
                       )}
@@ -820,39 +725,30 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
             </div>
           )}
 
-          {/* ── STEP 3 : Schedule ── */}
+          {/* ─── STEP 3 : Schedule ─── */}
           {step === 'schedule' && (
-            <div className="space-y-7">
+            <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
               {/* Smart slots */}
               {isPremium && (
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                      <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-gray-800">
-                      {publishedPosts.filter(p => p.status === 'published').length >= 3
-                        ? 'Créneaux basés sur tes données'
-                        : 'Créneaux LinkedIn recommandés'}
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', color:'#86868b', margin:'0 0 12px' }}>
+                    {publishedPosts.filter(p => p.status === 'published').length >= 3 ? 'Tes meilleurs créneaux' : 'Créneaux recommandés'}
+                  </p>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px' }}>
                     {smartSlots.map((slot, i) => (
-                      <button
-                        key={i}
-                        onClick={() => applySmartSlot(slot)}
-                        className="p-4 rounded-xl border-2 border-gray-100 bg-white hover:border-[#0A66C2] hover:shadow-sm transition-all text-left group"
-                      >
-                        <div className="flex items-center gap-1.5 mb-3">
-                          <Star className={`w-3.5 h-3.5 ${i === 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}`} />
-                          <span className="text-sm font-bold text-gray-800">{slot.dayLabel} {slot.hour}h</span>
+                      <button key={i} onClick={() => applySmartSlot(slot)}
+                        style={{ padding:'14px', background:'#f5f5f7', borderRadius:'16px', border:'none', cursor:'pointer', textAlign:'left', transition:'all 0.2s' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(10,102,194,0.06)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f5f7' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'10px' }}>
+                          <Star style={{ width:'12px', height:'12px', color: i === 0 ? '#f59e0b' : '#d1d1d6', fill: i === 0 ? '#f59e0b' : '#d1d1d6' }} />
+                          <span style={{ fontSize:'14px', fontWeight:700, color:'#1d1d1f', letterSpacing:'-0.2px' }}>{slot.dayLabel} {slot.hour}h</span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
-                          <div className="h-1.5 rounded-full bg-[#0A66C2]" style={{ width: `${slot.score}%` }} />
+                        <div style={{ height:'3px', background:'#e5e5ea', borderRadius:'999px', marginBottom:'8px' }}>
+                          <div style={{ height:'3px', background:'#0A66C2', borderRadius:'999px', width:`${slot.score}%` }} />
                         </div>
-                        <p className="text-[11px] text-gray-400 leading-tight truncate">{slot.label}</p>
-                        <p className="text-[11px] text-[#0A66C2] opacity-0 group-hover:opacity-100 transition-opacity font-semibold mt-2 flex items-center gap-1">Appliquer <ArrowRight className="w-2.5 h-2.5" /></p>
+                        <p style={{ fontSize:'11px', color:'#86868b', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{slot.label}</p>
                       </button>
                     ))}
                   </div>
@@ -860,21 +756,21 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               )}
 
               {!isPremium && (
-                <div className="flex items-start gap-4 p-5 bg-gradient-to-r from-blue-50 to-blue-50/20 rounded-xl border border-blue-100">
-                  <div className="w-9 h-9 rounded-xl bg-[#0A66C2]/10 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-4 h-4 text-[#0A66C2]" />
+                <div style={{ display:'flex', alignItems:'center', gap:'14px', padding:'16px', background:'rgba(10,102,194,0.05)', borderRadius:'16px' }}>
+                  <div style={{ width:'38px', height:'38px', borderRadius:'12px', background:'rgba(10,102,194,0.1)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <Clock style={{ width:'16px', height:'16px', color:'#0A66C2' }} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#004182]">Créneaux intelligents — Premium</p>
-                    <p className="text-xs text-[#0A66C2]/70 mt-0.5">Détection automatique des meilleurs horaires basée sur tes posts publiés.</p>
+                    <p style={{ fontSize:'13px', fontWeight:600, color:'#0A66C2', margin:'0 0 2px' }}>Créneaux intelligents — Premium</p>
+                    <p style={{ fontSize:'12px', color:'#86868b', margin:0 }}>Analyse automatique de tes meilleurs horaires.</p>
                   </div>
                 </div>
               )}
 
               {/* Frequency */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">Fréquence de publication</label>
-                <div className="grid grid-cols-2 gap-3">
+                <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', color:'#86868b', margin:'0 0 10px' }}>Fréquence</p>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
                   {[
                     { id: 'daily' as const, label: 'Quotidien', desc: '1 post / jour' },
                     { id: '3x_week' as const, label: '3× / semaine', desc: 'Lun, Mer, Ven' },
@@ -882,57 +778,41 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                     { id: 'weekly' as const, label: 'Hebdomadaire', desc: '1 post / semaine' },
                   ].map(f => (
                     <button key={f.id} onClick={() => setFrequency(f.id)}
-                      className={`px-5 py-4 rounded-xl border-2 text-left transition-all ${
-                        frequency === f.id
-                          ? 'border-[#0A66C2] bg-blue-50/40'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}>
-                      <p className={`text-sm font-bold ${frequency === f.id ? 'text-[#0A66C2]' : 'text-gray-800'}`}>{f.label}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{f.desc}</p>
+                      style={{ padding:'14px 16px', borderRadius:'16px', border:'none', textAlign:'left', cursor:'pointer', transition:'all 0.15s', background: frequency === f.id ? '#0A66C2' : '#f5f5f7' }}>
+                      <p style={{ fontSize:'14px', fontWeight:700, color: frequency === f.id ? '#fff' : '#1d1d1f', margin:'0 0 2px', letterSpacing:'-0.2px' }}>{f.label}</p>
+                      <p style={{ fontSize:'12px', color: frequency === f.id ? 'rgba(255,255,255,0.75)' : '#86868b', margin:0 }}>{f.desc}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Date & time */}
-              <div className="grid grid-cols-2 gap-4">
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Date de début</label>
+                  <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', color:'#86868b', margin:'0 0 8px' }}>Date de début</p>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-0 focus:border-[#0A66C2] transition-colors bg-white" />
+                    style={{ width:'100%', padding:'12px 14px', background:'#f5f5f7', border:'none', borderRadius:'14px', fontSize:'14px', color:'#1d1d1f', outline:'none', fontFamily:SF, boxSizing:'border-box' }} />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Heure de publication</label>
+                  <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', color:'#86868b', margin:'0 0 8px' }}>Heure</p>
                   <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-0 focus:border-[#0A66C2] transition-colors bg-white" />
+                    style={{ width:'100%', padding:'12px 14px', background:'#f5f5f7', border:'none', borderRadius:'14px', fontSize:'14px', color:'#1d1d1f', outline:'none', fontFamily:SF, boxSizing:'border-box' }} />
                 </div>
               </div>
 
-              {/* Summary */}
-              <div className="p-5 bg-[#0A66C2]/5 rounded-xl border border-[#0A66C2]/15">
-                <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-4 h-4 text-[#0A66C2]" />
-                  <span className="text-sm font-bold text-[#0A66C2]">Résumé de programmation</span>
-                </div>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  <strong className="text-gray-900">{selectedPosts.size} posts</strong> programmés{' '}
-                  {frequency === 'daily' ? 'tous les jours'
-                    : frequency === '3x_week' ? '3× par semaine (Lun, Mer, Ven)'
-                    : frequency === 'weekdays' ? 'du lundi au vendredi'
-                    : 'chaque semaine'}{' '}
-                  à partir du{' '}
-                  <strong className="text-gray-900">
-                    {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </strong>{' '}
-                  à <strong className="text-gray-900">{startTime}</strong>.
+              {/* Summary card */}
+              <div style={{ padding:'18px', background:'#f5f5f7', borderRadius:'20px' }}>
+                <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', color:'#86868b', margin:'0 0 8px' }}>Résumé</p>
+                <p style={{ fontSize:'14px', color:'#1d1d1f', lineHeight:1.6, margin:0 }}>
+                  <strong>{selectedPosts.size} posts</strong> ·{' '}
+                  {frequency === 'daily' ? 'Tous les jours' : frequency === '3x_week' ? '3× par semaine (Lun, Mer, Ven)' : frequency === 'weekdays' ? 'Lun – Ven' : 'Hebdomadaire'}{' '}
+                  · À partir du <strong>{new Date(startDate).toLocaleDateString('fr-FR', { day:'numeric', month:'long' })}</strong> à <strong>{startTime}</strong>
                 </p>
                 {totalImages > 0 && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#0A66C2]/10">
-                    <ImageIcon className="w-4 h-4 text-[#0A66C2]" />
-                    <p className="text-sm text-[#0A66C2] font-medium">
-                      {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — uploadées automatiquement dans LinkedIn.
-                    </p>
-                  </div>
+                  <p style={{ fontSize:'13px', color:'#0A66C2', margin:'8px 0 0', display:'flex', alignItems:'center', gap:'6px' }}>
+                    <ImageIcon style={{ width:'13px', height:'13px' }} />
+                    {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — incluses automatiquement
+                  </p>
                 )}
               </div>
             </div>
@@ -940,37 +820,30 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
         </div>
 
         {/* ── FOOTER ── */}
-        <div className="h-px bg-gray-100 flex-shrink-0" />
-        <div className="px-8 py-5 flex items-center justify-between flex-shrink-0 bg-white">
+        <div style={{ padding:'16px 28px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           {step !== 'upload' ? (
             <button onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
-              className="px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100 transition-colors">
+              style={{ padding:'10px 18px', background:'none', border:'none', color:'#86868b', fontSize:'14px', fontWeight:500, cursor:'pointer', borderRadius:'999px', fontFamily:SF }}>
               ← Retour
             </button>
-          ) : (
-            <div />
-          )}
-          <div className="flex items-center gap-3">
-            {step === 'upload' && (
-              <p className="text-xs text-gray-400">Étape 1 sur 3</p>
+          ) : <div />}
+
+          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+            {step === 'preview' && (
+              <span style={{ fontSize:'13px', color:'#86868b' }}>{selectedPosts.size} sélectionné{selectedPosts.size > 1 ? 's' : ''}</span>
             )}
             {step === 'preview' && (
-              <>
-                <p className="text-xs text-gray-400">{selectedPosts.size} post{selectedPosts.size > 1 ? 's' : ''} sélectionné{selectedPosts.size > 1 ? 's' : ''}</p>
-                <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-[#0A66C2] text-white text-sm font-semibold rounded-full hover:bg-[#004182] transition-colors disabled:opacity-40 shadow-sm">
-                  Continuer <ArrowRight className="w-4 h-4" />
-                </button>
-              </>
+              <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
+                style={{ display:'flex', alignItems:'center', gap:'8px', padding:'12px 24px', background: selectedPosts.size === 0 ? '#d1d1d6' : '#0A66C2', color:'#fff', fontSize:'14px', fontWeight:600, border:'none', borderRadius:'999px', cursor: selectedPosts.size === 0 ? 'not-allowed' : 'pointer', letterSpacing:'-0.1px', fontFamily:SF }}>
+                Continuer <ArrowRight style={{ width:'15px', height:'15px' }} />
+              </button>
             )}
             {step === 'schedule' && (
               <button onClick={handleSchedule} disabled={scheduling}
-                className="flex items-center gap-2 px-7 py-2.5 bg-[#0A66C2] text-white text-sm font-bold rounded-full hover:bg-[#004182] transition-colors disabled:opacity-60 shadow-sm">
-                {scheduling ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />{totalImages > 0 ? `Upload (${totalImages} images)…` : 'Programmation en cours…'}</>
-                ) : (
-                  <><Calendar className="w-4 h-4" />Confirmer et programmer</>
-                )}
+                style={{ display:'flex', alignItems:'center', gap:'8px', padding:'12px 24px', background: scheduling ? '#d1d1d6' : '#0A66C2', color:'#fff', fontSize:'14px', fontWeight:600, border:'none', borderRadius:'999px', cursor: scheduling ? 'not-allowed' : 'pointer', letterSpacing:'-0.1px', fontFamily:SF }}>
+                {scheduling
+                  ? <><Loader2 style={{ width:'15px', height:'15px', animation:'spin 1s linear infinite' }} />{totalImages > 0 ? `Upload…` : 'En cours…'}</>
+                  : <><Calendar style={{ width:'15px', height:'15px' }} />Confirmer et programmer</>}
               </button>
             )}
           </div>
