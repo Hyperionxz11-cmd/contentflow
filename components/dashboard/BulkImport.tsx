@@ -62,19 +62,23 @@ function detectElements(text: string): PostElements {
   return { hook, cta, hashtags }
 }
 
+const SF = '-apple-system, "SF Pro Display", BlinkMacSystemFont, "Helvetica Neue", sans-serif'
+
 function ElementBadge({ ok, label, icon }: { ok: boolean; label: string; icon: React.ReactNode }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-        ok
-          ? 'bg-green-50 text-green-600 border border-green-100'
-          : 'bg-orange-50 text-orange-500 border border-orange-100'
-      }`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 10px', borderRadius: 999, fontSize: 11, fontWeight: 500,
+        fontFamily: SF,
+        background: ok ? '#f0fdf4' : '#fff7ed',
+        color: ok ? '#16a34a' : '#ea580c',
+      }}
       title={ok ? `${label} ✓` : `${label} manquant`}
     >
       {icon}
       {label}
-      {ok ? <Check className="w-2.5 h-2.5" /> : <span className="text-orange-400">!</span>}
+      {ok ? <Check style={{ width: 10, height: 10 }} /> : <span style={{ color: '#fb923c' }}>!</span>}
     </span>
   )
 }
@@ -470,6 +474,8 @@ export default function BulkImport({
   // Render
   // ─────────────────────────────────────────────────────────
 
+  const stepIndex = step === 'upload' ? 0 : step === 'preview' ? 1 : 2
+
   return (
     <>
     {/* LinkedIn Preview */}
@@ -485,70 +491,80 @@ export default function BulkImport({
 
     {/* AI Variants Modal */}
     {aiModalIdx !== null && aiVariants && (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-violet-600" />
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(24px)', zIndex:80, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+        <div style={{ background:'#fff', borderRadius:24, boxShadow:'0 40px 80px -20px rgba(0,0,0,0.25)', width:'100%', maxWidth:640, maxHeight:'85vh', display:'flex', flexDirection:'column', fontFamily:SF }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'20px 24px', borderBottom:'1px solid #f5f5f7' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:32, height:32, borderRadius:10, background:'#f0f7ff', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <Sparkles style={{ width:16, height:16, color:'#0A66C2' }} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-gray-900">3 variantes générées par IA</h3>
-                <p className="text-xs text-gray-400">Clique sur une variante pour l'appliquer au post {(aiModalIdx ?? 0) + 1}</p>
+                <h3 style={{ fontSize:15, fontWeight:700, color:'#1d1d1f', margin:0 }}>3 variantes générées par IA</h3>
+                <p style={{ fontSize:12, color:'#86868b', margin:0 }}>Clique sur une variante pour l&apos;appliquer au post {(aiModalIdx ?? 0) + 1}</p>
               </div>
             </div>
-            <button onClick={() => { setAiModalIdx(null); setAiVariants(null) }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
-              <X className="w-5 h-5" />
+            <button onClick={() => { setAiModalIdx(null); setAiVariants(null) }} style={{ padding:8, background:'none', border:'none', cursor:'pointer', color:'#86868b', borderRadius:8 }}>
+              <X style={{ width:18, height:18 }} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div style={{ flex:1, overflowY:'auto', padding:16, display:'flex', flexDirection:'column', gap:12 }}>
             {aiVariants.map((v, i) => (
               <button
                 key={i}
                 onClick={() => applyVariant(v)}
-                className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-violet-400 hover:bg-violet-50/30 transition-all group"
+                style={{ width:'100%', textAlign:'left', padding:16, borderRadius:16, border:'2px solid #f5f5f7', background:'#fff', cursor:'pointer', transition:'all 0.15s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor='#0A66C2'; (e.currentTarget as HTMLElement).style.background='#f0f7ff' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor='#f5f5f7'; (e.currentTarget as HTMLElement).style.background='#fff' }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-full">{v.format}</span>
-                  <span className="text-xs text-gray-400">{v.description}</span>
-                  <span className="ml-auto text-xs text-violet-500 opacity-0 group-hover:opacity-100 font-semibold transition-opacity">Appliquer →</span>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                  <span style={{ padding:'2px 10px', background:'#f0f7ff', color:'#0A66C2', fontSize:11, fontWeight:700, borderRadius:999 }}>{v.format}</span>
+                  <span style={{ fontSize:11, color:'#86868b' }}>{v.description}</span>
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-6 leading-relaxed">{v.content}</p>
-                <p className="text-xs text-gray-400 mt-2">{v.content.length} caractères</p>
+                <p style={{ fontSize:13, color:'#1d1d1f', whiteSpace:'pre-wrap', lineHeight:1.6, margin:0, display:'-webkit-box', WebkitLineClamp:6, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{v.content}</p>
+                <p style={{ fontSize:11, color:'#86868b', marginTop:8 }}>{v.content.length} caractères</p>
               </button>
             ))}
           </div>
-          <div className="px-6 py-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400 text-center">✨ Powered by Claude AI · Reformulation contextuelle LinkedIn</p>
+          <div style={{ padding:'16px 24px', borderTop:'1px solid #f5f5f7', textAlign:'center' }}>
+            <p style={{ fontSize:11, color:'#86868b', margin:0 }}>✨ Powered by Claude AI · Reformulation contextuelle LinkedIn</p>
           </div>
         </div>
       </div>
     )}
 
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    {/* Main Modal */}
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', backdropFilter:'blur(32px)', zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+      <div style={{ background:'#fff', borderRadius:28, boxShadow:'0 48px 96px -24px rgba(0,0,0,0.2)', width:'100%', maxWidth:640, maxHeight:'92vh', display:'flex', flexDirection:'column', fontFamily:SF, overflow:'hidden' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'24px 28px 20px', borderBottom:'1px solid #f5f5f7', flexShrink:0 }}>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Aperçu des posts' : 'Programmer'}
+            <h2 style={{ fontSize:17, fontWeight:700, color:'#1d1d1f', margin:0 }}>
+              {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Sélectionner les posts' : 'Programmer'}
             </h2>
-            <p className="text-sm text-gray-400">
+            <p style={{ fontSize:13, color:'#86868b', margin:'2px 0 0' }}>
               {step === 'upload'
-                ? 'Importe n\'importe quel document — l\'IA s\'adapte'
+                ? "Importe n'importe quel document — l'IA s'adapte"
                 : step === 'preview'
                 ? `${selectedPosts.size} / ${posts.length} posts sélectionnés`
                 : 'Choisis la fréquence et la date de début'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
-            <X className="w-5 h-5" />
-          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            {/* Step dots */}
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{ height:8, borderRadius:999, background: i === stepIndex ? '#0A66C2' : '#e5e5ea', transition:'all 0.3s', width: i === stepIndex ? 28 : 8 }} />
+              ))}
+            </div>
+            <button onClick={onClose} style={{ padding:8, background:'#f5f5f7', border:'none', cursor:'pointer', color:'#86868b', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <X style={{ width:16, height:16 }} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div style={{ flex:1, overflowY:'auto', padding:'20px 28px' }}>
 
           {/* ── STEP 1 : Upload ── */}
           {step === 'upload' && (
@@ -557,69 +573,64 @@ export default function BulkImport({
                 onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors ${
-                  dragOver ? 'border-[#0A66C2] bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
+                style={{ background: dragOver ? '#f0f7ff' : '#f5f5f7', borderRadius:20, padding:'40px 32px', textAlign:'center', transition:'all 0.2s', border: dragOver ? '2px solid #0A66C2' : '2px solid transparent' }}
               >
                 {loading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-10 h-10 text-[#0A66C2] animate-spin" />
-                    <p className="text-sm font-medium text-gray-600">{loadingMsg}</p>
-                    <p className="text-xs text-gray-400">L'IA analyse la structure du document…</p>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
+                    <Loader2 style={{ width:40, height:40, color:'#0A66C2', animation:'spin 1s linear infinite' }} />
+                    <p style={{ fontSize:14, fontWeight:600, color:'#1d1d1f', margin:0 }}>{loadingMsg}</p>
+                    <p style={{ fontSize:12, color:'#86868b', margin:0 }}>L&apos;IA analyse la structure du document…</p>
                   </div>
                 ) : (
                   <>
-                    <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Upload className="w-7 h-7 text-[#0A66C2]" />
+                    <div style={{ width:56, height:56, background:'#fff', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', boxShadow:'0 2px 12px rgba(0,0,0,0.08)' }}>
+                      <Upload style={{ width:24, height:24, color:'#0A66C2' }} />
                     </div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Glisse ton fichier ici</p>
-                    <p className="text-xs text-gray-400 mb-4">ou parcours tes fichiers</p>
-                    <label className="inline-block px-5 py-2.5 bg-[#0A66C2] text-white text-sm font-semibold rounded-full cursor-pointer hover:bg-[#004182] transition-colors">
+                    <p style={{ fontSize:15, fontWeight:600, color:'#1d1d1f', margin:'0 0 4px' }}>Glisse ton fichier ici</p>
+                    <p style={{ fontSize:13, color:'#86868b', margin:'0 0 20px' }}>ou parcours tes fichiers</p>
+                    <label style={{ display:'inline-block', padding:'10px 24px', background:'#0A66C2', color:'#fff', fontSize:14, fontWeight:600, borderRadius:999, cursor:'pointer' }}>
                       Choisir un fichier
                       <input
                         type="file"
-                        className="hidden"
+                        style={{ display:'none' }}
                         accept=".docx,.doc,.txt,.md,.csv,.pdf,.rtf"
                         onChange={handleFileInput}
                       />
                     </label>
-                    <p className="text-xs text-gray-400 mt-4">
-                      .docx · .txt · .md · .pdf · .csv · .rtf — Tout format accepté
+                    <p style={{ fontSize:12, color:'#86868b', margin:'16px 0 0' }}>
+                      .docx · .txt · .md · .pdf · .csv · .rtf
                     </p>
                   </>
                 )}
               </div>
 
               {error && (
-                <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div style={{ marginTop:16, display:'flex', alignItems:'flex-start', gap:8, padding:12, background:'#fff1f0', color:'#d32f2f', fontSize:13, borderRadius:12 }}>
+                  <AlertCircle style={{ width:16, height:16, flexShrink:0, marginTop:1 }} />
                   <span>{error}</span>
                 </div>
               )}
 
               {/* How it works */}
-              <div className="mt-5 p-4 bg-gray-50 rounded-xl">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-[#0A66C2]" />
-                  <h3 className="text-sm font-semibold text-gray-700">Comment ça marche ?</h3>
+              <div style={{ marginTop:20, padding:20, background:'#f5f5f7', borderRadius:16 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                  <Sparkles style={{ width:14, height:14, color:'#0A66C2' }} />
+                  <h3 style={{ fontSize:13, fontWeight:600, color:'#1d1d1f', margin:0 }}>Comment ça marche ?</h3>
                 </div>
-                <div className="space-y-2 text-xs text-gray-500 leading-relaxed">
-                  <div className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[#0A66C2] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">1</span>
-                    <p><strong className="text-gray-600">Importe n'importe quel document</strong> — Word, texte, PDF, CSV</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[#0A66C2] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">2</span>
-                    <p><strong className="text-gray-600">L'IA détecte automatiquement</strong> la structure et sépare les posts</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[#0A66C2] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">3</span>
-                    <p><strong className="text-gray-600">Chaque post est complété</strong> avec hashtags et CTA si absents</p>
-                  </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {[
+                    { n:'1', title:"Importe n'importe quel document", desc:'Word, texte, PDF, CSV' },
+                    { n:'2', title:"L'IA détecte automatiquement", desc:'la structure et sépare les posts' },
+                    { n:'3', title:'Chaque post est complété', desc:'avec hashtags et CTA si absents' },
+                  ].map(item => (
+                    <div key={item.n} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                      <span style={{ width:20, height:20, borderRadius:999, background:'#0A66C2', color:'#fff', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:1 }}>{item.n}</span>
+                      <p style={{ fontSize:12, color:'#86868b', margin:0, lineHeight:1.5 }}><strong style={{ color:'#1d1d1f' }}>{item.title}</strong> — {item.desc}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-blue-700 font-medium">💡 Chaque post doit contenir : Hook · Contenu · Hashtags · CTA</p>
-                  <p className="text-xs text-blue-600 mt-1">L'IA vérifie et complète les éléments manquants automatiquement.</p>
+                <div style={{ marginTop:12, padding:12, background:'#e8f0fe', borderRadius:10 }}>
+                  <p style={{ fontSize:12, color:'#0A66C2', fontWeight:600, margin:0 }}>💡 Hook · Contenu · Hashtags · CTA — L&apos;IA complète automatiquement.</p>
                 </div>
               </div>
             </div>
@@ -627,43 +638,43 @@ export default function BulkImport({
 
           {/* ── STEP 2 : Preview ── */}
           {step === 'preview' && (
-            <div className="space-y-3">
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               {/* File info bar */}
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500 truncate max-w-[140px]">{filename}</span>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                <FileText style={{ width:14, height:14, color:'#86868b' }} />
+                <span style={{ fontSize:13, color:'#86868b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:140 }}>{filename}</span>
                 {structure && (
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
-                    <Zap className="w-3 h-3" />
+                  <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, padding:'2px 10px', background:'#f0f7ff', color:'#0A66C2', borderRadius:999 }}>
+                    <Zap style={{ width:11, height:11 }} />
                     {structureLabels[structure] || structure}
                   </span>
                 )}
                 {method === 'ai' && (
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-violet-50 text-violet-600 rounded-full font-medium">
-                    <Sparkles className="w-3 h-3" /> IA
+                  <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, padding:'2px 10px', background:'#f5f5f7', color:'#1d1d1f', borderRadius:999, fontWeight:600 }}>
+                    <Sparkles style={{ width:11, height:11 }} /> IA
                   </span>
                 )}
                 <button
                   onClick={() => setSelectedPosts(
                     selectedPosts.size === posts.length ? new Set() : new Set(posts.map((_, i) => i))
                   )}
-                  className="ml-auto text-xs text-[#0A66C2] font-medium hover:underline"
+                  style={{ marginLeft:'auto', fontSize:12, color:'#0A66C2', fontWeight:600, background:'none', border:'none', cursor:'pointer', padding:0 }}
                 >
                   {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
               </div>
 
               {aiError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-red-600 text-sm border border-red-100">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:12, background:'#fff1f0', borderRadius:12, color:'#d32f2f', fontSize:13 }}>
+                  <AlertCircle style={{ width:14, height:14, flexShrink:0 }} />
                   <span>{aiError}</span>
                 </div>
               )}
 
               {!isPremium && (
-                <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 text-xs border border-amber-100">
-                  <Star className="w-4 h-4 flex-shrink-0" />
-                  <span>Passe en <strong>Premium</strong> pour reformuler chaque post avec l'IA en 1 clic.</span>
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:12, background:'#fffbeb', borderRadius:12, color:'#92400e', fontSize:12 }}>
+                  <Star style={{ width:14, height:14, flexShrink:0 }} />
+                  <span>Passe en <strong>Premium</strong> pour reformuler chaque post avec l&apos;IA en 1 clic.</span>
                 </div>
               )}
 
@@ -675,43 +686,38 @@ export default function BulkImport({
                 const isEditing = editingPosts.has(idx)
                 const isAiLoading = aiLoadingIdx === idx
                 const elements = detectElements(content)
-                const allGood = elements.hook && elements.hashtags && elements.cta
                 const imgs = postImages[idx] || []
 
                 return (
                   <div
                     key={idx}
                     onClick={() => togglePost(idx)}
-                    className={`border rounded-xl transition-all cursor-pointer ${
-                      isSelected ? 'border-[#0A66C2] bg-blue-50/30' : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
+                    style={{ borderRadius:16, background:'#fff', cursor:'pointer', border: isSelected ? 'none' : '1px solid #f0f0f0', boxShadow: isSelected ? '0 2px 16px rgba(10,102,194,0.12), 0 0 0 2px #0A66C2' : '0 1px 6px rgba(0,0,0,0.06)', transition:'all 0.15s' }}
                   >
                     {/* Post header */}
-                    <div className="flex items-start gap-3 p-3">
+                    <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:16 }}>
                       <div
-                        className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isSelected ? 'bg-[#0A66C2]' : 'border-2 border-gray-300 bg-white'
-                        }`}
+                        style={{ marginTop:2, width:20, height:20, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background: isSelected ? '#0A66C2' : '#f5f5f7', border: isSelected ? 'none' : '2px solid #e5e5ea', transition:'all 0.15s' }}
                       >
-                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                        {isSelected && <Check style={{ width:11, height:11, color:'#fff' }} />}
                       </div>
 
-                      <div className="flex-1 min-w-0">
+                      <div style={{ flex:1, minWidth:0 }}>
                         {/* Title row */}
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-xs font-semibold text-gray-500">Post {idx + 1}</span>
-                          <span className="text-xs text-gray-400">·</span>
-                          <span className="text-xs text-gray-400">{content.length} car.</span>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8, flexWrap:'wrap' }}>
+                          <span style={{ fontSize:12, fontWeight:600, color:'#86868b' }}>Post {idx + 1}</span>
+                          <span style={{ fontSize:12, color:'#c7c7cc' }}>·</span>
+                          <span style={{ fontSize:12, color:'#c7c7cc' }}>{content.length} car.</span>
                           {imgs.length > 0 && (
-                            <span className="flex items-center gap-1 text-xs text-blue-500">
-                              <ImageIcon className="w-3 h-3" />{imgs.length}
+                            <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, color:'#0A66C2' }}>
+                              <ImageIcon style={{ width:11, height:11 }} />{imgs.length}
                             </span>
                           )}
                           {/* Element badges */}
-                          <div className="flex items-center gap-1 ml-auto">
-                            <ElementBadge ok={elements.hook} label="Hook" icon={<Zap className="w-2.5 h-2.5" />} />
-                            <ElementBadge ok={elements.hashtags} label="#Tags" icon={<Hash className="w-2.5 h-2.5" />} />
-                            <ElementBadge ok={elements.cta} label="CTA" icon={<MessageCircle className="w-2.5 h-2.5" />} />
+                          <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
+                            <ElementBadge ok={elements.hook} label="Hook" icon={<Zap style={{ width:9, height:9 }} />} />
+                            <ElementBadge ok={elements.hashtags} label="#Tags" icon={<Hash style={{ width:9, height:9 }} />} />
+                            <ElementBadge ok={elements.cta} label="CTA" icon={<MessageCircle style={{ width:9, height:9 }} />} />
                           </div>
                         </div>
 
@@ -721,11 +727,11 @@ export default function BulkImport({
                             value={idx in editedContent ? editedContent[idx] : content}
                             onChange={e => setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))}
                             onClick={e => e.stopPropagation()}
-                            className="w-full text-sm text-gray-700 leading-relaxed border border-[#0A66C2] rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 bg-white"
+                            style={{ width:'100%', fontSize:13, color:'#1d1d1f', lineHeight:1.6, border:'2px solid #0A66C2', borderRadius:10, padding:'10px 12px', resize:'none', outline:'none', background:'#fff', fontFamily:SF, boxSizing:'border-box' }}
                             rows={8}
                           />
                         ) : (
-                          <p className={`text-sm text-gray-700 leading-relaxed ${!isExpanded ? 'line-clamp-3' : 'whitespace-pre-wrap'}`}>
+                          <p style={{ fontSize:13, color:'#1d1d1f', lineHeight:1.6, margin:0, display:'-webkit-box', WebkitLineClamp: isExpanded ? undefined : 3, WebkitBoxOrient:'vertical', overflow: isExpanded ? 'visible' : 'hidden', whiteSpace: isExpanded ? 'pre-wrap' : 'normal' }}>
                             {content}
                           </p>
                         )}
@@ -733,12 +739,12 @@ export default function BulkImport({
                     </div>
 
                     {/* Actions bar */}
-                    <div className="flex items-center gap-1 px-3 py-2 border-t border-gray-100 bg-gray-50/50 rounded-b-xl" onClick={e => e.stopPropagation()}>
+                    <div style={{ display:'flex', alignItems:'center', gap:4, padding:'8px 12px', borderTop:'1px solid #f5f5f7', background:'#fafafa', borderRadius:'0 0 16px 16px' }} onClick={e => e.stopPropagation()}>
                       <button
                         onClick={e => toggleExpand(idx, e)}
-                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
+                        style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#86868b', padding:'4px 8px', borderRadius:8, background:'none', border:'none', cursor:'pointer' }}
                       >
-                        {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        {isExpanded ? <ChevronUp style={{ width:11, height:11 }} /> : <ChevronDown style={{ width:11, height:11 }} />}
                         {isExpanded ? 'Réduire' : 'Voir tout'}
                       </button>
 
@@ -746,31 +752,31 @@ export default function BulkImport({
                         <>
                           <button
                             onClick={e => saveEdit(idx, e)}
-                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 px-2 py-1 rounded hover:bg-green-50 font-medium"
+                            style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#16a34a', padding:'4px 8px', borderRadius:8, background:'none', border:'none', cursor:'pointer', fontWeight:600 }}
                           >
-                            <Check className="w-3 h-3" /> Sauvegarder
+                            <Check style={{ width:11, height:11 }} /> Sauvegarder
                           </button>
                           <button
                             onClick={e => cancelEdit(idx, e)}
-                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
+                            style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#86868b', padding:'4px 8px', borderRadius:8, background:'none', border:'none', cursor:'pointer' }}
                           >
-                            <X className="w-3 h-3" /> Annuler
+                            <X style={{ width:11, height:11 }} /> Annuler
                           </button>
                         </>
                       ) : (
                         <button
                           onClick={e => startEdit(idx, e)}
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
+                          style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#86868b', padding:'4px 8px', borderRadius:8, background:'none', border:'none', cursor:'pointer' }}
                         >
-                          <Pencil className="w-3 h-3" /> Éditer
+                          <Pencil style={{ width:11, height:11 }} /> Éditer
                         </button>
                       )}
 
                       <button
                         onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
-                        className="flex items-center gap-1 text-xs text-[#0A66C2] hover:text-[#004182] px-2 py-1 rounded hover:bg-blue-50"
+                        style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#0A66C2', padding:'4px 8px', borderRadius:8, background:'none', border:'none', cursor:'pointer' }}
                       >
-                        <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/></svg>
+                        <svg style={{ width:11, height:11 }} viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/></svg>
                         Aperçu
                       </button>
 
@@ -778,12 +784,12 @@ export default function BulkImport({
                         <button
                           onClick={e => handleAIReformulate(idx, e)}
                           disabled={isAiLoading}
-                          className="ml-auto flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 px-2 py-1 rounded hover:bg-violet-50 font-medium disabled:opacity-50"
+                          style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#0A66C2', padding:'4px 10px', borderRadius:999, background:'#f0f7ff', border:'none', cursor:'pointer', fontWeight:600, opacity: isAiLoading ? 0.5 : 1 }}
                         >
                           {isAiLoading ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} />
                           ) : (
-                            <Sparkles className="w-3 h-3" />
+                            <Sparkles style={{ width:11, height:11 }} />
                           )}
                           Reformuler
                         </button>
@@ -797,32 +803,34 @@ export default function BulkImport({
 
           {/* ── STEP 3 : Schedule ── */}
           {step === 'schedule' && (
-            <div className="space-y-5">
+            <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
               {/* Smart Slots */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Star className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-sm font-semibold text-gray-700">Créneaux optimaux LinkedIn</h3>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                  <Star style={{ width:14, height:14, color:'#f59e0b' }} />
+                  <h3 style={{ fontSize:13, fontWeight:600, color:'#1d1d1f', margin:0 }}>Créneaux optimaux LinkedIn</h3>
                 </div>
-                <div className="space-y-2">
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {smartSlots.map((slot, i) => (
                     <button
                       key={i}
                       onClick={() => applySmartSlot(slot)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-[#0A66C2] hover:bg-blue-50/30 transition-all text-left"
+                      style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:14, borderRadius:14, border:'1px solid #f0f0f0', background:'#fff', cursor:'pointer', textAlign:'left', transition:'all 0.15s', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor='#0A66C2'; (e.currentTarget as HTMLElement).style.background='#f0f7ff' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor='#f0f0f0'; (e.currentTarget as HTMLElement).style.background='#fff' }}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-[#0A66C2]/10 flex items-center justify-center flex-shrink-0">
-                        <Clock className="w-5 h-5 text-[#0A66C2]" />
+                      <div style={{ width:40, height:40, borderRadius:12, background:'#f0f7ff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        <Clock style={{ width:18, height:18, color:'#0A66C2' }} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800">{slot.dayLabel} à {slot.hour}h</p>
-                        <p className="text-xs text-gray-400 truncate">{slot.label}</p>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ fontSize:14, fontWeight:600, color:'#1d1d1f', margin:0 }}>{slot.dayLabel} à {slot.hour}h</p>
+                        <p style={{ fontSize:12, color:'#86868b', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{slot.label}</p>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#0A66C2] rounded-full" style={{ width: `${slot.score}%` }} />
+                      <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                        <div style={{ height:6, width:60, background:'#f0f0f0', borderRadius:999, overflow:'hidden' }}>
+                          <div style={{ height:'100%', background:'#0A66C2', borderRadius:999, width:`${slot.score}%` }} />
                         </div>
-                        <span className="text-xs font-bold text-[#0A66C2]">{slot.score}%</span>
+                        <span style={{ fontSize:12, fontWeight:700, color:'#0A66C2' }}>{slot.score}%</span>
                       </div>
                     </button>
                   ))}
@@ -830,31 +838,31 @@ export default function BulkImport({
               </div>
 
               {/* Date & time */}
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Date de début</label>
+                  <label style={{ display:'block', fontSize:12, fontWeight:500, color:'#86868b', marginBottom:6 }}>Date de début</label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={e => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2]"
+                    style={{ width:'100%', padding:'10px 14px', fontSize:14, background:'#f5f5f7', border:'none', borderRadius:12, outline:'none', fontFamily:SF, boxSizing:'border-box', color:'#1d1d1f' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Heure</label>
+                  <label style={{ display:'block', fontSize:12, fontWeight:500, color:'#86868b', marginBottom:6 }}>Heure</label>
                   <input
                     type="time"
                     value={startTime}
                     onChange={e => setStartTime(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2]"
+                    style={{ width:'100%', padding:'10px 14px', fontSize:14, background:'#f5f5f7', border:'none', borderRadius:12, outline:'none', fontFamily:SF, boxSizing:'border-box', color:'#1d1d1f' }}
                   />
                 </div>
               </div>
 
               {/* Frequency */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-2">Fréquence de publication</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label style={{ display:'block', fontSize:12, fontWeight:500, color:'#86868b', marginBottom:8 }}>Fréquence de publication</label>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                   {([
                     { value: 'daily', label: 'Chaque jour', sub: '7×/sem.' },
                     { value: '3x_week', label: '3× par semaine', sub: 'Lun · Mer · Ven' },
@@ -864,22 +872,18 @@ export default function BulkImport({
                     <button
                       key={opt.value}
                       onClick={() => setFrequency(opt.value)}
-                      className={`p-3 rounded-xl border-2 text-left transition-all ${
-                        frequency === opt.value
-                          ? 'border-[#0A66C2] bg-blue-50'
-                          : 'border-gray-100 hover:border-gray-200'
-                      }`}
+                      style={{ padding:'14px 16px', borderRadius:14, border:'none', textAlign:'left', cursor:'pointer', transition:'all 0.15s', background: frequency === opt.value ? '#0A66C2' : '#f5f5f7' }}
                     >
-                      <p className={`text-sm font-semibold ${frequency === opt.value ? 'text-[#0A66C2]' : 'text-gray-700'}`}>{opt.label}</p>
-                      <p className="text-xs text-gray-400">{opt.sub}</p>
+                      <p style={{ fontSize:13, fontWeight:600, margin:0, color: frequency === opt.value ? '#fff' : '#1d1d1f' }}>{opt.label}</p>
+                      <p style={{ fontSize:11, margin:'2px 0 0', color: frequency === opt.value ? 'rgba(255,255,255,0.75)' : '#86868b' }}>{opt.sub}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Summary */}
-              <div className="p-3 bg-blue-50 rounded-xl text-xs text-blue-700 flex items-center gap-2">
-                <Calendar className="w-4 h-4 flex-shrink-0" />
+              <div style={{ padding:14, background:'#f0f7ff', borderRadius:14, display:'flex', alignItems:'center', gap:10, fontSize:13, color:'#0A66C2' }}>
+                <Calendar style={{ width:16, height:16, flexShrink:0 }} />
                 <span>
                   <strong>{selectedPosts.size} posts</strong> programmés à partir du{' '}
                   <strong>{new Date(`${startDate}T${startTime}`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}</strong>{' '}
@@ -891,15 +895,15 @@ export default function BulkImport({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0">
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 28px 20px', borderTop:'1px solid #f5f5f7', flexShrink:0 }}>
           {step === 'upload' ? (
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50">
+            <button onClick={onClose} style={{ padding:'10px 20px', fontSize:14, color:'#86868b', background:'none', border:'none', cursor:'pointer', borderRadius:999 }}>
               Annuler
             </button>
           ) : (
             <button
               onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
-              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50"
+              style={{ padding:'10px 20px', fontSize:14, color:'#86868b', background:'none', border:'none', cursor:'pointer', borderRadius:999 }}
             >
               ← Retour
             </button>
@@ -909,7 +913,7 @@ export default function BulkImport({
             <button
               onClick={() => setStep('schedule')}
               disabled={selectedPosts.size === 0}
-              className="px-5 py-2.5 bg-[#0A66C2] text-white text-sm font-semibold rounded-full hover:bg-[#004182] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              style={{ padding:'12px 28px', background:'#0A66C2', color:'#fff', fontSize:14, fontWeight:600, borderRadius:999, border:'none', cursor: selectedPosts.size === 0 ? 'not-allowed' : 'pointer', opacity: selectedPosts.size === 0 ? 0.4 : 1, transition:'all 0.15s' }}
             >
               Programmer {selectedPosts.size > 0 ? `${selectedPosts.size} post${selectedPosts.size > 1 ? 's' : ''}` : ''} →
             </button>
@@ -919,12 +923,12 @@ export default function BulkImport({
             <button
               onClick={handleSchedule}
               disabled={scheduling || selectedPosts.size === 0}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#0A66C2] text-white text-sm font-semibold rounded-full hover:bg-[#004182] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 28px', background:'#0A66C2', color:'#fff', fontSize:14, fontWeight:600, borderRadius:999, border:'none', cursor: (scheduling || selectedPosts.size === 0) ? 'not-allowed' : 'pointer', opacity: (scheduling || selectedPosts.size === 0) ? 0.4 : 1 }}
             >
               {scheduling ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Programmation…</>
+                <><Loader2 style={{ width:16, height:16, animation:'spin 1s linear infinite' }} /> Programmation…</>
               ) : (
-                <><Calendar className="w-4 h-4" /> Confirmer la programmation</>
+                <><Calendar style={{ width:16, height:16 }} /> Confirmer la programmation</>
               )}
             </button>
           )}
