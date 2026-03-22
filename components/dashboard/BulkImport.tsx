@@ -4,7 +4,8 @@ import { useState } from 'react'
 import {
   Upload, FileText, Calendar, Check, X, Loader2,
   Pencil, ChevronDown, ChevronUp, Image as ImageIcon,
-  Linkedin, Sparkles, Clock, Star, RefreshCw, AlertCircle
+  Linkedin, Sparkles, Clock, Star, RefreshCw, AlertCircle,
+  ArrowRight, Zap
 } from 'lucide-react'
 import LinkedInPreview from '@/components/linkedin/LinkedInPreview'
 
@@ -431,6 +432,14 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
   // Render
   // ─────────────────────────────────────────────────────────
 
+  // Steps config
+  const steps = [
+    { id: 'upload', label: 'Import', num: 1 },
+    { id: 'preview', label: 'Sélection', num: 2 },
+    { id: 'schedule', label: 'Programmer', num: 3 },
+  ]
+  const currentStepIdx = steps.findIndex(s => s.id === step)
+
   return (
     <>
     {/* LinkedIn Preview */}
@@ -448,107 +457,172 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
     {aiModalIdx !== null && aiVariants && (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+          <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-[#0A66C2]" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-gray-900">3 variantes générées par IA</h3>
-                <p className="text-xs text-gray-400">Clique sur une variante pour l'appliquer au post {aiModalIdx + 1}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Clique pour appliquer au post {(aiModalIdx ?? 0) + 1}</p>
               </div>
             </div>
-            <button onClick={() => { setAiModalIdx(null); setAiVariants(null) }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+            <button onClick={() => { setAiModalIdx(null); setAiVariants(null) }} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {aiVariants.map((v, i) => (
               <button
                 key={i}
                 onClick={() => applyVariant(v)}
-                className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-[#0A66C2] hover:bg-blue-50/30 transition-all group"
+                className="w-full text-left p-5 rounded-xl border-2 border-gray-100 hover:border-[#0A66C2] hover:bg-blue-50/20 transition-all group"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 bg-blue-100 text-[#004182] text-xs font-bold rounded-full">{v.format}</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-3 py-1 bg-blue-50 text-[#004182] text-xs font-bold rounded-full border border-blue-100">{v.format}</span>
                   <span className="text-xs text-gray-400">{v.description}</span>
-                  <span className="ml-auto text-xs text-[#0A66C2] opacity-0 group-hover:opacity-100 font-semibold transition-opacity">Appliquer →</span>
+                  <span className="ml-auto flex items-center gap-1 text-xs text-[#0A66C2] opacity-0 group-hover:opacity-100 font-semibold transition-opacity">Appliquer <ArrowRight className="w-3 h-3" /></span>
                 </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-6 leading-relaxed">{v.content}</p>
-                <p className="text-xs text-gray-400 mt-2">{v.content.length} caractères</p>
+                <p className="text-xs text-gray-400 mt-3 border-t border-gray-100 pt-2">{v.content.length} caractères</p>
               </button>
             ))}
           </div>
-          <div className="px-6 py-4 border-t border-gray-100">
+          <div className="px-7 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
             <p className="text-xs text-gray-400 text-center">✨ Powered by Claude AI · Reformulation contextuelle LinkedIn</p>
           </div>
         </div>
       </div>
     )}
 
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    {/* ── MAIN MODAL ── */}
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 flex-shrink-0">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              {step === 'upload' ? 'Importer des posts' : step === 'preview' ? 'Aperçu des posts' : 'Programmer'}
-            </h2>
-            <p className="text-sm text-gray-400 mt-0.5">
-              {step === 'upload'
-                ? 'Glisse un fichier Word ou texte avec tes posts'
-                : step === 'preview'
-                ? `${selectedPosts.size} / ${posts.length} posts sélectionnés`
-                : 'Choisis la fréquence et la date de début'}
-            </p>
+        {/* ── TOP BAR : title + close ── */}
+        <div className="flex items-center justify-between px-8 pt-6 pb-0 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0A66C2] flex items-center justify-center flex-shrink-0">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 leading-tight">Import de posts en masse</h2>
+              <p className="text-xs text-gray-400">Depuis un fichier Word ou texte</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        {/* ── STEP INDICATOR ── */}
+        <div className="flex items-center gap-0 px-8 pt-5 pb-5 flex-shrink-0">
+          {steps.map((s, i) => (
+            <div key={s.id} className="flex items-center flex-1">
+              <div className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  i < currentStepIdx
+                    ? 'bg-[#0A66C2] text-white'
+                    : i === currentStepIdx
+                    ? 'bg-[#0A66C2] text-white ring-4 ring-blue-100'
+                    : 'bg-gray-100 text-gray-400'
+                }`}>
+                  {i < currentStepIdx ? <Check className="w-3.5 h-3.5" /> : s.num}
+                </div>
+                <span className={`text-xs font-semibold ${i === currentStepIdx ? 'text-[#0A66C2]' : i < currentStepIdx ? 'text-gray-500' : 'text-gray-300'}`}>
+                  {s.label}
+                </span>
+              </div>
+              {i < steps.length - 1 && (
+                <div className={`flex-1 h-px mx-3 transition-all ${i < currentStepIdx ? 'bg-[#0A66C2]' : 'bg-gray-200'}`} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ── DIVIDER ── */}
+        <div className="h-px bg-gray-100 flex-shrink-0" />
+
+        {/* ── CONTENT ── */}
+        <div className="flex-1 overflow-y-auto px-8 py-7">
 
           {/* ── STEP 1 : Upload ── */}
           {step === 'upload' && (
             <div className="space-y-6">
+              {/* Drag & drop zone */}
               <div
                 onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-2xl p-16 text-center transition-colors ${
-                  dragOver ? 'border-[var(--primary)] bg-[var(--primary-light)]' : 'border-gray-200 hover:border-gray-300'
+                className={`relative border-2 border-dashed rounded-2xl text-center transition-all cursor-pointer ${
+                  dragOver
+                    ? 'border-[#0A66C2] bg-blue-50/60'
+                    : 'border-gray-200 hover:border-[#0A66C2]/50 hover:bg-gray-50/50'
                 }`}
               >
-                {loading ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="w-12 h-12 text-[var(--primary)] animate-spin" />
-                    <p className="text-sm text-gray-500 mt-1">{loadingMsg}</p>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="w-12 h-12 text-gray-300 mx-auto mb-5" />
-                    <p className="text-base text-gray-600 mb-1 font-medium">Glisse ton fichier ici</p>
-                    <p className="text-sm text-gray-400 mb-5">ou parcours tes fichiers</p>
-                    <label className="inline-block px-6 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-full cursor-pointer hover:bg-[var(--primary-dark)] transition-colors">
-                      Choisir un fichier
-                      <input type="file" className="hidden" accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
-                    </label>
-                    <p className="text-xs text-gray-400 mt-5">Formats supportés : .docx, .txt, .md — Images intégrées automatiquement</p>
-                  </>
-                )}
+                <label className="block p-14 cursor-pointer">
+                  <input type="file" className="hidden" accept=".docx,.doc,.txt,.md,.csv" onChange={handleFileInput} />
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-[#0A66C2] animate-spin" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700">{loadingMsg}</p>
+                        <p className="text-xs text-gray-400 mt-1">Merci de patienter…</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-4">
+                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${dragOver ? 'bg-[#0A66C2]' : 'bg-gray-100'}`}>
+                        <Upload className={`w-7 h-7 transition-colors ${dragOver ? 'text-white' : 'text-gray-400'}`} />
+                      </div>
+                      <div>
+                        <p className="text-base font-semibold text-gray-800">Glisse ton fichier ici</p>
+                        <p className="text-sm text-gray-400 mt-1">ou clique pour parcourir tes fichiers</p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {['.docx', '.txt', '.md'].map(ext => (
+                          <span key={ext} className="px-2.5 py-1 bg-white border border-gray-200 text-xs text-gray-500 rounded-full font-medium shadow-sm">{ext}</span>
+                        ))}
+                        <span className="px-2.5 py-1 bg-blue-50 border border-blue-100 text-xs text-[#0A66C2] rounded-full font-medium">Images auto</span>
+                      </div>
+                    </div>
+                  )}
+                </label>
               </div>
 
-              {error && <div className="p-4 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">{error}</div>}
+              {error && (
+                <div className="flex items-center gap-3 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
 
-              <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Comment formater ton fichier ?</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  Les fichiers Word (.docx) sont analysés automatiquement — images incluses.
-                  Pour les fichiers texte, sépare chaque post avec <code className="bg-gray-200 px-1.5 py-0.5 rounded text-xs">---</code> ou une ligne vide.
-                </p>
+              {/* How-to section */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                      <FileText className="w-3.5 h-3.5 text-gray-500" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700">Fichier Word .docx</span>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Analysé automatiquement. Les images sont extraites et incluses dans chaque post LinkedIn.
+                  </p>
+                </div>
+                <div className="p-5 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                      <FileText className="w-3.5 h-3.5 text-gray-500" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700">Fichier texte .txt / .md</span>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Sépare chaque post avec <code className="bg-gray-200 px-1.5 py-0.5 rounded font-mono">---</code> ou une ligne vide entre les sections.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -556,45 +630,57 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
           {/* ── STEP 2 : Preview ── */}
           {step === 'preview' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-5">
-                <FileText className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500">{filename}</span>
-                {isHtml && (
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
-                    <ImageIcon className="w-3 h-3" /> images incluses
-                  </span>
-                )}
-                {isPremium && (
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-[#0A66C2] rounded-full font-medium">
-                    <Sparkles className="w-3 h-3" /> IA disponible
-                  </span>
-                )}
+              {/* File info + controls bar */}
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">{filename}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-xs text-gray-400">{posts.length} posts détectés</span>
+                    {isHtml && (
+                      <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                        <ImageIcon className="w-2.5 h-2.5" /> images
+                      </span>
+                    )}
+                    {isPremium && (
+                      <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 bg-blue-50 text-[#0A66C2] rounded-full font-medium">
+                        <Sparkles className="w-2.5 h-2.5" /> IA
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <button
                   onClick={() => setSelectedPosts(
                     selectedPosts.size === posts.length ? new Set() : new Set(posts.map((_, i) => i))
                   )}
-                  className="ml-auto text-xs text-[var(--primary)] font-medium hover:underline"
+                  className="text-xs text-[#0A66C2] font-semibold hover:underline flex-shrink-0 px-3 py-1.5 hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
               </div>
 
               {aiError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-red-600 text-sm">
+                <div className="flex items-center gap-2 p-4 bg-red-50 rounded-xl text-red-600 text-sm border border-red-100">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{aiError}</span>
                 </div>
               )}
 
               {!isPremium && (
-                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                  <Sparkles className="w-4 h-4 text-[#0A66C2] flex-shrink-0" />
-                  <p className="text-sm text-[#004182]">
-                    <strong>Feature Premium :</strong> Reformulation IA contextuelle — 3 variantes optimisées LinkedIn par post (Storytelling, Liste, Hook+CTA)
-                  </p>
+                <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-50/30 rounded-xl border border-blue-100">
+                  <div className="w-8 h-8 rounded-lg bg-[#0A66C2]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Sparkles className="w-4 h-4 text-[#0A66C2]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#004182]">Reformulation IA — Feature Premium</p>
+                    <p className="text-xs text-[#0A66C2]/80 mt-0.5">3 variantes optimisées LinkedIn par post : Storytelling, Liste à valeur, Hook+CTA</p>
+                  </div>
                 </div>
               )}
 
+              {/* Post cards */}
               {posts.map((_, idx) => {
                 const isSelected = selectedPosts.has(idx)
                 const isExpanded = expandedPosts.has(idx)
@@ -609,39 +695,44 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                   <div
                     key={idx}
                     onClick={() => !isEditing && togglePost(idx)}
-                    className={`rounded-xl border transition-all ${
+                    className={`rounded-xl border-2 transition-all overflow-hidden ${
                       isEditing
-                        ? 'border-amber-400 bg-amber-50/30 cursor-default'
+                        ? 'border-amber-300 cursor-default'
                         : isSelected
-                        ? 'border-[var(--primary)] bg-[var(--primary-light)]/20 cursor-pointer hover:bg-[var(--primary-light)]/30'
-                        : 'border-gray-200 opacity-60 cursor-pointer hover:opacity-80'
+                        ? 'border-[#0A66C2] shadow-sm cursor-pointer'
+                        : 'border-gray-200 opacity-50 cursor-pointer hover:opacity-75 hover:border-gray-300'
                     }`}
                   >
+                    {/* Card top stripe */}
+                    {isSelected && !isEditing && (
+                      <div className="h-0.5 bg-[#0A66C2] w-full" />
+                    )}
+
                     {/* Card header */}
-                    <div className="flex items-start gap-3 p-5 pb-3">
+                    <div className="flex items-start gap-3 px-5 pt-4 pb-3">
                       <div
-                        className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          isEditing ? 'border-2 border-amber-400 bg-white'
-                            : isSelected ? 'bg-[var(--primary)] text-white'
-                            : 'border-2 border-gray-300'
+                        className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border-2 transition-all ${
+                          isEditing ? 'border-amber-400 bg-white'
+                            : isSelected ? 'bg-[#0A66C2] border-[#0A66C2]'
+                            : 'border-gray-300 bg-white'
                         }`}
                         onClick={e => { e.stopPropagation(); if (!isEditing) togglePost(idx) }}
                       >
-                        {isSelected && !isEditing && <Check className="w-3 h-3" />}
+                        {isSelected && !isEditing && <Check className="w-2.5 h-2.5 text-white" />}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-xs font-medium text-gray-400">Post {idx + 1}</span>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Post {idx + 1}</span>
                           {isModified && (
-                            <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">modifié</span>
+                            <span className="text-xs px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full font-medium border border-amber-200">modifié</span>
                           )}
                           {imgCount > 0 && (
-                            <span className="flex items-center gap-0.5 text-xs text-blue-500">
-                              <ImageIcon className="w-3 h-3" />{imgCount}
+                            <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">
+                              <ImageIcon className="w-2.5 h-2.5" />{imgCount} img
                             </span>
                           )}
-                          <span className="text-xs text-gray-400 ml-auto">{textLen} car.</span>
+                          <span className="text-xs text-gray-300 ml-auto">{textLen} car.</span>
                         </div>
 
                         {isEditing ? (
@@ -649,19 +740,21 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                             value={editedContent[idx] ?? ''}
                             onChange={e => setEditedContent(prev => ({ ...prev, [idx]: e.target.value }))}
                             onClick={e => e.stopPropagation()}
-                            className="w-full text-sm text-gray-700 border border-amber-300 rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white font-mono"
-                            rows={12}
+                            className="w-full text-sm text-gray-700 border border-amber-300 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 bg-amber-50/20 font-mono leading-relaxed"
+                            rows={10}
                             autoFocus
                           />
                         ) : isHtml && !isModified ? (
                           <div
-                            className={`post-html-content text-sm text-gray-700 ${!isExpanded ? 'max-h-24 overflow-hidden' : ''}`}
-                            style={{ maskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none',
-                                     WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 60%, transparent 100%)' : 'none' }}
+                            className={`post-html-content text-sm text-gray-700 leading-relaxed ${!isExpanded ? 'max-h-20 overflow-hidden' : ''}`}
+                            style={{
+                              maskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent 100%)' : 'none',
+                              WebkitMaskImage: !isExpanded ? 'linear-gradient(to bottom, black 50%, transparent 100%)' : 'none'
+                            }}
                             dangerouslySetInnerHTML={{ __html: displayContent }}
                           />
                         ) : (
-                          <p className={`text-sm text-gray-700 whitespace-pre-wrap ${!isExpanded ? 'line-clamp-3' : ''}`}>
+                          <p className={`text-sm text-gray-700 whitespace-pre-wrap leading-relaxed ${!isExpanded ? 'line-clamp-3' : ''}`}>
                             {displayContent}
                           </p>
                         )}
@@ -669,26 +762,25 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                     </div>
 
                     {/* Action bar */}
-                    <div className="flex items-center gap-1.5 px-5 pb-4 pt-1" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 px-4 py-3 border-t border-gray-100 bg-gray-50/50" onClick={e => e.stopPropagation()}>
                       {isEditing ? (
                         <>
                           <button onClick={e => saveEdit(idx, e)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg hover:bg-[var(--primary-dark)] transition-colors">
+                            className="flex items-center gap-1.5 px-4 py-2 bg-[#0A66C2] text-white text-xs font-semibold rounded-full hover:bg-[#004182] transition-colors">
                             <Check className="w-3 h-3" /> Enregistrer
                           </button>
                           <button onClick={e => cancelEdit(idx, e)}
-                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-200 rounded-full transition-colors">
                             <X className="w-3 h-3" /> Annuler
                           </button>
                         </>
                       ) : (
                         <>
-                          {/* AI Reformulate Button */}
                           {isPremium ? (
                             <button
                               onClick={e => handleAIReformulate(idx, e)}
                               disabled={isAiLoading}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-[#0A66C2] text-xs font-semibold rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0A66C2]/10 text-[#0A66C2] text-xs font-semibold rounded-full hover:bg-[#0A66C2]/20 transition-colors disabled:opacity-50"
                               title="Reformulation IA — 3 variantes LinkedIn"
                             >
                               {isAiLoading ? (
@@ -700,23 +792,23 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                           ) : (
                             <button
                               onClick={e => e.stopPropagation()}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-gray-50 text-gray-400 text-xs rounded-lg cursor-not-allowed"
+                              className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 text-gray-400 text-xs rounded-full cursor-not-allowed"
                               title="Disponible en plan Premium"
                             >
                               <Sparkles className="w-3 h-3" />Premium
                             </button>
                           )}
                           <button onClick={e => startEdit(idx, e)}
-                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-[var(--primary)] hover:bg-[var(--primary-light)]/30 rounded-lg transition-colors">
+                            className="flex items-center gap-1.5 px-3.5 py-2 text-gray-500 text-xs hover:text-gray-800 hover:bg-gray-200 rounded-full transition-colors">
                             <Pencil className="w-3 h-3" /> Modifier
                           </button>
                           <button
                             onClick={e => { e.stopPropagation(); setPreviewIdx(idx) }}
-                            className="flex items-center gap-1.5 px-4 py-2 text-[#0a66c2] text-xs hover:bg-blue-50 rounded-lg transition-colors font-medium">
-                            <Linkedin className="w-3 h-3" /> Aperçu
+                            className="flex items-center gap-1.5 px-3.5 py-2 text-[#0A66C2] text-xs hover:bg-blue-50 rounded-full transition-colors font-medium">
+                            <Linkedin className="w-3 h-3" /> Aperçu LI
                           </button>
                           <button onClick={e => toggleExpand(idx, e)}
-                            className="flex items-center gap-1.5 px-4 py-2 text-gray-500 text-xs hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors ml-auto">
+                            className="flex items-center gap-1.5 px-3.5 py-2 text-gray-400 text-xs hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors ml-auto">
                             {isExpanded ? <><ChevronUp className="w-3 h-3" />Réduire</> : <><ChevronDown className="w-3 h-3" />Voir tout</>}
                           </button>
                         </>
@@ -730,17 +822,19 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
 
           {/* ── STEP 3 : Schedule ── */}
           {step === 'schedule' && (
-            <div className="space-y-8">
+            <div className="space-y-7">
 
-              {/* Smart slots (premium) */}
+              {/* Smart slots */}
               {isPremium && (
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <Clock className="w-4 h-4 text-[#0A66C2]" />
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                      <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    </div>
                     <h3 className="text-sm font-semibold text-gray-800">
                       {publishedPosts.filter(p => p.status === 'published').length >= 3
-                        ? '🎯 Meilleurs créneaux basés sur tes données'
-                        : '💡 Créneaux LinkedIn recommandés'}
+                        ? 'Créneaux basés sur tes données'
+                        : 'Créneaux LinkedIn recommandés'}
                     </h3>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
@@ -748,20 +842,17 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
                       <button
                         key={i}
                         onClick={() => applySmartSlot(slot)}
-                        className="p-4 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:border-[#0A66C2] hover:bg-blue-50 transition-all text-left group"
+                        className="p-4 rounded-xl border-2 border-gray-100 bg-white hover:border-[#0A66C2] hover:shadow-sm transition-all text-left group"
                       >
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Star className={`w-3.5 h-3.5 ${i === 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />
-                          <span className="text-xs font-bold text-gray-700">{slot.dayLabel} {slot.hour}h</span>
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <Star className={`w-3.5 h-3.5 ${i === 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}`} />
+                          <span className="text-sm font-bold text-gray-800">{slot.dayLabel} {slot.hour}h</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
-                          <div
-                            className="h-1.5 rounded-full bg-[#0A66C2] transition-all"
-                            style={{ width: `${slot.score}%` }}
-                          />
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+                          <div className="h-1.5 rounded-full bg-[#0A66C2]" style={{ width: `${slot.score}%` }} />
                         </div>
-                        <p className="text-[11px] text-gray-500 leading-tight truncate">{slot.label}</p>
-                        <p className="text-[11px] text-[#0A66C2] opacity-0 group-hover:opacity-100 transition-opacity font-semibold mt-1">Appliquer →</p>
+                        <p className="text-[11px] text-gray-400 leading-tight truncate">{slot.label}</p>
+                        <p className="text-[11px] text-[#0A66C2] opacity-0 group-hover:opacity-100 transition-opacity font-semibold mt-2 flex items-center gap-1">Appliquer <ArrowRight className="w-2.5 h-2.5" /></p>
                       </button>
                     ))}
                   </div>
@@ -769,94 +860,116 @@ export default function BulkImport({ onImport, onClose, isPremium = false, publi
               )}
 
               {!isPremium && (
-                <div className="flex items-center gap-4 p-5 bg-blue-50 rounded-xl border border-blue-100">
-                  <Clock className="w-5 h-5 text-[#0A66C2] flex-shrink-0" />
-                  <p className="text-sm text-[#004182]">
-                    <strong>Créneaux intelligents Premium :</strong> Détection automatique des meilleurs horaires basée sur l&apos;analyse de tes posts publiés.
-                  </p>
+                <div className="flex items-start gap-4 p-5 bg-gradient-to-r from-blue-50 to-blue-50/20 rounded-xl border border-blue-100">
+                  <div className="w-9 h-9 rounded-xl bg-[#0A66C2]/10 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-4 h-4 text-[#0A66C2]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#004182]">Créneaux intelligents — Premium</p>
+                    <p className="text-xs text-[#0A66C2]/70 mt-0.5">Détection automatique des meilleurs horaires basée sur tes posts publiés.</p>
+                  </div>
                 </div>
               )}
 
+              {/* Frequency */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">Fréquence de publication</label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'daily' as const, label: 'Quotidien', desc: '1 post/jour' },
-                    { id: '3x_week' as const, label: '3x / semaine', desc: 'Lun, Mer, Ven' },
+                    { id: 'daily' as const, label: 'Quotidien', desc: '1 post / jour' },
+                    { id: '3x_week' as const, label: '3× / semaine', desc: 'Lun, Mer, Ven' },
                     { id: 'weekdays' as const, label: 'Jours ouvrés', desc: 'Lun – Ven' },
-                    { id: 'weekly' as const, label: 'Hebdomadaire', desc: '1 post/semaine' },
+                    { id: 'weekly' as const, label: 'Hebdomadaire', desc: '1 post / semaine' },
                   ].map(f => (
                     <button key={f.id} onClick={() => setFrequency(f.id)}
-                      className={`px-5 py-4 rounded-xl border text-left transition-all ${
-                        frequency === f.id ? 'border-[var(--primary)] bg-[var(--primary-light)]/30' : 'border-gray-200 hover:border-gray-300'
+                      className={`px-5 py-4 rounded-xl border-2 text-left transition-all ${
+                        frequency === f.id
+                          ? 'border-[#0A66C2] bg-blue-50/40'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}>
-                      <p className="text-sm font-semibold text-gray-900">{f.label}</p>
+                      <p className={`text-sm font-bold ${frequency === f.id ? 'text-[#0A66C2]' : 'text-gray-800'}`}>{f.label}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{f.desc}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-5">
+              {/* Date & time */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Date de début</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Date de début</label>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                    className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-0 focus:border-[#0A66C2] transition-colors bg-white" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Heure</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Heure de publication</label>
                   <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" />
+                    className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-0 focus:border-[#0A66C2] transition-colors bg-white" />
                 </div>
               </div>
 
-              <div className="p-5 bg-blue-50 rounded-xl border border-blue-100">
+              {/* Summary */}
+              <div className="p-5 bg-[#0A66C2]/5 rounded-xl border border-[#0A66C2]/15">
                 <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-4 h-4 text-[var(--primary)]" />
-                  <span className="text-sm font-semibold text-[var(--primary)]">Résumé</span>
+                  <Calendar className="w-4 h-4 text-[#0A66C2]" />
+                  <span className="text-sm font-bold text-[#0A66C2]">Résumé de programmation</span>
                 </div>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {selectedPosts.size} posts programmés{' '}
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  <strong className="text-gray-900">{selectedPosts.size} posts</strong> programmés{' '}
                   {frequency === 'daily' ? 'tous les jours'
-                    : frequency === '3x_week' ? '3x par semaine (Lun, Mer, Ven)'
+                    : frequency === '3x_week' ? '3× par semaine (Lun, Mer, Ven)'
                     : frequency === 'weekdays' ? 'du lundi au vendredi'
                     : 'chaque semaine'}{' '}
                   à partir du{' '}
-                  {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}{' '}
-                  à {startTime}.
+                  <strong className="text-gray-900">
+                    {new Date(startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </strong>{' '}
+                  à <strong className="text-gray-900">{startTime}</strong>.
                 </p>
                 {totalImages > 0 && (
-                  <p className="text-sm text-blue-600 mt-2 font-medium">
-                    🖼 {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — elles seront uploadées et incluses dans les posts LinkedIn.
-                  </p>
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#0A66C2]/10">
+                    <ImageIcon className="w-4 h-4 text-[#0A66C2]" />
+                    <p className="text-sm text-[#0A66C2] font-medium">
+                      {totalImages} image{totalImages > 1 ? 's' : ''} détectée{totalImages > 1 ? 's' : ''} — uploadées automatiquement dans LinkedIn.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-8 py-5 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-          {step !== 'upload' && (
+        {/* ── FOOTER ── */}
+        <div className="h-px bg-gray-100 flex-shrink-0" />
+        <div className="px-8 py-5 flex items-center justify-between flex-shrink-0 bg-white">
+          {step !== 'upload' ? (
             <button onClick={() => setStep(step === 'schedule' ? 'preview' : 'upload')}
-              className="px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-              Retour
+              className="px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100 transition-colors">
+              ← Retour
             </button>
+          ) : (
+            <div />
           )}
-          <div className="ml-auto">
+          <div className="flex items-center gap-3">
+            {step === 'upload' && (
+              <p className="text-xs text-gray-400">Étape 1 sur 3</p>
+            )}
             {step === 'preview' && (
-              <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
-                className="px-7 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-40">
-                Programmer ({selectedPosts.size} posts)
-              </button>
+              <>
+                <p className="text-xs text-gray-400">{selectedPosts.size} post{selectedPosts.size > 1 ? 's' : ''} sélectionné{selectedPosts.size > 1 ? 's' : ''}</p>
+                <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-[#0A66C2] text-white text-sm font-semibold rounded-full hover:bg-[#004182] transition-colors disabled:opacity-40 shadow-sm">
+                  Continuer <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
             )}
             {step === 'schedule' && (
               <button onClick={handleSchedule} disabled={scheduling}
-                className="flex items-center gap-2 px-7 py-2.5 bg-[var(--primary)] text-white text-sm font-semibold rounded-xl hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-60">
+                className="flex items-center gap-2 px-7 py-2.5 bg-[#0A66C2] text-white text-sm font-bold rounded-full hover:bg-[#004182] transition-colors disabled:opacity-60 shadow-sm">
                 {scheduling ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />{totalImages > 0 ? `Upload images (${totalImages})…` : 'Programmation…'}</>
+                  <><Loader2 className="w-4 h-4 animate-spin" />{totalImages > 0 ? `Upload (${totalImages} images)…` : 'Programmation en cours…'}</>
                 ) : (
-                  'Confirmer et programmer'
+                  <><Calendar className="w-4 h-4" />Confirmer et programmer</>
                 )}
               </button>
             )}
