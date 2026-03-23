@@ -713,22 +713,25 @@ export default function BulkImport({
                 </button>
               </div>
 
-              {/* ── Banner: posts look bad → offer AI repair ── */}
-              {method !== 'ai' && (() => {
+              {/* ── Banner: AI repair — always visible ── */}
+              {(() => {
                 const avgLen = posts.length > 0 ? posts.reduce((s, p) => s + p.length, 0) / posts.length : 999
-                const looksOff = avgLen < 250 || importWarning === 'ai_unavailable'
-                if (!looksOff) return null
+                const looksOff = avgLen < 250 || importWarning === 'ai_unavailable' || method !== 'ai'
+                const bannerBg = looksOff ? 'rgba(255,59,48,0.06)' : 'rgba(0,122,255,0.05)'
+                const bannerBorder = looksOff ? '1px solid rgba(255,59,48,0.15)' : '1px solid rgba(0,122,255,0.12)'
+                const iconColor = looksOff ? '#c0392b' : T.primary
+                const btnBg = retryingAI ? T.gray5 : (looksOff ? '#c0392b' : T.primary)
                 return (
                   <div style={{ padding: '12px 14px', marginBottom: 10, borderRadius: T.radius.md,
-                    background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.15)',
+                    background: bannerBg, border: bannerBorder,
                     display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <AlertCircle style={{ width: 14, height: 14, color: '#c0392b', flexShrink: 0 }} />
+                    <AlertCircle style={{ width: 14, height: 14, color: iconColor, flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#c0392b' }}>
-                        Posts mal séparés ?
+                      <span style={{ fontSize: 12, fontWeight: 600, color: iconColor }}>
+                        {looksOff ? 'Posts mal séparés ?' : 'Résultat incorrect ?'}
                       </span>
-                      <span style={{ fontSize: 12, color: '#7f3838', marginLeft: 6 }}>
-                        {posts.length} blocs détectés (moy. {Math.round(avgLen)} car.)
+                      <span style={{ fontSize: 12, color: looksOff ? '#7f3838' : T.gray3, marginLeft: 6 }}>
+                        {posts.length} posts · moy. {Math.round(avgLen)} car.
                       </span>
                     </div>
                     <button
@@ -737,7 +740,7 @@ export default function BulkImport({
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                         padding: '6px 14px', borderRadius: T.radius.pill, border: 'none',
-                        background: retryingAI ? T.gray5 : '#c0392b', color: T.white,
+                        background: btnBg, color: T.white,
                         fontSize: 12, fontWeight: 600, cursor: retryingAI ? 'not-allowed' : 'pointer',
                         whiteSpace: 'nowrap', flexShrink: 0,
                       }}>
