@@ -204,8 +204,8 @@ function labeledMarkerSplit(text: string): string[] | null {
   const patterns = [
     // "Post N" or "Post N:"
     { re: /^post\s*\d+[\s:.\-—]/im, split: /\n(?=post\s*\d+[\s:.\-—])/i, strip: /^post\s*\d+[\s:.\-—]*/i },
-    // "Semaine N" / "Jour N" / "Day N" / "Week N"
-    { re: /^(semaine|jour|day|week)\s+\d+/im, split: /\n{1,3}(?=(semaine|jour|day|week)\s+\d+)/i, strip: null },
+    // "Semaine N" / "Jour N" / "Day N" / "Week N" — any number of blank lines before marker
+    { re: /^(semaine|jour|day|week)\s+\d+/im, split: /\n+(?=(semaine|jour|day|week)\s+\d+)/i, strip: null },
     // "1." or "1)" at start of line (at least 3 occurrences)
     { re: /^\d+[\.\)]\s/m, split: /\n(?=\d+[\.\)]\s)/, strip: /^\d+[\.\)]\s*/ },
   ]
