@@ -144,11 +144,11 @@ function analyzeSmartSlots(publishedPosts: Array<{ scheduled_at: string; status:
 // API call
 // ─────────────────────────────────────────────────────────────
 
-async function apiSplit(text: string, filename: string): Promise<{ posts: string[]; structure: string; method: string; warning: string | null }> {
+async function apiSplit(text: string, filename: string, forceAI = false): Promise<{ posts: string[]; structure: string; method: string; warning: string | null }> {
   const res = await fetch('/api/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, filename }),
+    body: JSON.stringify({ text, filename, forceAI }),
   })
   const raw = await res.text()
   let data: any
@@ -220,9 +220,11 @@ export default function BulkImport({
   const [posts, setPosts] = useState<string[]>([])
   const [postImages, setPostImages] = useState<Record<number, string[]>>({})
   const [filename, setFilename] = useState('')
+  const [rawText, setRawText] = useState('')           // original document text for AI retry
   const [structure, setStructure] = useState('')
   const [method, setMethod] = useState('')
   const [importWarning, setImportWarning] = useState<string | null>(null)
+  const [retryingAI, setRetryingAI] = useState(false)
   const [loading, setLoading] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState('')
@@ -288,6 +290,7 @@ export default function BulkImport({
       }
 
       setFilename(file.name)
+      setRawText(rawText)
       setSelectedPosts(new Set(finalPosts.map((_, i) => i)))
       setExpandedPosts(new Set()); setEditingPosts(new Set()); setEditedContent({})
       setStep('preview')
@@ -295,6 +298,25 @@ export default function BulkImport({
       setError(err.message || "Erreur lors de l'import")
     } finally {
       setLoading(false); setLoadingMsg('')
+    }
+  }
+
+  // ── Retry with AI ──
+
+  const handleRetryWithAI = async () => {
+    if (!rawText || retryingAI) return
+    setRetryingAI(true)
+    setError('')
+    try {
+      const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, filename, true)
+      setPosts(extracted)
+      setStructure(s); setMethod(m); setImportWarning(w ?? null)
+      setSelectedPosts(new Set(extracted.map((_, i) => i)))
+      setExpandedPosts(new Set()); setEditingPosts(new Set()); setEditedContent({})
+    } catch (err: any) {
+      setError(err.message || "Erreur IA")
+    } finally {
+      setRetryingAI(false)
     }
   }
 
@@ -611,6 +633,42 @@ export default function BulkImport({
                 </button>
               </div>
 
+              {/* ── Banner: posts look bad → offer AI repair ── */}
+              {method !== 'ai' && (() => {
+                const avgLen = posts.length > 0 ? posts.reduce((s, p) => s + p.length, 0) / posts.length : 999
+                const looksOff = avgLen < 250 || importWarning === 'ai_unavailable'
+                if (!looksOff) return null
+                return (
+                  <div style={{ padding: '12px 14px', marginBottom: 10, borderRadius: T.radius.md,
+                    background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.15)',
+                    display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <AlertCircle style={{ width: 14, height: 14, color: '#c0392b', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#c0392b' }}>
+                        Posts mal séparés ?
+                      </span>
+                      <span style={{ fontSize: 12, color: '#7f3838', marginLeft: 6 }}>
+                        {posts.length} blocs détectés (moy. {Math.round(avgLen)} car.)
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleRetryWithAI}
+                      disabled={retryingAI || !rawText}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '6px 14px', borderRadius: T.radius.pill, border: 'none',
+                        background: retryingAI ? T.gray5 : '#c0392b', color: T.white,
+                        fontSize: 12, fontWeight: 600, cursor: retryingAI ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                      }}>
+                      {retryingAI
+                        ? <><Loader2 style={{ width: 11, height: 11, animation: 'spin 1s linear infinite' }} /> IA en cours…</>
+                        : <><Sparkles style={{ width: 11, height: 11 }} /> Réparer avec l'IA</>}
+                    </button>
+                  </div>
+                )
+              })()}
+
               {/* ── Warning: AI unavailable, partial detection ── */}
               {importWarning === 'ai_unavailable' && (
                 <div style={{ padding: '12px 14px', marginBottom: 10, borderRadius: T.radius.md,
@@ -922,3 +980,4 @@ function ActionBtn({ icon, label, onClick, color, disabled, style: extraStyle }:
     </button>
   )
 }
+
