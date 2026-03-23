@@ -4,131 +4,188 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bvsfclqlop
 const AI_SPLITTER_URL = `${SUPABASE_URL}/functions/v1/ai-doc-splitter`
 
 // ─────────────────────────────────────────────────────────────
-// Rule-based split — covers ~90% of real documents
-// Much more permissive than the previous version
+// Quality validation
+// A LinkedIn post is max 3000 chars. Any "post" > 4000 chars
+// means the split failed for that piece.
 // ─────────────────────────────────────────────────────────────
-function ruleSplit(rawText: string): string[] | null {
-  const text = rawText.trim()
+const LINKEDIN_MAX = 4000  // a bit above the real 3000 limit for safety
+const MIN_POST_LEN = 40
 
-  // Helper: clean a post block
-  const clean = (s: string) =>
-    s
-      .split('\n')
-      .filter(line => {
-        const t = line.trim()
-        if (!t) return true
-        // Remove pure section headers (ALL CAPS, short, no punctuation)
-        if (t.length >= 3 && t.length <= 60 && t === t.toUpperCase() && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3}/.test(t) && !/[.?!,]/.test(t)) return false
-        if (/^(semaine|jour|day|week|chapitre|partie|section|module)\s+\d+/i.test(t)) return false
-        return true
-      })
-      .join('\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim()
+function isGoodSplit(posts: string[]): boolean {
+  if (posts.length < 2) return false
+  // Hard fail: any post way too long = the whole document landed in one block
+  if (posts.some(p => p.length > LINKEDIN_MAX)) return false
+  // At least 60% of posts must be of reasonable length
+  const reasonable = posts.filter(p => p.length >= MIN_POST_LEN && p.length <= LINKEDIN_MAX)
+  return reasonable.length >= Math.max(2, Math.ceil(posts.length * 0.6))
+}
 
-  // 1. Explicit separator --- or ===
-  if (/^-{3,}$/m.test(text)) {
-    const posts = text.split(/^-{3,}$/m).map(p => clean(p)).filter(p => p.length >= 30)
-    if (posts.length >= 2) return posts
-  }
-  if (/^={3,}$/m.test(text)) {
-    const posts = text.split(/^={3,}$/m).map(p => clean(p)).filter(p => p.length >= 30)
-    if (posts.length >= 2) return posts
-  }
-
-  // 2. Explicit "Post N" / "POST N" markers
-  if (/^post\s*\d+/im.test(text)) {
-    const posts = text
-      .split(/\n(?=post\s*\d+[\s:.\-—])/i)
-      .map(p => clean(p.replace(/^post\s*\d+[\s:.\-—]*/i, '')))
-      .filter(p => p.length >= 30)
-    if (posts.length >= 2) return posts
-  }
-
-  // 3. Numbered "1." or "1)" at line start — but only if consistent throughout
-  const numberedMatches = text.match(/^(\d+)[\.\)]\s/gm) || []
-  if (numberedMatches.length >= 3) {
-    const posts = text
-      .split(/\n(?=\d+[\.\)]\s)/)
-      .map(p => clean(p.replace(/^\d+[\.\)]\s*/, '')))
-      .filter(p => p.length >= 30)
-    if (posts.length >= 2) return posts
-  }
-
-  // 4. "Semaine X" / "Jour X" / "Day X" markers
-  if (/^(semaine|jour|day|week)\s+\d+/im.test(text)) {
-    const posts = text
-      .split(/\n{1,3}(?=(semaine|jour|day|week)\s+\d+)/i)
-      .map(p => clean(p))
-      .filter(p => p.length >= 30)
-    if (posts.length >= 2) return posts
-  }
-
-  // 5. UPPERCASE section headers (e.g. FONDAMENTAUX\n\nContent...)
-  if (/\n{1,3}[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ][A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{3,}\n/.test(text)) {
-    const sections = text
-      .split(/\n{1,3}(?=[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ][A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{3,}\n)/)
-      .map(p => {
-        // Keep UPPERCASE header as first line only if it's a title-like prefix
-        return clean(p)
-      })
-      .filter(p => p.length >= 30)
-    if (sections.length >= 2) return sections
-  }
-
-  // 6. Triple newlines
-  if (text.includes('\n\n\n')) {
-    const posts = text.split(/\n{3,}/).map(p => clean(p)).filter(p => p.length >= 30)
-    if (posts.length >= 2) return posts
-  }
-
-  // 7. Double newlines — PERMISSIVE version
-  // This is the most common pattern for Word docs
-  const doubleParts = text.split(/\n\n+/).map(p => clean(p)).filter(p => p.length >= 30)
-  if (doubleParts.length >= 2) {
-    // Merge very short fragments (titles) with the following block
-    const merged: string[] = []
-    let i = 0
-    while (i < doubleParts.length) {
-      const current = doubleParts[i]
-      const isShortTitle = current.length < 80 && !current.includes('\n') && i + 1 < doubleParts.length
-      if (isShortTitle && doubleParts[i + 1].length >= 80) {
-        merged.push(current + '\n\n' + doubleParts[i + 1])
-        i += 2
-      } else {
-        merged.push(current)
-        i++
-      }
-    }
-    if (merged.length >= 2) return merged
-  }
-
-  // 8. Single newline — each line is a post (very dense format)
-  const lineParts = text.split(/\n/).map(p => p.trim()).filter(p => p.length >= 80)
-  if (lineParts.length >= 3) return lineParts
-
-  return null
+// Score a split result: higher = better
+function scoreSplit(posts: string[]): number {
+  if (!isGoodSplit(posts)) return -1
+  const reasonable = posts.filter(p => p.length >= 100 && p.length <= LINKEDIN_MAX)
+  // Bonus for consistent lengths (posts of similar size = probably correct split)
+  const lengths = reasonable.map(p => p.length)
+  const avg = lengths.reduce((a, b) => a + b, 0) / (lengths.length || 1)
+  const variance = lengths.reduce((a, b) => a + Math.abs(b - avg), 0) / (lengths.length || 1)
+  const consistencyBonus = Math.max(0, 500 - variance / 10)
+  return reasonable.length * 100 + consistencyBonus
 }
 
 // ─────────────────────────────────────────────────────────────
-// AI split — chunked for long documents
-// Splits the document into 4000-char chunks, processes each,
-// then merges. No truncation = 52-post docs work perfectly.
+// Clean a post block: strip pure section headers, normalize whitespace
+// ─────────────────────────────────────────────────────────────
+function cleanBlock(s: string): string {
+  return s
+    .split('\n')
+    .filter(line => {
+      const t = line.trim()
+      if (!t) return true
+      // Pure UPPERCASE section header (no punctuation, short)
+      if (t.length >= 3 && t.length <= 80 && t === t.toUpperCase()
+          && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3}/.test(t) && !/[.?!,;:]/.test(t)) return false
+      // Week/day/chapter markers
+      if (/^(semaine|jour|day|week|chapitre|partie|section|module|post)\s+\d+\s*[:\-—]?\s*$/i.test(t)) return false
+      return true
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+// ─────────────────────────────────────────────────────────────
+// Multi-strategy rule-based splitter
+// Tries every possible strategy, picks the best-scoring result
+// ─────────────────────────────────────────────────────────────
+function ruleSplit(rawText: string): string[] | null {
+  const text = rawText.trim()
+  const candidates: string[][] = []
+
+  const addCandidate = (parts: string[]) => {
+    const cleaned = parts.map(cleanBlock).filter(p => p.length >= MIN_POST_LEN)
+    if (cleaned.length >= 2) candidates.push(cleaned)
+  }
+
+  // 1. Explicit --- separator
+  if (/^-{3,}$/m.test(text)) {
+    addCandidate(text.split(/^-{3,}$/m))
+  }
+
+  // 2. Explicit === separator
+  if (/^={3,}$/m.test(text)) {
+    addCandidate(text.split(/^={3,}$/m))
+  }
+
+  // 3. "Post N:" or "Post N —" markers
+  if (/^post\s*\d+[\s:.\-—]/im.test(text)) {
+    addCandidate(
+      text.split(/\n(?=post\s*\d+[\s:.\-—])/i)
+        .map(p => p.replace(/^post\s*\d+[\s:.\-—]*/i, ''))
+    )
+  }
+
+  // 4. Numbered list "1." or "1)"
+  const numberedCount = (text.match(/^(\d+)[\.\)]\s/gm) || []).length
+  if (numberedCount >= 3) {
+    addCandidate(
+      text.split(/\n(?=\d+[\.\)]\s)/)
+        .map(p => p.replace(/^\d+[\.\)]\s*/, ''))
+    )
+  }
+
+  // 5. "Semaine X" / "Jour X" / "Day X"
+  if (/^(semaine|jour|day|week)\s+\d+/im.test(text)) {
+    addCandidate(text.split(/\n{1,3}(?=(semaine|jour|day|week)\s+\d+)/i))
+  }
+
+  // 6. UPPERCASE section headers (2+ newlines before the header)
+  if (/\n{2,}[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ][A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{3,}\n/.test(text)) {
+    addCandidate(text.split(/\n{2,}(?=[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ][A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{3,}\n)/))
+  }
+
+  // 7. Triple newlines
+  if (text.includes('\n\n\n')) {
+    addCandidate(text.split(/\n{3,}/))
+  }
+
+  // 8. Double newlines — with title merging
+  {
+    const raw = text.split(/\n\n+/).map(p => p.trim()).filter(p => p.length >= MIN_POST_LEN)
+    if (raw.length >= 2) {
+      // Try without merging
+      addCandidate(raw)
+      // Try with title merging (short single-line + next block)
+      const merged: string[] = []
+      let i = 0
+      while (i < raw.length) {
+        const cur = raw[i]
+        const isTitle = cur.length < 120 && !cur.includes('\n') && i + 1 < raw.length
+        if (isTitle && raw[i + 1]?.length >= 100) {
+          merged.push(cur + '\n\n' + raw[i + 1])
+          i += 2
+        } else {
+          merged.push(cur)
+          i++
+        }
+      }
+      if (merged.length !== raw.length) addCandidate(merged)
+    }
+  }
+
+  // 9. Single newlines — each line is a post (very dense flat format)
+  {
+    const lines = text.split('\n').map(p => p.trim()).filter(p => p.length >= 80)
+    if (lines.length >= 3) addCandidate(lines)
+  }
+
+  // 10. Mixed: split on any blank line, then merge very short adjacent blocks
+  {
+    const parts = text.split(/\n\s*\n/).map(cleanBlock).filter(p => p.length >= MIN_POST_LEN)
+    if (parts.length >= 2) {
+      const merged: string[] = []
+      let i = 0
+      while (i < parts.length) {
+        let block = parts[i]
+        // Keep merging consecutive short blocks (< 200 chars) into one post
+        while (i + 1 < parts.length && block.length + parts[i + 1].length < 2500
+               && parts[i + 1].length < 200 && block.length < 200) {
+          i++
+          block += '\n\n' + parts[i]
+        }
+        merged.push(block)
+        i++
+      }
+      addCandidate(merged)
+    }
+  }
+
+  if (candidates.length === 0) return null
+
+  // Score all candidates, return best
+  const scored = candidates
+    .map(posts => ({ posts, score: scoreSplit(posts) }))
+    .filter(c => c.score > 0)
+    .sort((a, b) => b.score - a.score)
+
+  if (scored.length === 0) return null
+  return scored[0].posts.slice(0, 200)
+}
+
+// ─────────────────────────────────────────────────────────────
+// AI split — chunked for documents of any length
 // ─────────────────────────────────────────────────────────────
 async function aiSplit(text: string): Promise<{ posts: string[]; structure: string }> {
   const CHUNK_SIZE = 4000
-  const OVERLAP = 200 // overlap to avoid cutting posts at boundaries
+  const OVERLAP = 150
 
-  // For short docs: single call
   if (text.length <= CHUNK_SIZE) {
-    return await aiSplitChunk(text)
+    return aiSplitChunk(text)
   }
 
-  // For long docs: split into chunks and merge results
+  // Build chunks at paragraph boundaries
   const chunks: string[] = []
   let pos = 0
   while (pos < text.length) {
-    // Find a good split point (paragraph boundary)
     let end = Math.min(pos + CHUNK_SIZE, text.length)
     if (end < text.length) {
       const lastBreak = text.lastIndexOf('\n\n', end)
@@ -139,21 +196,20 @@ async function aiSplit(text: string): Promise<{ posts: string[]; structure: stri
     if (pos >= text.length) break
   }
 
-  // Process all chunks in parallel
-  const results = await Promise.all(chunks.map(chunk => aiSplitChunk(chunk).catch(() => ({ posts: [] as string[], structure: 'unknown' }))))
+  const results = await Promise.all(
+    chunks.map(chunk => aiSplitChunk(chunk).catch(() => ({ posts: [] as string[], structure: 'unknown' })))
+  )
 
-  // Merge and deduplicate
+  // Merge, dedup at chunk boundaries
   const allPosts: string[] = []
   for (const r of results) {
     for (const post of r.posts) {
-      // Simple dedup: skip if very similar to last post
       const last = allPosts[allPosts.length - 1] || ''
-      const similarity = post.slice(0, 50) === last.slice(0, 50)
-      if (!similarity) allPosts.push(post)
+      if (post.slice(0, 60) !== last.slice(0, 60)) allPosts.push(post)
     }
   }
 
-  return { posts: allPosts, structure: results[0]?.structure || 'ai-chunked' }
+  return { posts: allPosts, structure: `ai-chunked(${chunks.length})` }
 }
 
 async function aiSplitChunk(text: string): Promise<{ posts: string[]; structure: string }> {
@@ -162,10 +218,7 @@ async function aiSplitChunk(text: string): Promise<{ posts: string[]; structure:
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   })
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`AI splitter: ${err}`)
-  }
+  if (!res.ok) throw new Error(`AI splitter HTTP ${res.status}`)
   const data = await res.json()
   if (data.error) throw new Error(data.error)
   return { posts: data.posts || [], structure: data.structure || 'ai' }
@@ -201,38 +254,61 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Fichier vide ou illisible.' }, { status: 400 })
     }
 
-    // Step 1: Rule-based (free, handles 90% of cases, no token limit)
+    // ── Step 1: Multi-strategy rule-based with quality scoring ──
     const rulePosts = ruleSplit(rawText)
     if (rulePosts && rulePosts.length >= 2) {
       return NextResponse.json({
-        posts: rulePosts.slice(0, 200),
-        count: Math.min(rulePosts.length, 200),
+        posts: rulePosts,
+        count: rulePosts.length,
         filename,
         method: 'rule-based',
         structure: 'detected',
+        warning: null,
       })
     }
 
-    // Step 2: AI with chunked processing (handles any length, costs ~$0.002×chunks)
+    // ── Step 2: AI chunked split ──
     try {
       const { posts, structure } = await aiSplit(rawText)
-      if (posts.length > 0) {
+      if (posts.length >= 1) {
         return NextResponse.json({
           posts: posts.slice(0, 200),
           count: Math.min(posts.length, 200),
           filename,
           method: 'ai',
           structure,
+          warning: null,
         })
       }
     } catch (aiErr: any) {
-      console.error('AI split failed:', aiErr.message)
-      // Fall through to error
+      // AI failed (no credits or network error)
+      // Return what we have from rule-based (even if quality is bad)
+      // with a clear warning
+      const fallback = rawText
+        .split(/\n{2,}/)
+        .map(cleanBlock)
+        .filter(p => p.length >= MIN_POST_LEN)
+        .slice(0, 200)
+
+      if (fallback.length >= 1) {
+        return NextResponse.json({
+          posts: fallback,
+          count: fallback.length,
+          filename,
+          method: 'partial',
+          structure: 'unknown',
+          warning: 'ai_unavailable',  // triggers user-facing message
+        })
+      }
+
+      return NextResponse.json({
+        error: 'Détection automatique indisponible (crédits IA épuisés). Formate ton document avec --- entre les posts.',
+        warning: 'ai_unavailable',
+      }, { status: 422 })
     }
 
     return NextResponse.json({
-      error: 'Aucun post détecté. Vérifie que ton document contient des posts séparés.',
-      rawPreview: rawText.slice(0, 300),
+      error: 'Aucun post détecté. Sépare tes posts avec --- pour garantir la détection.',
     }, { status: 400 })
 
   } catch (error: any) {
