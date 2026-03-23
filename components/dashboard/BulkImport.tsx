@@ -206,7 +206,61 @@ function splitHtmlByHeadings(html: string): string[] | null {
 }
 
 // ─────────────────────────────────────────────────────────────
-// API call
+// Direct AI split — bypasses Vercel (avoids 10s timeout)
+// Calls Supabase edge function directly from the browser
+// ─────────────────────────────────────────────────────────────
+
+const AI_SPLITTER_URL = 'https://bvsfclqlopzkfmeinbqs.supabase.co/functions/v1/ai-doc-splitter'
+const AI_CHUNK_SIZE = 2800   // chars per chunk sent to Claude
+const AI_CHUNK_OVERLAP = 80  // overlap to avoid cutting mid-post
+
+async function splitWithAIDirectly(text: string): Promise<string[]> {
+  // Chunk the document
+  const chunks: string[] = []
+  let pos = 0
+  while (pos < text.length) {
+    let end = Math.min(pos + AI_CHUNK_SIZE, text.length)
+    if (end < text.length) {
+      const lb = text.lastIndexOf('\n\n', end)
+      if (lb > pos + AI_CHUNK_SIZE / 2) end = lb
+    }
+    const chunk = text.slice(pos, end).trim()
+    if (chunk.length >= 50) chunks.push(chunk)
+    pos = end - AI_CHUNK_OVERLAP
+    if (pos >= text.length) break
+  }
+
+  // Process chunks — batch of 3 in parallel
+  const BATCH = 3
+  const allPosts: string[] = []
+  for (let i = 0; i < chunks.length; i += BATCH) {
+    const batch = chunks.slice(i, i + BATCH)
+    const results = await Promise.all(batch.map(async chunk => {
+      try {
+        const res = await fetch(AI_SPLITTER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: chunk }),
+        })
+        if (!res.ok) return [] as string[]
+        const data = await res.json()
+        return (data.posts || []) as string[]
+      } catch { return [] as string[] }
+    }))
+    for (const posts of results) {
+      for (const post of posts) {
+        const last = allPosts[allPosts.length - 1] || ''
+        if (post.trim().length >= 50 && post.slice(0, 60) !== last.slice(0, 60)) {
+          allPosts.push(post.trim())
+        }
+      }
+    }
+  }
+  return allPosts
+}
+
+// ─────────────────────────────────────────────────────────────
+// API call (rule-based via Next.js)
 // ─────────────────────────────────────────────────────────────
 
 async function apiSplit(text: string, filename: string, forceAI = false): Promise<{ posts: string[]; structure: string; method: string; warning: string | null }> {
@@ -381,20 +435,25 @@ export default function BulkImport({
     }
   }
 
-  // ── Retry with AI ──
+  // ── Retry with AI (direct Supabase call — bypasses Vercel timeout) ──
 
   const handleRetryWithAI = async () => {
     if (!rawText || retryingAI) return
     setRetryingAI(true)
+    setAiError('')
     setError('')
     try {
-      const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, filename, true)
-      setPosts(extracted)
-      setStructure(s); setMethod(m); setImportWarning(w ?? null)
-      setSelectedPosts(new Set(extracted.map((_, i) => i)))
-      setExpandedPosts(new Set()); setEditingPosts(new Set()); setEditedContent({})
+      const extracted = await splitWithAIDirectly(rawText)
+      if (extracted.length >= 2) {
+        setPosts(extracted)
+        setStructure('ai-direct'); setMethod('ai'); setImportWarning(null)
+        setSelectedPosts(new Set(extracted.map((_, i) => i)))
+        setExpandedPosts(new Set()); setEditingPosts(new Set()); setEditedContent({})
+      } else {
+        setAiError("L'IA n'a pas détecté de posts. Essaie de séparer tes posts avec --- dans le document.")
+      }
     } catch (err: any) {
-      setError(err.message || "Erreur IA")
+      setAiError(err.message || "Erreur IA — réessaie dans quelques secondes.")
     } finally {
       setRetryingAI(false)
     }
