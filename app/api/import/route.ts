@@ -149,6 +149,31 @@ function cleanBlock(s: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────
+// STRATEGY 0 — MARKDOWN HEADINGS (## / ### sent by BulkImport)
+// When BulkImport sends htmlToStructuredText, headings become ## markers
+// These are the most reliable signal we can get from a Word doc
+// ─────────────────────────────────────────────────────────────
+
+function markdownHeadingSplit(text: string): string[] | null {
+  // Match ## or ### headings at the start of a line
+  if (!/^#{1,4}\s+\S/m.test(text)) return null
+  const headingCount = (text.match(/^#{1,4}\s+\S/gm) || []).length
+  if (headingCount < 2) return null
+
+  // Split on heading markers, keeping the heading as first line of each post
+  const parts = text.split(/\n(?=#{1,4}\s+)/)
+  const posts = parts
+    .map(p => {
+      // Strip the ## prefix from the first line (it's decoration, not content)
+      return p.replace(/^#{1,4}\s+/, '').trim()
+    })
+    .filter(p => p.length >= POST_MIN)
+
+  if (posts.length < 2) return null
+  return mergeShortPosts(posts)
+}
+
+// ─────────────────────────────────────────────────────────────
 // STRATEGY 1 — EXPLICIT SEPARATORS (---, ===, ***, ___  etc.)
 // ─────────────────────────────────────────────────────────────
 
@@ -344,6 +369,10 @@ function ruleSplit(rawText: string): string[] | null {
     const cleaned = parts.map(cleanBlock).filter(p => p.length >= POST_MIN)
     if (cleaned.length >= 2) candidates.push(cleaned)
   }
+
+  // ── 0. Markdown headings (## / ###) — from htmlToStructuredText ──
+  const mdHeadings = markdownHeadingSplit(text)
+  if (mdHeadings && mdHeadings.length >= 2 && isGoodSplit(mdHeadings)) return mdHeadings
 
   // ── 1. Explicit separators (---, ===, etc.) — instant win ──
   const explicitResult = explicitSepSplit(text)
