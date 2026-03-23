@@ -141,6 +141,88 @@ function analyzeSmartSlots(publishedPosts: Array<{ scheduled_at: string; status:
 }
 
 // ─────────────────────────────────────────────────────────────
+// HTML → TEXT helpers  (mammoth gives us rich HTML, we use it)
+// ─────────────────────────────────────────────────────────────
+
+/** Convert an HTML fragment to clean plain text */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/**
+ * Convert mammoth HTML to a "structured text" where Word headings
+ * become ## markers — sent to the API as a reliable signal.
+ */
+function htmlToStructuredText(html: string): string {
+  return html
+    .replace(/<h[1-4][^>]*>(.*?)<\/h[1-4]>/gi, '\n\n## $1\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/**
+ * Split a Word doc HTML (from mammoth) into posts using heading tags.
+ * Returns null if the document has no heading structure.
+ *
+ * This is the PRIMARY strategy for .docx — it reads the ACTUAL Word
+ * heading styles (h1/h2/h3/h4) that extractRawText would have lost.
+ */
+function splitHtmlByHeadings(html: string): string[] | null {
+  const headingMatches = html.match(/<h[1-4][^>]*>/gi) || []
+  if (headingMatches.length < 2) return null   // no heading structure
+
+  // Find the most common heading level (the one used for post titles)
+  const levelCounts: Record<string, number> = {}
+  for (const tag of headingMatches) {
+    const lvl = (tag.match(/h([1-4])/i) || [])[1] || '1'
+    levelCounts[lvl] = (levelCounts[lvl] || 0) + 1
+  }
+  const dominantLevel = Object.entries(levelCounts)
+    .sort((a, b) => b[1] - a[1])[0][0]
+
+  // Split on the dominant heading level
+  const splitRe = new RegExp(`<h${dominantLevel}[^>]*>`, 'gi')
+  const parts = html.split(splitRe)
+  // parts[0] = intro text before first heading (author bio, etc.)
+
+  const posts: string[] = []
+  for (let i = 1; i < parts.length; i++) {
+    const text = htmlToText(parts[i]).trim()
+    if (text.length >= 80) posts.push(text)
+  }
+
+  // If the intro is long enough to be a post, prepend it
+  if (parts[0]) {
+    const introText = htmlToText(parts[0]).trim()
+    if (introText.length >= 150) posts.unshift(introText)
+  }
+
+  return posts.length >= 2 ? posts : null
+}
+
+// ─────────────────────────────────────────────────────────────
 // API call
 // ─────────────────────────────────────────────────────────────
 
@@ -263,21 +345,36 @@ export default function BulkImport({
         const html = htmlResult.value
 
         setLoadingMsg('Analyse de la structure…')
-        const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, file.name)
-        finalPosts = extracted
 
-        const images: Record<number, string[]> = {}
-        if (html.includes('<img')) {
-          const allImgs = extractImagesFromHtml(html)
-          if (allImgs.length > 0) {
-            const perPost = Math.ceil(allImgs.length / extracted.length)
-            extracted.forEach((_, i) => {
-              const slice = allImgs.slice(i * perPost, (i + 1) * perPost)
-              if (slice.length > 0) images[i] = slice
-            })
+        // ── Priority 1: HTML heading structure (Word heading styles → h1/h2/h3) ──
+        // This is always the best strategy when the author used Word heading styles.
+        // extractRawText would have lost this info; we use htmlResult directly.
+        const headingPosts = splitHtmlByHeadings(html)
+
+        if (headingPosts && headingPosts.length >= 2) {
+          finalPosts = headingPosts
+          setPosts(headingPosts); setPostImages({}); setStructure('word-headings'); setMethod('html-headings'); setImportWarning(null)
+        } else {
+          // ── Priority 2: Send structured text (## markers) to the API ──
+          // Better than rawText: headings become ## markers the API can detect
+          const structuredText = htmlToStructuredText(html)
+          const textToSend = structuredText.length > rawText.length * 0.5 ? structuredText : rawText
+          const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(textToSend, file.name)
+          finalPosts = extracted
+
+          const images: Record<number, string[]> = {}
+          if (html.includes('<img')) {
+            const allImgs = extractImagesFromHtml(html)
+            if (allImgs.length > 0) {
+              const perPost = Math.ceil(allImgs.length / extracted.length)
+              extracted.forEach((_, i) => {
+                const slice = allImgs.slice(i * perPost, (i + 1) * perPost)
+                if (slice.length > 0) images[i] = slice
+              })
+            }
           }
+          setPosts(extracted); setPostImages(images); setStructure(s); setMethod(m); setImportWarning(w ?? null)
         }
-        setPosts(extracted); setPostImages(images); setStructure(s); setMethod(m); setImportWarning(w ?? null)
       } else if (['txt', 'md', 'csv', 'rtf', 'pdf'].includes(ext)) {
         setLoadingMsg('Lecture du fichier…')
         rawText = await file.text()
