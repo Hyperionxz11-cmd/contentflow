@@ -4,58 +4,143 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bvsfclqlop
 const AI_SPLITTER_URL = `${SUPABASE_URL}/functions/v1/ai-doc-splitter`
 
 // ─────────────────────────────────────────────────────────────
-// Quality validation
-// A LinkedIn post is typically 200-3000 chars.
-// Any "post" > 4000 chars means the split failed for that piece.
+// Constants
 // ─────────────────────────────────────────────────────────────
-const LINKEDIN_MAX = 4000
-const MIN_POST_LEN = 80   // raised from 40 — anything shorter is a title/header, not a post
-const SWEET_MIN = 200     // LinkedIn posts are rarely < 200 chars
-const SWEET_MAX = 2800
+const LINKEDIN_MAX = 3000
+const POST_MIN = 100       // below this = definitely not a full post
+const POST_SWEET_MIN = 150 // ideally a LinkedIn post is at least 150 chars
+const POST_SWEET_MAX = 2800
+
+// ─────────────────────────────────────────────────────────────
+// BLOCK PARSING — the foundation of everything
+// Extract every paragraph with its ACTUAL blank-line gap count
+// ─────────────────────────────────────────────────────────────
+
+interface Block {
+  text: string
+  blankLinesAfter: number  // actual number of blank lines after this block
+}
+
+function getBlocksAndGaps(rawText: string): Block[] {
+  const result: Block[] = []
+  let lastIndex = 0
+  // Match any sequence of 2+ newlines (possibly with spaces/tabs in between)
+  const regex = /\n([ \t]*\n)+/g
+  let match: RegExpExecArray | null
+
+  while ((match = regex.exec(rawText)) !== null) {
+    const blockText = rawText.slice(lastIndex, match.index).trim()
+    // Count actual blank lines = number of \n minus 1
+    const blankLines = (match[0].match(/\n/g) || []).length - 1
+    if (blockText.length >= POST_MIN) {
+      result.push({ text: blockText, blankLinesAfter: blankLines })
+    } else if (blockText.length > 0 && result.length > 0) {
+      // Tiny block: append to previous block's text instead of dropping it
+      result[result.length - 1].text += '\n\n' + blockText
+    }
+    lastIndex = match.index + match[0].length
+  }
+
+  // Last block (no gap after)
+  const lastBlock = rawText.slice(lastIndex).trim()
+  if (lastBlock.length >= POST_MIN) {
+    result.push({ text: lastBlock, blankLinesAfter: 0 })
+  } else if (lastBlock.length > 0 && result.length > 0) {
+    result[result.length - 1].text += '\n\n' + lastBlock
+  }
+
+  return result
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST SIGNALS — detect post beginnings and endings
+// ─────────────────────────────────────────────────────────────
+
+// Returns 0-3: how strongly this block looks like a POST OPENER
+function postOpenStrength(text: string): number {
+  const first = text.trim().split('\n')[0] || ''
+  const t = first.trim()
+  let score = 0
+
+  // Starts with emoji (very strong signal)
+  if (/^[\u{1F300}-\u{1FAFF}]/u.test(t)) score += 3
+  // Starts with known week/post markers
+  if (/^(semaine|jour|day|week|post|partie|chapitre|module)\s+\d+/i.test(t)) score += 3
+  // Starts with a number followed by a word (e.g. "52 posts", "3 raisons")
+  if (/^\d+\s+[a-zA-ZÀ-ÿ]/.test(t)) score += 2
+  // Starts with hook patterns: question, strong verbs, pronouns
+  if (/^(comment|pourquoi|saviez-|si vous|il y a|chaque|tout |voici|la clé|le secret|stop |c'est |j'ai |vous |on |je )/i.test(t)) score += 2
+  // Ends with question mark (short = hook)
+  if (t.endsWith('?') && t.length < 120) score += 2
+  // Ends with exclamation mark (short = hook)
+  if (t.endsWith('!') && t.length < 120) score += 1
+  // Dash or em-dash title style (e.g. "Semaine 1 — La LCA")
+  if (/[—\-–]\s/.test(t) && t.length < 120) score += 1
+  // ALL CAPS (title/header style)
+  if (t === t.toUpperCase() && t.length >= 4 && t.length <= 60 && /[A-Z]{3}/.test(t)) score += 2
+
+  return score
+}
+
+// Returns 0-3: how strongly this block looks like a POST ENDER
+function postEndStrength(text: string): number {
+  const trimmed = text.trim()
+  const last = trimmed.split('\n').slice(-3).join(' ')
+  let score = 0
+
+  // Ends with hashtags (very strong signal)
+  if (/#[a-zA-ZÀ-ÿ0-9_]{2,}/.test(last)) score += 3
+  // Ends with CTA patterns
+  if (/\?[^?]*$/.test(trimmed) && trimmed.length > 100) score += 2
+  if (/(commentez?|partagez|likez|dites[- ]moi|dites nous|qu'en pensez|votre avis|rejoignez|suivez|abonnez|contactez|lien en bio)/i.test(last)) score += 2
+  // Ends with "…" or "---"
+  if (/[…]{1}$/.test(trimmed) || /^-{3,}$/.test(trimmed.split('\n').pop() || '')) score += 1
+
+  return score
+}
+
+// ─────────────────────────────────────────────────────────────
+// QUALITY SCORING
+// ─────────────────────────────────────────────────────────────
 
 function isGoodSplit(posts: string[]): boolean {
   if (posts.length < 2) return false
-  // Hard fail: any post way too long = the whole document landed in one block
-  if (posts.some(p => p.length > LINKEDIN_MAX)) return false
-  // Average post must be >= 150 chars — if shorter, we're over-splitting paragraphs
-  const avgLen = posts.reduce((sum, p) => sum + p.length, 0) / posts.length
-  if (avgLen < 150) return false
-  // At least 50% of posts must be of reasonable length
-  const reasonable = posts.filter(p => p.length >= MIN_POST_LEN && p.length <= LINKEDIN_MAX)
-  return reasonable.length >= Math.max(2, Math.ceil(posts.length * 0.5))
+  if (posts.some(p => p.length > LINKEDIN_MAX + 500)) return false
+  const avgLen = posts.reduce((s, p) => s + p.length, 0) / posts.length
+  if (avgLen < POST_SWEET_MIN) return false
+  const sweetSpot = posts.filter(p => p.length >= POST_SWEET_MIN && p.length <= LINKEDIN_MAX)
+  return sweetSpot.length >= Math.max(2, Math.ceil(posts.length * 0.4))
 }
 
-// Score a split result: higher = better
-// Reward posts in the LinkedIn sweet spot (200-2800 chars), penalize extremes
 function scoreSplit(posts: string[]): number {
   if (!isGoodSplit(posts)) return -1
-  // Primary score: posts in the LinkedIn sweet spot
-  const sweetSpot = posts.filter(p => p.length >= SWEET_MIN && p.length <= SWEET_MAX)
+  const sweetSpot = posts.filter(p => p.length >= POST_SWEET_MIN && p.length <= POST_SWEET_MAX)
   if (sweetSpot.length === 0) return -1
-  // Consistency bonus: lower variance = better
   const lengths = sweetSpot.map(p => p.length)
   const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length
   const variance = lengths.reduce((a, b) => a + Math.abs(b - avg), 0) / lengths.length
-  const consistencyBonus = Math.max(0, 500 - variance / 10)
-  // Penalize total post count vs sweet-spot count (over-splitting penalty)
+  const consistencyBonus = Math.max(0, 500 - variance / 8)
   const sweetRatio = sweetSpot.length / posts.length
-  return sweetSpot.length * 100 + consistencyBonus + sweetRatio * 200
+  // Reward: sweet spot posts + consistency + ratio
+  return sweetSpot.length * 100 + consistencyBonus + sweetRatio * 300
 }
 
 // ─────────────────────────────────────────────────────────────
-// Clean a post block: strip pure section headers, normalize whitespace
+// CLEAN A POST BLOCK
 // ─────────────────────────────────────────────────────────────
+
 function cleanBlock(s: string): string {
   return s
     .split('\n')
     .filter(line => {
       const t = line.trim()
       if (!t) return true
-      // Pure UPPERCASE section header (no punctuation, short)
-      if (t.length >= 3 && t.length <= 80 && t === t.toUpperCase()
-          && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3}/.test(t) && !/[.?!,;:]/.test(t)) return false
-      // Week/day/chapter markers
-      if (/^(semaine|jour|day|week|chapitre|partie|section|module|post)\s+\d+\s*[:\-—]?\s*$/i.test(t)) return false
+      // Pure UPPERCASE header (no punctuation, very short)
+      if (t.length >= 3 && t.length <= 60 && t === t.toUpperCase()
+          && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3}/.test(t) && !/[.?!,;:]/.test(t)
+          && !/[#@]/.test(t)) return false
+      // Lone week/chapter markers (no content after them)
+      if (/^(semaine|jour|day|week|chapitre|partie|section|module)\s+\d+\s*[:\-—]?\s*$/i.test(t)) return false
       return true
     })
     .join('\n')
@@ -64,112 +149,227 @@ function cleanBlock(s: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Multi-strategy rule-based splitter
-// Tries every possible strategy, picks the best-scoring result
+// STRATEGY 1 — EXPLICIT SEPARATORS (---, ===, ***, ___  etc.)
 // ─────────────────────────────────────────────────────────────
+
+function explicitSepSplit(text: string): string[] | null {
+  const seps = [
+    /^[-]{3,}$/m,
+    /^[=]{3,}$/m,
+    /^[*]{3,}$/m,
+    /^[_]{3,}$/m,
+    /^[#]{3,}$/m,
+    /^[~]{3,}$/m,
+  ]
+  for (const sep of seps) {
+    if (sep.test(text)) {
+      const parts = text.split(sep).map(s => cleanBlock(s)).filter(s => s.length >= POST_MIN)
+      if (parts.length >= 2) return parts
+    }
+  }
+  return null
+}
+
+// ─────────────────────────────────────────────────────────────
+// STRATEGY 2 — NUMBERED / LABELED MARKERS
+// Post 1:, Post 2:, Semaine 1, 1., etc.
+// ─────────────────────────────────────────────────────────────
+
+function labeledMarkerSplit(text: string): string[] | null {
+  const patterns = [
+    // "Post N" or "Post N:"
+    { re: /^post\s*\d+[\s:.\-—]/im, split: /\n(?=post\s*\d+[\s:.\-—])/i, strip: /^post\s*\d+[\s:.\-—]*/i },
+    // "Semaine N" / "Jour N" / "Day N" / "Week N"
+    { re: /^(semaine|jour|day|week)\s+\d+/im, split: /\n{1,3}(?=(semaine|jour|day|week)\s+\d+)/i, strip: null },
+    // "1." or "1)" at start of line (at least 3 occurrences)
+    { re: /^\d+[\.\)]\s/m, split: /\n(?=\d+[\.\)]\s)/, strip: /^\d+[\.\)]\s*/ },
+  ]
+
+  for (const p of patterns) {
+    if (p.re.test(text)) {
+      const count = (text.match(new RegExp(p.re.source, 'gim')) || []).length
+      if (count < 2) continue
+      const parts = text.split(p.split)
+        .map(s => p.strip ? s.replace(p.strip, '') : s)
+        .map(s => cleanBlock(s))
+        .filter(s => s.length >= POST_MIN)
+      if (parts.length >= 2) return parts
+    }
+  }
+  return null
+}
+
+// ─────────────────────────────────────────────────────────────
+// STRATEGY 3 — GAP THRESHOLD (MAIN ALGORITHM)
+// Detect the right blank-line threshold automatically
+// ─────────────────────────────────────────────────────────────
+
+function gapThresholdSplit(blocks: Block[], threshold: number): string[] {
+  // Merge consecutive blocks where gap < threshold into posts
+  const posts: string[] = []
+  let current = ''
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    current = current ? current + '\n\n' + block.text : block.text
+
+    // Split here if gap >= threshold, or last block
+    if (block.blankLinesAfter >= threshold || i === blocks.length - 1) {
+      const cleaned = cleanBlock(current)
+      if (cleaned.length >= POST_MIN) posts.push(cleaned)
+      current = ''
+    }
+  }
+
+  return posts
+}
+
+// Try all reasonable thresholds (1-4), return best
+function adaptiveGapSplit(blocks: Block[]): string[] | null {
+  if (blocks.length < 2) return null
+
+  // Collect gap sizes to understand the document's structure
+  const gapSizes = blocks.map(b => b.blankLinesAfter).filter(g => g > 0)
+  const maxGap = Math.max(...gapSizes, 0)
+
+  // Try thresholds from largest to smallest
+  const candidates: string[][] = []
+
+  for (let threshold = Math.min(maxGap, 4); threshold >= 1; threshold--) {
+    const hasGapsAtThreshold = gapSizes.filter(g => g >= threshold).length >= 2
+    if (!hasGapsAtThreshold && threshold > 1) continue
+
+    const posts = gapThresholdSplit(blocks, threshold)
+    // Then merge very short consecutive posts
+    const merged = mergeShortPosts(posts)
+    if (merged.length >= 2) candidates.push(merged)
+  }
+
+  if (candidates.length === 0) return null
+
+  // Return the best-scoring candidate
+  const scored = candidates
+    .map(posts => ({ posts, score: scoreSplit(posts) }))
+    .filter(c => c.score > 0)
+    .sort((a, b) => b.score - a.score)
+
+  return scored.length > 0 ? scored[0].posts : null
+}
+
+// ─────────────────────────────────────────────────────────────
+// STRATEGY 4 — SIGNAL-BASED SPLITTING
+// Use post-open/post-end signals to find boundaries
+// ─────────────────────────────────────────────────────────────
+
+function signalBasedSplit(blocks: Block[]): string[] | null {
+  if (blocks.length < 3) return null
+
+  // Score each potential boundary
+  interface Boundary { index: number; score: number }
+  const boundaries: Boundary[] = []
+
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const endScore = postEndStrength(blocks[i].text)
+    const openScore = postOpenStrength(blocks[i + 1].text)
+    const gapScore = Math.min(blocks[i].blankLinesAfter, 3)
+    const total = endScore + openScore + gapScore
+    boundaries.push({ index: i, score: total })
+  }
+
+  // A boundary is "real" if score >= 2 (at least some signal)
+  const cutPoints = new Set<number>()
+  const avgScore = boundaries.reduce((s, b) => s + b.score, 0) / boundaries.length
+  const scoreThreshold = Math.max(2, avgScore * 0.7)
+
+  for (const b of boundaries) {
+    if (b.score >= scoreThreshold) cutPoints.add(b.index)
+  }
+
+  if (cutPoints.size < 1) return null
+
+  // Build posts by cutting at those boundaries
+  const posts: string[] = []
+  let currentBlocks: Block[] = []
+
+  for (let i = 0; i < blocks.length; i++) {
+    currentBlocks.push(blocks[i])
+    if (cutPoints.has(i) || i === blocks.length - 1) {
+      const text = cleanBlock(currentBlocks.map(b => b.text).join('\n\n'))
+      if (text.length >= POST_MIN) posts.push(text)
+      currentBlocks = []
+    }
+  }
+
+  const merged = mergeShortPosts(posts)
+  return merged.length >= 2 ? merged : null
+}
+
+// ─────────────────────────────────────────────────────────────
+// MERGE SHORT POSTS
+// After splitting, merge adjacent posts that are too short
+// ─────────────────────────────────────────────────────────────
+
+function mergeShortPosts(posts: string[]): string[] {
+  if (posts.length === 0) return []
+  const result: string[] = []
+  let acc = ''
+
+  for (let i = 0; i < posts.length; i++) {
+    acc = acc ? acc + '\n\n' + posts[i] : posts[i]
+
+    const isLast = i === posts.length - 1
+    const nextIsAlsoShort = !isLast && posts[i + 1].length < POST_SWEET_MIN
+    const currentIsLong = acc.length >= POST_SWEET_MIN
+
+    if (currentIsLong || isLast || (!nextIsAlsoShort && acc.length >= POST_MIN)) {
+      result.push(acc)
+      acc = ''
+    }
+  }
+
+  if (acc) result.push(acc)
+  return result
+}
+
+// ─────────────────────────────────────────────────────────────
+// MASTER RULE-BASED SPLITTER
+// ─────────────────────────────────────────────────────────────
+
 function ruleSplit(rawText: string): string[] | null {
   const text = rawText.trim()
   const candidates: string[][] = []
 
-  const addCandidate = (parts: string[]) => {
-    const cleaned = parts.map(cleanBlock).filter(p => p.length >= MIN_POST_LEN)
+  const addCandidate = (parts: string[] | null) => {
+    if (!parts) return
+    const cleaned = parts.map(cleanBlock).filter(p => p.length >= POST_MIN)
     if (cleaned.length >= 2) candidates.push(cleaned)
   }
 
-  // 1. Explicit --- separator
-  if (/^-{3,}$/m.test(text)) {
-    addCandidate(text.split(/^-{3,}$/m))
+  // ── 1. Explicit separators (---, ===, etc.) — instant win ──
+  const explicitResult = explicitSepSplit(text)
+  if (explicitResult && explicitResult.length >= 2) {
+    // High confidence: use directly if quality is OK
+    const merged = mergeShortPosts(explicitResult)
+    if (isGoodSplit(merged)) return merged
+    addCandidate(explicitResult)
   }
 
-  // 2. Explicit === separator
-  if (/^={3,}$/m.test(text)) {
-    addCandidate(text.split(/^={3,}$/m))
-  }
+  // ── 2. Labeled markers (Post N, Semaine N, 1.) ──
+  addCandidate(labeledMarkerSplit(text))
 
-  // 3. "Post N:" or "Post N —" markers
-  if (/^post\s*\d+[\s:.\-—]/im.test(text)) {
-    addCandidate(
-      text.split(/\n(?=post\s*\d+[\s:.\-—])/i)
-        .map(p => p.replace(/^post\s*\d+[\s:.\-—]*/i, ''))
-    )
-  }
+  // ── 3. Block parsing — foundation for strategies 3 & 4 ──
+  const blocks = getBlocksAndGaps(text)
 
-  // 4. Numbered list "1." or "1)"
-  const numberedCount = (text.match(/^(\d+)[\.\)]\s/gm) || []).length
-  if (numberedCount >= 3) {
-    addCandidate(
-      text.split(/\n(?=\d+[\.\)]\s)/)
-        .map(p => p.replace(/^\d+[\.\)]\s*/, ''))
-    )
-  }
+  // ── 3. Adaptive gap threshold ──
+  const gapResult = adaptiveGapSplit(blocks)
+  addCandidate(gapResult)
 
-  // 5. "Semaine X" / "Jour X" / "Day X"
-  if (/^(semaine|jour|day|week)\s+\d+/im.test(text)) {
-    addCandidate(text.split(/\n{1,3}(?=(semaine|jour|day|week)\s+\d+)/i))
-  }
+  // ── 4. Signal-based (hook/hashtag detection) ──
+  addCandidate(signalBasedSplit(blocks))
 
-  // 6. UPPERCASE section headers (2+ newlines before the header)
-  if (/\n{2,}[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ][A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{3,}\n/.test(text)) {
-    addCandidate(text.split(/\n{2,}(?=[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ][A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ\s]{3,}\n)/))
-  }
-
-  // 7. Triple newlines
-  if (text.includes('\n\n\n')) {
-    addCandidate(text.split(/\n{3,}/))
-  }
-
-  // 8. Double newlines — with aggressive title merging
-  {
-    const raw = text.split(/\n\n+/).map(p => p.trim()).filter(p => p.length >= MIN_POST_LEN)
-    if (raw.length >= 2) {
-      // Try without merging
-      addCandidate(raw)
-      // Try with title merging (short single-line blocks merged into the next)
-      const merged: string[] = []
-      let i = 0
-      while (i < raw.length) {
-        let block = raw[i]
-        // Keep merging short blocks into a growing post
-        while (
-          i + 1 < raw.length &&
-          (block.length < SWEET_MIN || raw[i + 1].length < SWEET_MIN) &&
-          block.length + raw[i + 1].length < SWEET_MAX
-        ) {
-          i++
-          block += '\n\n' + raw[i]
-        }
-        merged.push(block)
-        i++
-      }
-      if (merged.length !== raw.length && merged.length >= 2) addCandidate(merged)
-    }
-  }
-
-  // 9. Single newlines — each line is a post (very dense flat format, only if lines are long)
-  {
-    const lines = text.split('\n').map(p => p.trim()).filter(p => p.length >= SWEET_MIN)
-    if (lines.length >= 3) addCandidate(lines)
-  }
-
-  // 10. Mixed: split on any blank line, then merge short adjacent blocks aggressively
-  {
-    const parts = text.split(/\n\s*\n/).map(cleanBlock).filter(p => p.length >= MIN_POST_LEN)
-    if (parts.length >= 2) {
-      const merged: string[] = []
-      let i = 0
-      while (i < parts.length) {
-        let block = parts[i]
-        // Keep merging consecutive short blocks until post reaches minimum LinkedIn length
-        while (i + 1 < parts.length && block.length < SWEET_MIN) {
-          i++
-          block += '\n\n' + parts[i]
-        }
-        merged.push(block)
-        i++
-      }
-      if (merged.length >= 2) addCandidate(merged)
-    }
-  }
+  // ── 5. Fallback: try all single-line blocks (one post per line) ──
+  const lineBlocks = text.split('\n').map(l => l.trim()).filter(l => l.length >= POST_SWEET_MIN)
+  if (lineBlocks.length >= 3) addCandidate(lineBlocks)
 
   if (candidates.length === 0) return null
 
@@ -179,13 +379,21 @@ function ruleSplit(rawText: string): string[] | null {
     .filter(c => c.score > 0)
     .sort((a, b) => b.score - a.score)
 
-  if (scored.length === 0) return null
+  if (scored.length === 0) {
+    // No good split found — return best available even if not perfect
+    const fallback = candidates
+      .map(posts => ({ posts, score: posts.length }))
+      .sort((a, b) => b.score - a.score)
+    return fallback.length > 0 ? fallback[0].posts.slice(0, 500) : null
+  }
+
   return scored[0].posts.slice(0, 500)
 }
 
 // ─────────────────────────────────────────────────────────────
-// AI split — chunked for documents of any length
+// AI SPLIT — chunked for documents of any length
 // ─────────────────────────────────────────────────────────────
+
 async function aiSplit(text: string): Promise<{ posts: string[]; structure: string }> {
   const CHUNK_SIZE = 4000
   const OVERLAP = 150
@@ -194,7 +402,6 @@ async function aiSplit(text: string): Promise<{ posts: string[]; structure: stri
     return aiSplitChunk(text)
   }
 
-  // Build chunks at paragraph boundaries
   const chunks: string[] = []
   let pos = 0
   while (pos < text.length) {
@@ -212,7 +419,6 @@ async function aiSplit(text: string): Promise<{ posts: string[]; structure: stri
     chunks.map(chunk => aiSplitChunk(chunk).catch(() => ({ posts: [] as string[], structure: 'unknown' })))
   )
 
-  // Merge, dedup at chunk boundaries
   const allPosts: string[] = []
   for (const r of results) {
     for (const post of r.posts) {
@@ -237,8 +443,9 @@ async function aiSplitChunk(text: string): Promise<{ posts: string[]; structure:
 }
 
 // ─────────────────────────────────────────────────────────────
-// Main route
+// MAIN ROUTE
 // ─────────────────────────────────────────────────────────────
+
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || ''
@@ -268,7 +475,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Fichier vide ou illisible.' }, { status: 400 })
     }
 
-    // ── Step 1: Multi-strategy rule-based (skipped if forceAI) ──
+    // ── Step 1: Rule-based (unless forceAI) ──
     if (!forceAI) {
       const rulePosts = ruleSplit(rawText)
       if (rulePosts && rulePosts.length >= 2) {
@@ -297,13 +504,11 @@ export async function POST(request: NextRequest) {
         })
       }
     } catch (aiErr: any) {
-      // AI failed (no credits or network error)
-      // Return what we have from rule-based (even if quality is bad)
-      // with a clear warning
-      const fallback = rawText
+      // AI failed (no credits or network error) — partial fallback
+      const fallback = ruleSplit(rawText) || rawText
         .split(/\n{2,}/)
         .map(cleanBlock)
-        .filter(p => p.length >= MIN_POST_LEN)
+        .filter(p => p.length >= POST_MIN)
         .slice(0, 500)
 
       if (fallback.length >= 1) {
