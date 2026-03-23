@@ -5,31 +5,41 @@ const AI_SPLITTER_URL = `${SUPABASE_URL}/functions/v1/ai-doc-splitter`
 
 // ─────────────────────────────────────────────────────────────
 // Quality validation
-// A LinkedIn post is max 3000 chars. Any "post" > 4000 chars
-// means the split failed for that piece.
+// A LinkedIn post is typically 200-3000 chars.
+// Any "post" > 4000 chars means the split failed for that piece.
 // ─────────────────────────────────────────────────────────────
-const LINKEDIN_MAX = 4000  // a bit above the real 3000 limit for safety
-const MIN_POST_LEN = 40
+const LINKEDIN_MAX = 4000
+const MIN_POST_LEN = 80   // raised from 40 — anything shorter is a title/header, not a post
+const SWEET_MIN = 200     // LinkedIn posts are rarely < 200 chars
+const SWEET_MAX = 2800
 
 function isGoodSplit(posts: string[]): boolean {
   if (posts.length < 2) return false
   // Hard fail: any post way too long = the whole document landed in one block
   if (posts.some(p => p.length > LINKEDIN_MAX)) return false
-  // At least 60% of posts must be of reasonable length
+  // Average post must be >= 150 chars — if shorter, we're over-splitting paragraphs
+  const avgLen = posts.reduce((sum, p) => sum + p.length, 0) / posts.length
+  if (avgLen < 150) return false
+  // At least 50% of posts must be of reasonable length
   const reasonable = posts.filter(p => p.length >= MIN_POST_LEN && p.length <= LINKEDIN_MAX)
-  return reasonable.length >= Math.max(2, Math.ceil(posts.length * 0.6))
+  return reasonable.length >= Math.max(2, Math.ceil(posts.length * 0.5))
 }
 
 // Score a split result: higher = better
+// Reward posts in the LinkedIn sweet spot (200-2800 chars), penalize extremes
 function scoreSplit(posts: string[]): number {
   if (!isGoodSplit(posts)) return -1
-  const reasonable = posts.filter(p => p.length >= 100 && p.length <= LINKEDIN_MAX)
-  // Bonus for consistent lengths (posts of similar size = probably correct split)
-  const lengths = reasonable.map(p => p.length)
-  const avg = lengths.reduce((a, b) => a + b, 0) / (lengths.length || 1)
-  const variance = lengths.reduce((a, b) => a + Math.abs(b - avg), 0) / (lengths.length || 1)
+  // Primary score: posts in the LinkedIn sweet spot
+  const sweetSpot = posts.filter(p => p.length >= SWEET_MIN && p.length <= SWEET_MAX)
+  if (sweetSpot.length === 0) return -1
+  // Consistency bonus: lower variance = better
+  const lengths = sweetSpot.map(p => p.length)
+  const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length
+  const variance = lengths.reduce((a, b) => a + Math.abs(b - avg), 0) / lengths.length
   const consistencyBonus = Math.max(0, 500 - variance / 10)
-  return reasonable.length * 100 + consistencyBonus
+  // Penalize total post count vs sweet-spot count (over-splitting penalty)
+  const sweetRatio = sweetSpot.length / posts.length
+  return sweetSpot.length * 100 + consistencyBonus + sweetRatio * 200
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -108,37 +118,40 @@ function ruleSplit(rawText: string): string[] | null {
     addCandidate(text.split(/\n{3,}/))
   }
 
-  // 8. Double newlines — with title merging
+  // 8. Double newlines — with aggressive title merging
   {
     const raw = text.split(/\n\n+/).map(p => p.trim()).filter(p => p.length >= MIN_POST_LEN)
     if (raw.length >= 2) {
       // Try without merging
       addCandidate(raw)
-      // Try with title merging (short single-line + next block)
+      // Try with title merging (short single-line blocks merged into the next)
       const merged: string[] = []
       let i = 0
       while (i < raw.length) {
-        const cur = raw[i]
-        const isTitle = cur.length < 120 && !cur.includes('\n') && i + 1 < raw.length
-        if (isTitle && raw[i + 1]?.length >= 100) {
-          merged.push(cur + '\n\n' + raw[i + 1])
-          i += 2
-        } else {
-          merged.push(cur)
+        let block = raw[i]
+        // Keep merging short blocks into a growing post
+        while (
+          i + 1 < raw.length &&
+          (block.length < SWEET_MIN || raw[i + 1].length < SWEET_MIN) &&
+          block.length + raw[i + 1].length < SWEET_MAX
+        ) {
           i++
+          block += '\n\n' + raw[i]
         }
+        merged.push(block)
+        i++
       }
-      if (merged.length !== raw.length) addCandidate(merged)
+      if (merged.length !== raw.length && merged.length >= 2) addCandidate(merged)
     }
   }
 
-  // 9. Single newlines — each line is a post (very dense flat format)
+  // 9. Single newlines — each line is a post (very dense flat format, only if lines are long)
   {
-    const lines = text.split('\n').map(p => p.trim()).filter(p => p.length >= 80)
+    const lines = text.split('\n').map(p => p.trim()).filter(p => p.length >= SWEET_MIN)
     if (lines.length >= 3) addCandidate(lines)
   }
 
-  // 10. Mixed: split on any blank line, then merge very short adjacent blocks
+  // 10. Mixed: split on any blank line, then merge short adjacent blocks aggressively
   {
     const parts = text.split(/\n\s*\n/).map(cleanBlock).filter(p => p.length >= MIN_POST_LEN)
     if (parts.length >= 2) {
@@ -146,16 +159,15 @@ function ruleSplit(rawText: string): string[] | null {
       let i = 0
       while (i < parts.length) {
         let block = parts[i]
-        // Keep merging consecutive short blocks (< 200 chars) into one post
-        while (i + 1 < parts.length && block.length + parts[i + 1].length < 2500
-               && parts[i + 1].length < 200 && block.length < 200) {
+        // Keep merging consecutive short blocks until post reaches minimum LinkedIn length
+        while (i + 1 < parts.length && block.length < SWEET_MIN) {
           i++
           block += '\n\n' + parts[i]
         }
         merged.push(block)
         i++
       }
-      addCandidate(merged)
+      if (merged.length >= 2) addCandidate(merged)
     }
   }
 
@@ -168,7 +180,7 @@ function ruleSplit(rawText: string): string[] | null {
     .sort((a, b) => b.score - a.score)
 
   if (scored.length === 0) return null
-  return scored[0].posts.slice(0, 200)
+  return scored[0].posts.slice(0, 500)
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -232,11 +244,13 @@ export async function POST(request: NextRequest) {
     const contentType = request.headers.get('content-type') || ''
     let rawText = ''
     let filename = 'import'
+    let forceAI = false
 
     if (contentType.includes('application/json')) {
       const body = await request.json()
       rawText = body.text || ''
       filename = body.filename || 'import'
+      forceAI = body.forceAI === true
     } else if (contentType.includes('multipart/form-data')) {
       let formData: FormData
       try { formData = await request.formData() } catch (e: any) {
@@ -254,17 +268,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Fichier vide ou illisible.' }, { status: 400 })
     }
 
-    // ── Step 1: Multi-strategy rule-based with quality scoring ──
-    const rulePosts = ruleSplit(rawText)
-    if (rulePosts && rulePosts.length >= 2) {
-      return NextResponse.json({
-        posts: rulePosts,
-        count: rulePosts.length,
-        filename,
-        method: 'rule-based',
-        structure: 'detected',
-        warning: null,
-      })
+    // ── Step 1: Multi-strategy rule-based (skipped if forceAI) ──
+    if (!forceAI) {
+      const rulePosts = ruleSplit(rawText)
+      if (rulePosts && rulePosts.length >= 2) {
+        return NextResponse.json({
+          posts: rulePosts,
+          count: rulePosts.length,
+          filename,
+          method: 'rule-based',
+          structure: 'detected',
+          warning: null,
+        })
+      }
     }
 
     // ── Step 2: AI chunked split ──
@@ -272,8 +288,8 @@ export async function POST(request: NextRequest) {
       const { posts, structure } = await aiSplit(rawText)
       if (posts.length >= 1) {
         return NextResponse.json({
-          posts: posts.slice(0, 200),
-          count: Math.min(posts.length, 200),
+          posts: posts.slice(0, 500),
+          count: Math.min(posts.length, 500),
           filename,
           method: 'ai',
           structure,
@@ -288,7 +304,7 @@ export async function POST(request: NextRequest) {
         .split(/\n{2,}/)
         .map(cleanBlock)
         .filter(p => p.length >= MIN_POST_LEN)
-        .slice(0, 200)
+        .slice(0, 500)
 
       if (fallback.length >= 1) {
         return NextResponse.json({
@@ -297,7 +313,7 @@ export async function POST(request: NextRequest) {
           filename,
           method: 'partial',
           structure: 'unknown',
-          warning: 'ai_unavailable',  // triggers user-facing message
+          warning: 'ai_unavailable',
         })
       }
 
