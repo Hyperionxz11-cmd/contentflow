@@ -249,6 +249,7 @@ export default function BulkImport({
     try {
       const ext = file.name.toLowerCase().split('.').pop() || ''
       let rawText = ''
+      let finalPosts: string[] = []
 
       if (ext === 'docx' || ext === 'doc') {
         setLoadingMsg('Extraction du document Word…')
@@ -261,6 +262,7 @@ export default function BulkImport({
 
         setLoadingMsg('Analyse de la structure…')
         const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, file.name)
+        finalPosts = extracted
 
         const images: Record<number, string[]> = {}
         if (html.includes('<img')) {
@@ -279,13 +281,14 @@ export default function BulkImport({
         rawText = await file.text()
         setLoadingMsg('Analyse de la structure…')
         const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, file.name)
+        finalPosts = extracted
         setPosts(extracted); setPostImages({}); setStructure(s); setMethod(m); setImportWarning(w ?? null)
       } else {
         throw new Error(`Format "${ext}" non supporté. Utilise .docx, .txt, .md ou .pdf`)
       }
 
       setFilename(file.name)
-      setSelectedPosts(new Set(Array.from({ length: 200 }, (_, i) => i)))
+      setSelectedPosts(new Set(finalPosts.map((_, i) => i)))
       setExpandedPosts(new Set()); setEditingPosts(new Set()); setEditedContent({})
       setStep('preview')
     } catch (err: any) {
