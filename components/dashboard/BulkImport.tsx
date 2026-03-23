@@ -144,7 +144,7 @@ function analyzeSmartSlots(publishedPosts: Array<{ scheduled_at: string; status:
 // API call
 // ─────────────────────────────────────────────────────────────
 
-async function apiSplit(text: string, filename: string): Promise<{ posts: string[]; structure: string; method: string }> {
+async function apiSplit(text: string, filename: string): Promise<{ posts: string[]; structure: string; method: string; warning: string | null }> {
   const res = await fetch('/api/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -153,8 +153,13 @@ async function apiSplit(text: string, filename: string): Promise<{ posts: string
   const raw = await res.text()
   let data: any
   try { data = JSON.parse(raw) } catch { throw new Error(`Réponse serveur invalide (${res.status})`) }
+  // 422 = AI unavailable but we have partial results
+  if (res.status === 422 && data.warning === 'ai_unavailable') {
+    if (data.posts?.length) return { posts: data.posts as string[], structure: data.structure || '', method: 'partial', warning: 'ai_unavailable' }
+    throw new Error(data?.error || 'Crédits IA épuisés')
+  }
   if (!res.ok) throw new Error(data?.error || `Erreur ${res.status}`)
-  return { posts: data.posts as string[], structure: data.structure || '', method: data.method || '' }
+  return { posts: data.posts as string[], structure: data.structure || '', method: data.method || '', warning: (data.warning as string | null) || null }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -217,6 +222,7 @@ export default function BulkImport({
   const [filename, setFilename] = useState('')
   const [structure, setStructure] = useState('')
   const [method, setMethod] = useState('')
+  const [importWarning, setImportWarning] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState('')
@@ -253,8 +259,8 @@ export default function BulkImport({
         rawText = textResult.value
         const html = htmlResult.value
 
-        setLoadingMsg('IA analyse la structure…')
-        const { posts: extracted, structure: s, method: m } = await apiSplit(rawText, file.name)
+        setLoadingMsg('Analyse de la structure…')
+        const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, file.name)
 
         const images: Record<number, string[]> = {}
         if (html.includes('<img')) {
@@ -267,19 +273,19 @@ export default function BulkImport({
             })
           }
         }
-        setPosts(extracted); setPostImages(images); setStructure(s); setMethod(m)
+        setPosts(extracted); setPostImages(images); setStructure(s); setMethod(m); setImportWarning(w ?? null)
       } else if (['txt', 'md', 'csv', 'rtf', 'pdf'].includes(ext)) {
         setLoadingMsg('Lecture du fichier…')
         rawText = await file.text()
-        setLoadingMsg('IA analyse le document…')
-        const { posts: extracted, structure: s, method: m } = await apiSplit(rawText, file.name)
-        setPosts(extracted); setPostImages({}); setStructure(s); setMethod(m)
+        setLoadingMsg('Analyse de la structure…')
+        const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, file.name)
+        setPosts(extracted); setPostImages({}); setStructure(s); setMethod(m); setImportWarning(w ?? null)
       } else {
         throw new Error(`Format "${ext}" non supporté. Utilise .docx, .txt, .md ou .pdf`)
       }
 
       setFilename(file.name)
-      setSelectedPosts(new Set(posts.map((_, i) => i)))
+      setSelectedPosts(new Set(Array.from({ length: 200 }, (_, i) => i)))
       setExpandedPosts(new Set()); setEditingPosts(new Set()); setEditedContent({})
       setStep('preview')
     } catch (err: any) {
@@ -601,6 +607,29 @@ export default function BulkImport({
                   {selectedPosts.size === posts.length ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
               </div>
+
+              {/* ── Warning: AI unavailable, partial detection ── */}
+              {importWarning === 'ai_unavailable' && (
+                <div style={{ padding: '12px 14px', marginBottom: 10, borderRadius: T.radius.md,
+                  background: 'rgba(255,149,0,0.07)', border: '1px solid rgba(255,149,0,0.18)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <AlertCircle style={{ width: 14, height: 14, color: '#b05a00', flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#b05a00' }}>
+                      Détection partielle — {posts.length} posts trouvés
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 11, color: '#92400e', margin: '0 0 8px 22px', lineHeight: 1.5 }}>
+                    L'IA n'est pas disponible (crédits épuisés). La détection automatique ne peut pas analyser
+                    la structure complète de ce document.
+                  </p>
+                  <div style={{ marginLeft: 22, padding: '8px 10px', background: 'rgba(255,255,255,0.6)',
+                    borderRadius: T.radius.sm, fontSize: 11, color: '#78350f' }}>
+                    <strong>Solution rapide :</strong> ouvre ton document et ajoute{' '}
+                    <code style={{ background: 'rgba(0,0,0,0.06)', padding: '1px 5px', borderRadius: 4 }}>---</code>{' '}
+                    sur une ligne seule entre chaque post → l'importeur détectera tous les {posts.length}+ posts sans IA.
+                  </div>
+                </div>
+              )}
 
               {aiError && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', marginBottom: 10,
