@@ -142,25 +142,8 @@ function analyzeSmartSlots(publishedPosts: Array<{ scheduled_at: string; status:
 
 // ─────────────────────────────────────────────────────────────
 // HTML → TEXT helpers  (mammoth gives us rich HTML, we use it)
+// Note: htmlToText is already defined above (uses DOM when available)
 // ─────────────────────────────────────────────────────────────
-
-/** Convert an HTML fragment to clean plain text */
-function htmlToText(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<\/h[1-6]>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
 
 /**
  * Convert mammoth HTML to a "structured text" where Word headings
