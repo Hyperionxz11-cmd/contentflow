@@ -104,7 +104,7 @@ export default function Pilier3Page() {
           { label: 'Nouveaux', value: stats.new, color: 'bg-indigo-50 text-indigo-700' },
           { label: 'Messages prêts', value: stats.ready, color: 'bg-yellow-50 text-yellow-700' },
           { label: 'Envoyés', value: stats.sent, color: 'bg-green-50 text-green-700' },
-          { label: 'Posts aujourd'hui', value: stats.postsToday, color: 'bg-purple-50 text-purple-700' },
+          { label: "Posts aujourd'hui", value: stats.postsToday, color: 'bg-purple-50 text-purple-700' },
           { label: 'Posts échoués', value: stats.postsFailed, color: 'bg-red-50 text-red-700' },
         ].map(s => (
           <div key={s.label} className={`rounded-xl p-4 ${s.color}`}>
