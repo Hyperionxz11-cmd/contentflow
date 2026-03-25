@@ -2,10 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { getSupabaseServer } from '@/lib/supabase-server'
 
-// Map amount_total (in cents) to plan name
 const PLAN_BY_AMOUNT: Record<number, string> = {
   1900: 'pro',
   5900: 'agence',
+}
+
+// Cache in memory to avoid Supabase call on every request
+let cachedWebhookSecret: string | null = null
+
+async function getWebhookSecret(): Promise<string | null> {
+  if (process.env.STRIPE_WEBHOOK_SECRET) return process.env.STRIPE_WEBHOOK_SECRET
+  if (cachedWebhookSecret) return cachedWebhookSecret
+  const supabase = getSupabaseServer()
+  const { data } = await supabase.from('settings').select('value').eq('key', 'stripe_webhook_secret').single()
+  if (data?.value) {
+    cachedWebhookSecret = data.value
+    return data.value
+  }
+  return null
 }
 
 function verifyStripeSignature(body: string, signature: string, secret: string): boolean {
@@ -29,13 +43,16 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseServer()
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  const webhookSecret = await getWebhookSecret()
+
   if (webhookSecret) {
     if (!signature || !verifyStripeSignature(body, signature, webhookSecret)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
   }
+
   const event = JSON.parse(body)
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
     const userId = session.client_reference_id
@@ -48,11 +65,13 @@ export async function POST(request: NextRequest) {
       p_subscription_id: session.subscription,
     })
   }
+
   if (event.type === 'customer.subscription.deleted') {
     const sub = event.data.object
     await supabase.rpc('cancel_user_subscription', {
       p_customer_id: sub.customer
     })
   }
+
   return NextResponse.json({ received: true })
 }
