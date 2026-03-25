@@ -439,7 +439,7 @@ export default function Page() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
           {plans.map((plan, i) => (
-            <PricingCard key={i} {...plan} onClick={() => router.push('/login')} />
+            <PricingCard key={i} {...plan} onClick={() => router.push(plan.name === 'Gratuit' ? '/login' : `/login?plan=${plan.name.toLowerCase()}`)} />
           ))}
         </div>
       </section>
