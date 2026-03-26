@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bvsfclqlopzkfmeinbqs.supabase.co'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const EDGE_FN_URL = `${SUPABASE_URL}/functions/v1/anthropic-reformulate`
 
 export async function POST(req: NextRequest) {
@@ -46,6 +47,7 @@ Réponds UNIQUEMENT en JSON valide (pas de texte avant ou après) :
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
