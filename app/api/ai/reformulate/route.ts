@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bvsfclqlopzkfmeinbqs.supabase.co'
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2c2ZjbHFsb3B6a2ZtZWluYnFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3Mjc1NTMsImV4cCI6MjA4OTMwMzU1M30.ka5xQQVdHSslk12iu7vRtWlk9CgpKm5jiDpskeJ1-Bw'
 const EDGE_FN_URL = `${SUPABASE_URL}/functions/v1/anthropic-reformulate`
 
 export async function POST(req: NextRequest) {
