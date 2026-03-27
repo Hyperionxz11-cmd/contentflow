@@ -90,7 +90,6 @@ function htmlToText(html: string): string {
     const t = line.trim()
     if (!t) return true
     if (t.length >= 3 && t === t.toUpperCase() && /[A-ZÀÂÇÈÉÊËÎÏÔÙÛŒ]{3}/.test(t) && t.length < 60) return false
-    if (/^semaine\s+\d+\s*[—\-–]/i.test(t)) return false
     if (/^(jour|day|week|chapitre|partie|section)\s+\d+/i.test(t)) return false
     return true
   }).join('\n').replace(/\n{3,}/g, '\n\n').trim()

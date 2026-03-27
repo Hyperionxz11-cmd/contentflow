@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Zap, LogOut, Plus, Calendar as CalendarIcon,
   LayoutGrid, BarChart3, Linkedin, Upload,
@@ -226,7 +225,12 @@ export default function DashboardPage() {
         images: p.images && p.images.length > 0 ? p.images : [],
       }))
 
-      const { data } = await supabase.from('posts').insert(toInsert).select()
+      const { data, error: insertError } = await supabase.from('posts').insert(toInsert).select()
+      if (insertError) {
+        console.error('BulkImport insert error:', insertError)
+        alert('Erreur lors de la sauvegarde des posts : ' + insertError.message)
+        return
+      }
       if (data) {
         setPosts(prev => [...prev, ...data.map((d: any) => ({
           id: d.id,
@@ -464,10 +468,10 @@ export default function DashboardPage() {
 
       <div style={{position:'relative',zIndex:1,display:'flex',minHeight:'100vh'}}>
         {/* SIDEBAR */}
-        <motion.aside
-          initial={{x:-240}}
-          animate={{x:0}}
-          transition={{duration:0.5,ease: "easeOut"}}
+        <aside
+
+
+
           style={{
             position:'fixed',
             left:0,
@@ -483,10 +487,10 @@ export default function DashboardPage() {
           }}
         >
           {/* Logo */}
-          <motion.div
-            initial={{opacity:0,y:-10}}
-            animate={{opacity:1,y:0}}
-            transition={{delay:0.1,duration:0.5}}
+          <div
+
+
+
             style={{padding:'24px 24px 20px'}}
           >
             <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'32px'}}>
@@ -508,11 +512,11 @@ export default function DashboardPage() {
                 { id: 'posts' as const, icon: LayoutGrid, label: 'Mes posts' },
                 { id: 'analytics' as const, icon: BarChart3, label: 'Analytics' },
               ].map((item,idx) => (
-                <motion.button
+                <button
                   key={item.id}
-                  initial={{opacity:0,x:-20}}
-                  animate={{opacity:1,x:0}}
-                  transition={{delay:0.15+idx*0.05,duration:0.4}}
+
+
+
                   onClick={() => setActiveTab(item.id)}
                   style={{
                     width:'100%',
@@ -551,16 +555,16 @@ export default function DashboardPage() {
                     filter:activeTab===item.id?'drop-shadow(0 0 8px rgba(124,58,237,0.8))':'none'
                   }} />
                   {item.label}
-                </motion.button>
+                </button>
               ))}
             </nav>
-          </motion.div>
+          </div>
 
           {/* LinkedIn + Plan sections */}
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:0.3,duration:0.5}}
+          <div
+
+
+
             style={{flex:1,overflow:'auto',padding:'0 16px'}}
           >
             {/* LinkedIn */}
@@ -653,13 +657,13 @@ export default function DashboardPage() {
                 </button>
               )}
             </div>
-          </motion.div>
+          </div>
 
           {/* User footer */}
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:0.4,duration:0.5}}
+          <div
+
+
+
             style={{padding:'16px',borderTop:'1px solid rgba(255,255,255,0.04)',marginTop:'auto'}}
           >
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -679,14 +683,14 @@ export default function DashboardPage() {
                 <LogOut style={{width:'16px',height:'16px'}} />
               </button>
             </div>
-          </motion.div>
-        </motion.aside>
+          </div>
+        </aside>
 
         {/* MAIN CONTENT */}
-        <motion.main
-          initial={{opacity:0}}
-          animate={{opacity:1}}
-          transition={{delay:0.2,duration:0.5}}
+        <main
+
+
+
           style={{marginLeft:'240px',padding:'32px',width:'calc(100% - 240px)',minHeight:'100vh'}}
         >
           {/* Header */}
@@ -695,7 +699,7 @@ export default function DashboardPage() {
             paddingBottom:'24px',borderBottom:'1px solid rgba(255,255,255,0.05)',
             marginBottom:'32px'
           }}>
-            <motion.div initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} transition={{delay:0.3,duration:0.5}}>
+            <div>
               <p style={{fontSize:'12px',color:'#9CA3AF',letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:'monospace',fontWeight:500}}>
                 {capitalizedDate}
               </p>
@@ -704,12 +708,12 @@ export default function DashboardPage() {
                   {profile?.full_name?.split(' ')[0]||'André'}
                 </span> 👋
               </h1>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{opacity:0,y:-10}}
-              animate={{opacity:1,y:0}}
-              transition={{delay:0.35,duration:0.5}}
+            <div
+
+
+
               style={{display:'flex',gap:'12px'}}
             >
               {['premium','team','agency'].includes(profile?.plan||'') && (
@@ -760,14 +764,14 @@ export default function DashboardPage() {
                 <Plus style={{width:'16px',height:'16px'}} />
                 Nouveau post
               </button>
-            </motion.div>
+            </div>
           </div>
 
           {/* Stat Cards */}
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:0.4,duration:0.5}}
+          <div
+
+
+
             style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))',gap:'16px',marginBottom:'32px'}}
           >
             {[
@@ -777,23 +781,22 @@ export default function DashboardPage() {
             ].map((stat,idx)=>(
               <StatCard key={idx} icon={stat.icon} value={stat.value} label={stat.label} color={stat.color} delay={stat.delay} />
             ))}
-          </motion.div>
+          </div>
 
           {/* Tabs Content */}
-          <AnimatePresence mode="wait">
             {activeTab==='calendar'&&(
-              <motion.div key="calendar" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
+              <div key="calendar">
                 <CalendarView
                   posts={posts}
                   onDayClick={handleDayClick}
                   onPostClick={(post)=>setPreviewPost(post as Post)}
                   onPostReschedule={handleReschedule}
                 />
-              </motion.div>
+              </div>
             )}
 
             {activeTab==='posts'&&(
-              <motion.div key="posts" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
+              <div key="posts">
                 <PostsTable
                   posts={posts}
                   currentPage={currentPage}
@@ -808,22 +811,20 @@ export default function DashboardPage() {
                   setPreviewPost={setPreviewPost}
                   openEditModal={openEditModal}
                 />
-              </motion.div>
+              </div>
             )}
 
             {activeTab==='analytics'&&(
-              <motion.div key="analytics" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
+              <div key="analytics">
                 <Analytics
                   posts={posts}
                   isPremium={['premium', 'team', 'agency'].includes(profile?.plan || '')}
                   onUpgrade={() => router.push('/pricing')}
                 />
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
           {/* Modals */}
-          <AnimatePresence>
             {previewPost&&(
               <LinkedInPreview
                 content={previewPost.content}
@@ -836,9 +837,7 @@ export default function DashboardPage() {
                 onClose={()=>setPreviewPost(null)}
               />
             )}
-          </AnimatePresence>
 
-          <AnimatePresence>
             {showBulkImport&&(
               <BulkImport
                 onImport={handleBulkImport}
@@ -848,9 +847,7 @@ export default function DashboardPage() {
                 publishedPosts={posts.map(p => ({ scheduled_at: p.scheduled_at, status: p.status }))}
               />
             )}
-          </AnimatePresence>
 
-          <AnimatePresence>
             {showCarousel&&(
               <CarouselBuilder
                 onClose={()=>setShowCarousel(false)}
@@ -861,15 +858,13 @@ export default function DashboardPage() {
                 }}
               />
             )}
-          </AnimatePresence>
 
-          <AnimatePresence>
             {editingPost&&(
-              <motion.div
-                initial={{opacity:0}}
-                animate={{opacity:1}}
-                exit={{opacity:0}}
-                transition={{duration:0.2}}
+              <div
+
+
+
+
                 onClick={()=>setEditingPost(null)}
                 style={{
                   position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',
@@ -877,11 +872,11 @@ export default function DashboardPage() {
                   padding:'16px'
                 }}
               >
-                <motion.div
-                  initial={{opacity:0,scale:0.95,y:20}}
-                  animate={{opacity:1,scale:1,y:0}}
-                  exit={{opacity:0,scale:0.95,y:20}}
-                  transition={{duration:0.3,ease: "easeOut"}}
+                <div
+
+
+
+
                   onClick={(e)=>e.stopPropagation()}
                   style={{
                     borderRadius:'16px',width:'100%',maxWidth:'480px',
@@ -967,26 +962,24 @@ export default function DashboardPage() {
                       Enregistrer
                     </button>
                   </div>
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             )}
-          </AnimatePresence>
 
-          <AnimatePresence>
             {showEditor&&(
-              <motion.div
-                initial={{opacity:0}}
-                animate={{opacity:1}}
-                exit={{opacity:0}}
-                transition={{duration:0.2}}
+              <div
+
+
+
+
                 onClick={()=>setShowEditor(false)}
                 style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}}
               >
-                <motion.div
-                  initial={{opacity:0,scale:0.95,y:20}}
-                  animate={{opacity:1,scale:1,y:0}}
-                  exit={{opacity:0,scale:0.95,y:20}}
-                  transition={{duration:0.3,ease: "easeOut"}}
+                <div
+
+
+
+
                   onClick={(e)=>e.stopPropagation()}
                   style={{width:'100%',maxWidth:'720px',maxHeight:'90vh',overflow:'auto'}}
                 >
@@ -996,11 +989,10 @@ export default function DashboardPage() {
                     initialDate={selectedDate}
                     templates={defaultTemplates}
                   />
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             )}
-          </AnimatePresence>
-        </motion.main>
+        </main>
       </div>
 
       <style>{`
@@ -1018,11 +1010,11 @@ export default function DashboardPage() {
 
 function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value: number; label: string; color: string; delay: number }) {
   return (
-    <motion.div
-      initial={{opacity:0,y:20}}
-      animate={{opacity:1,y:0}}
-      transition={{delay,duration:0.5,ease: "easeOut"}}
-      whileHover={{y:-3}}
+    <div
+
+
+
+
       style={{
         background:'rgba(255,255,255,0.025)',
         border:'1px solid rgba(255,255,255,0.06)',
@@ -1038,10 +1030,10 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',position:'relative',zIndex:1}}>
         <div>
-          <motion.div
-            initial={{opacity:0}}
-            animate={{opacity:1}}
-            transition={{delay:delay+0.2,duration:0.6}}
+          <div
+
+
+
             style={{
               fontSize:'36px',fontWeight:800,fontFamily:'Syne,sans-serif',letterSpacing:'-0.03em',
               lineHeight:1,background:`linear-gradient(135deg,#FFFFFF 0%,${color} 100%)`,
@@ -1049,15 +1041,15 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
             }}
           >
             {value}
-          </motion.div>
+          </div>
           <div style={{fontSize:'13px',color:'#9CA3AF',marginTop:'6px',fontWeight:500}}>
             {label}
           </div>
         </div>
-        <motion.div
-          initial={{scale:0}}
-          animate={{scale:1}}
-          transition={{delay:delay+0.1,duration:0.4,type:'spring'}}
+        <div
+
+
+
           style={{
             width:'40px',height:'40px',borderRadius:'10px',
             background:`rgba(${hexToRgb(color)},0.1)`,
@@ -1066,9 +1058,9 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
           }}
         >
           <Icon style={{width:'18px',height:'18px',color}} />
-        </motion.div>
+        </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
@@ -1077,7 +1069,7 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
   const paginated=posts.slice((currentPage-1)*POSTS_PER_PAGE,currentPage*POSTS_PER_PAGE)
 
   return (
-    <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.4}} style={{borderRadius:'16px',overflow:'hidden',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)'}}>
+    <div style={{borderRadius:'16px',overflow:'hidden',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)'}}>
       <div style={{padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
         <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB'}}>Tous les posts</h3>
         <span style={{fontSize:'12px',color:'#9CA3AF'}}>{posts.length} post{posts.length>1?'s':''} au total</span>
@@ -1099,7 +1091,7 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
               const statusColor={'scheduled':'#A78BFA','published':'#34D399','failed':'#EF4444','draft':'#9CA3AF'}[post.status]||'#9CA3AF'
               const statusLabel={'scheduled':'⏰ Programmé','published':'✓ Publié','failed':'✗ Échoué','draft':'Brouillon'}[post.status]||'Brouillon'
               return (
-                <motion.div key={post.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3}} style={{padding:'20px 24px',display:'flex',alignItems:'flex-start',gap:'16px',borderBottom:'1px solid rgba(255,255,255,0.05)',background:'transparent',transition:'background 0.3s',cursor:'default'}} onMouseEnter={(e)=>e.currentTarget.style.background='rgba(124,58,237,0.03)'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                <div key={post.id} style={{padding:'20px 24px',display:'flex',alignItems:'flex-start',gap:'16px',borderBottom:'1px solid rgba(255,255,255,0.05)',background:'transparent',transition:'background 0.3s',cursor:'default'}} onMouseEnter={(e)=>e.currentTarget.style.background='rgba(124,58,237,0.03)'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
                   <div style={{flexShrink:0,width:'56px',textAlign:'center'}}>
                     <p style={{fontSize:'18px',fontWeight:700,lineHeight:1,color:'#A78BFA',fontFamily:'Syne,sans-serif'}}>{d.getDate()}</p>
                     <p style={{fontSize:'10px',textTransform:'uppercase',marginTop:'4px',color:'#9CA3AF'}}>{d.toLocaleDateString('fr-FR',{month:'short'})}</p>
@@ -1132,7 +1124,7 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               )
             })}
             {totalPages>1&&(
@@ -1147,7 +1139,7 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
           </>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }
 

@@ -533,6 +533,12 @@ export async function POST(request: NextRequest) {
       const file = formData.get('file') as File | null
       if (!file) return NextResponse.json({ error: 'Aucun fichier' }, { status: 400 })
       filename = file.name
+      const ext = filename.toLowerCase().split('.').pop() || ''
+      if (['docx', 'doc', 'pdf'].includes(ext)) {
+        return NextResponse.json({
+          error: `Le format .${ext} doit être traité côté client (via l'interface). Envoie le texte extrait en JSON.`,
+        }, { status: 400 })
+      }
       rawText = await file.text()
     } else {
       return NextResponse.json({ error: 'Content-Type non supporté.' }, { status: 400 })
