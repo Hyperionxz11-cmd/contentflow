@@ -9,7 +9,7 @@
 | Info | Valeur |
 |------|--------|
 | **HEAD local** | `64dc389` — fix: save uncommitted local work |
-| **Dernier push GitHub** | `b07b348` — ⚠️ NON POUSSÉ (voir ci-dessous) |
+| **Dernier push GitHub** | `df8e7ab` — ✅ POUSSÉ 2026-03-27 |
 | **Production Vercel** | https://contentflow-gilt.vercel.app |
 | **Dernier déploiement stable** | `5385d6c` — landing page fix |
 | **Plan André** | TEAM |
@@ -20,13 +20,12 @@
 
 ## ⚠️ ACTIONS REQUISES AU PROCHAIN DÉMARRAGE
 
-1. **Pusher le commit `64dc389` vers GitHub** (`git push origin main`)
-2. **Vérifier Vercel auto-deploy** sur https://vercel.com/dashboard
-3. **Supprimer manuellement depuis Windows** les fichiers lock stale :
+1. **Vérifier Vercel auto-deploy** de `df8e7ab` sur https://vercel.com/dashboard
+2. **Supprimer manuellement depuis Windows** les fichiers lock stale :
    - `.git/index.lock`
    - `.git/refs/heads/main.lock`
    - `.git/refs/stash.lock`
-   *(Ces fichiers bloquent git add/commit/stash depuis Linux)*
+   *(Ces fichiers bloquent git add/commit/stash depuis Linux — pas critiques si on utilise le plumbing)*
 
 ---
 
