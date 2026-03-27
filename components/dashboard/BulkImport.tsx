@@ -560,6 +560,8 @@ export default function BulkImport({
         setSuccessCount(timeline.length)
       }
       setStep('success')
+    } catch (err: any) {
+      setError(err?.message || 'Erreur lors de la planification. Réessaie.')
     } finally {
       setScheduling(false)
     }

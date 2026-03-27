@@ -237,7 +237,7 @@ export default function DashboardPage() {
         }))])
       }
     }
-    setShowBulkImport(false)
+    // Ne pas fermer ici — BulkImport affiche l'écran de succès puis appelle onClose lui-même
   }
 
   const openEditModal = (post: Post) => {
