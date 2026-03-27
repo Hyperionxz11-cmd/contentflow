@@ -843,7 +843,8 @@ export default function DashboardPage() {
               <BulkImport
                 onImport={handleBulkImport}
                 onClose={()=>setShowBulkImport(false)}
-                isPremium={['premium', 'team', 'agency'].includes(profile?.plan || '')}
+                isPremium={['premium', 'team', 'agency', 'solo', 'agence'].includes(profile?.plan || '')}
+                plan={profile?.plan || 'free'}
                 publishedPosts={posts.map(p => ({ scheduled_at: p.scheduled_at, status: p.status }))}
               />
             )}

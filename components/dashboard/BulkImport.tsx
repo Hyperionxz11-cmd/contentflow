@@ -12,6 +12,7 @@ interface BulkImportProps {
   onImport: (posts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => Promise<void> | void
   onClose: () => void
   isPremium?: boolean
+  plan?: string
   publishedPosts?: Array<{ scheduled_at: string; status: string }>
   authorAvatar?: string
   authorName?: string
@@ -333,11 +334,13 @@ function StepDots({ current }: { current: number }) {
 // ─────────────────────────────────────────────────────────────
 
 export default function BulkImport({
-  onImport, onClose, isPremium = false, publishedPosts = [], authorAvatar, authorName,
+  onImport, onClose, isPremium = false, plan = 'free', publishedPosts = [], authorAvatar, authorName,
 }: BulkImportProps) {
+  const isFreePlan = plan === 'free'
   const [step, setStep] = useState<'upload' | 'preview' | 'schedule' | 'success'>('upload')
   const [successCount, setSuccessCount] = useState(0)
   const [successRange, setSuccessRange] = useState('')
+  const [showUpgradeGate, setShowUpgradeGate] = useState(false)
   const [posts, setPosts] = useState<string[]>([])
   const [postImages, setPostImages] = useState<Record<number, string[]>>({})
   const [filename, setFilename] = useState('')
@@ -661,6 +664,92 @@ export default function BulkImport({
       </div>
     )}
 
+    {/* Upgrade gate modal */}
+    {showUpgradeGate && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(24px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}>
+        <div style={{
+          background: '#111116', border: '1px solid rgba(10,102,194,0.2)',
+          borderRadius: 24, padding: '32px 28px', maxWidth: 420, width: '100%',
+          boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+        }}>
+          {/* Icon */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{
+              width: 68, height: 68, borderRadius: '50%',
+              background: 'rgba(10,102,194,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}>
+              <Calendar style={{ width: 28, height: 28, color: T.primary }} />
+            </div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#E5E7EB', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+              Planification verrouillée
+            </h2>
+            <p style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
+              Tu viens de voir l'IA détecter <strong style={{ color: '#E5E7EB' }}>{selectedPosts.size} posts</strong> dans ton document.
+              <br />Passe en Solo pour les planifier automatiquement.
+            </p>
+          </div>
+
+          {/* Plan cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {[
+              { plan: 'solo', label: 'Solo', price: '9€/mois', features: '5 imports · 20 reformulations · Posts illimités', color: '#6366f1', highlight: true },
+              { plan: 'agence', label: 'Agence', price: '29€/mois', features: '20 imports · 80 reformulations · Multi-comptes', color: T.primary, highlight: false },
+            ].map(p => (
+              <button key={p.plan}
+                onClick={() => { window.location.href = `/api/stripe/checkout?plan=${p.plan}` }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '14px 16px', borderRadius: 14,
+                  border: p.highlight ? `1.5px solid ${p.color}66` : `1.5px solid ${p.color}33`,
+                  background: p.highlight ? `${p.color}18` : `${p.color}0a`,
+                  cursor: 'pointer', textAlign: 'left',
+                }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#E5E7EB' }}>{p.label} — {p.price}</div>
+                  <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>{p.features}</div>
+                </div>
+                <div style={{
+                  padding: '7px 16px', borderRadius: 999,
+                  background: p.color, color: '#fff',
+                  fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                }}>Choisir →</div>
+              </button>
+            ))}
+          </div>
+
+          {/* What they'll unlock */}
+          <div style={{ padding: '12px 14px', background: 'rgba(10,102,194,0.07)', borderRadius: 12, marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: T.primary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Ce que tu débloqueras
+            </div>
+            {[
+              `Planifier tes ${selectedPosts.size} posts en 1 clic`,
+              'Choisir ta cadence (3×/sem, quotidien…)',
+              'LinkedIn publie automatiquement',
+            ].map((f, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: i < 2 ? 6 : 0 }}>
+                <Check style={{ width: 12, height: 12, color: T.primary, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: '#D1D5DB' }}>{f}</span>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => setShowUpgradeGate(false)}
+            style={{ width: '100%', padding: '10px', borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'transparent', color: '#6B7280', fontSize: 13, cursor: 'pointer' }}>
+            Continuer sans planifier
+          </button>
+        </div>
+      </div>
+    )}
+
     {/* Main modal */}
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50,
@@ -677,11 +766,26 @@ export default function BulkImport({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 24px 16px' }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 700, color: T.gray1, letterSpacing: '-0.01em' }}>{stepLabel}</div>
-            <div style={{ fontSize: 12, color: T.gray4, marginTop: 3 }}>
-              {step === 'upload' ? 'Tout format accepté — l\'IA s\'adapte' :
-               step === 'preview' ? `${selectedPosts.size} / ${posts.length} posts sélectionnés` :
-               step === 'schedule' ? 'Fréquence et date de début' :
-               successRange}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+              <span style={{ fontSize: 12, color: T.gray4 }}>
+                {step === 'upload' ? 'Tout format accepté — l\'IA s\'adapte' :
+                 step === 'preview' ? `${selectedPosts.size} / ${posts.length} posts sélectionnés` :
+                 step === 'schedule' ? 'Fréquence et date de début' :
+                 successRange}
+              </span>
+              {step === 'preview' && isFreePlan && posts.length > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '2px 8px', borderRadius: T.radius.pill, fontSize: 10, fontWeight: 700,
+                  background: 'rgba(255,149,0,0.10)', color: '#b05a00',
+                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                }}>
+                  <svg style={{ width: 9, height: 9 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  Planification verrouillée
+                </span>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1239,10 +1343,24 @@ export default function BulkImport({
           )}
 
           {step === 'preview' && (
-            <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
-              style={{ padding: '9px 20px', borderRadius: T.radius.pill, border: 'none',
+            <button
+              onClick={() => {
+                if (selectedPosts.size === 0) return
+                if (isFreePlan) { setShowUpgradeGate(true); return }
+                setStep('schedule')
+              }}
+              disabled={selectedPosts.size === 0}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '9px 20px', borderRadius: T.radius.pill, border: 'none',
                 background: selectedPosts.size === 0 ? T.gray5 : T.primary, color: T.white,
-                fontSize: 13, fontWeight: 600, cursor: selectedPosts.size === 0 ? 'not-allowed' : 'pointer' }}>
+                fontSize: 13, fontWeight: 600, cursor: selectedPosts.size === 0 ? 'not-allowed' : 'pointer',
+              }}>
+              {isFreePlan && selectedPosts.size > 0 && (
+                <svg style={{ width: 13, height: 13 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              )}
               Programmer {selectedPosts.size > 0 ? `${selectedPosts.size} post${selectedPosts.size > 1 ? 's' : ''}` : ''} →
             </button>
           )}
