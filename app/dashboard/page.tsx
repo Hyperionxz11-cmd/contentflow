@@ -366,6 +366,7 @@ export default function DashboardPage() {
 
   const scheduledCount = posts.filter(p => p.status === 'scheduled').length
   const publishedCount = posts.filter(p => p.status === 'published').length
+  const failedCount = posts.filter(p => p.status === 'failed').length
   const totalCount = posts.length
   const draftCount = posts.filter(p => p.status === 'draft').length
 
@@ -639,7 +640,7 @@ export default function DashboardPage() {
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:'11px'}}>
                 <span style={{color:'#9CA3AF'}}>Plan actuel</span>
                 <span style={{fontSize:'10px',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#A78BFA'}}>
-                  {profile?.plan||'Free'}
+                  {profile?.plan ? profile.plan.charAt(0).toUpperCase()+profile.plan.slice(1) : 'Free'}
                 </span>
               </div>
               {(!profile||profile.plan==='free')&&(
@@ -700,14 +701,19 @@ export default function DashboardPage() {
             marginBottom:'32px'
           }}>
             <div>
-              <p style={{fontSize:'12px',color:'#9CA3AF',letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:'monospace',fontWeight:500}}>
+              <p style={{fontSize:'12px',color:'#6B7280',letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:'monospace',fontWeight:500}}>
                 {capitalizedDate}
               </p>
-              <h1 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'28px',letterSpacing:'-0.02em',marginTop:'4px',color:'#E5E7EB'}}>
-                Bonjour, <span style={{background:'linear-gradient(135deg,#A78BFA 0%,#7C3AED 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+              <h1 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'26px',letterSpacing:'-0.02em',marginTop:'4px',color:'#E5E7EB'}}>
+                Bonjour,{' '}<span style={{background:'linear-gradient(135deg,#A78BFA 0%,#7C3AED 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
                   {profile?.full_name?.split(' ')[0]||'André'}
-                </span> 👋
+                </span>
               </h1>
+              {scheduledCount > 0 && (
+                <p style={{fontSize:'12px',color:'#6B7280',marginTop:'4px'}}>
+                  <span style={{color:'#A78BFA',fontWeight:600}}>{scheduledCount}</span> post{scheduledCount>1?'s':''} en attente de publication
+                </p>
+              )}
             </div>
 
             <div
@@ -769,15 +775,13 @@ export default function DashboardPage() {
 
           {/* Stat Cards */}
           <div
-
-
-
-            style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))',gap:'16px',marginBottom:'32px'}}
+            style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:'16px',marginBottom:'32px'}}
           >
             {[
               {icon:FileText,value:totalCount,label:'Posts créés',color:'#A78BFA',delay:0.5},
-              {icon:Clock,value:scheduledCount,label:'Posts programmés',color:'#60A5FA',delay:0.55},
+              {icon:Clock,value:scheduledCount,label:'Programmés',color:'#60A5FA',delay:0.55},
               {icon:CheckCircle2,value:publishedCount,label:'Publiés',color:'#34D399',delay:0.6},
+              {icon:TrendingUp,value:failedCount,label:'Échecs',color:failedCount>0?'#F87171':'#4B5563',delay:0.65},
             ].map((stat,idx)=>(
               <StatCard key={idx} icon={stat.icon} value={stat.value} label={stat.label} color={stat.color} delay={stat.delay} />
             ))}
