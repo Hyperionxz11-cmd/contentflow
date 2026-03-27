@@ -335,3 +335,4 @@ export default function Analytics({ posts, isPremium, onUpgrade }: AnalyticsProp
     </div>
   )
 }
+

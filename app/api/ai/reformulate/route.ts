@@ -13,16 +13,12 @@ export async function POST(req: NextRequest) {
 
     // ── Quota check ──
     const cookieStore = await cookies()
-    const supabaseAuth = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bvsfclqlopzkfmeinbqs.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2c2ZjbHFsb3B6a2ZtZWluYnFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3Mjc1NTMsImV4cCI6MjA4OTMwMzU1M30.ka5xQQVdHSslk12iu7vRtWlk9CgpKm5jiDpskeJ1-Bw',
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(c: any[]) { c.forEach(({ name, value, options }: any) => cookieStore.set(name, value, options)) },
-        },
-      }
-    )
+    const supabaseAuth = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) },
+      },
+    })
     const { data: { user } } = await supabaseAuth.auth.getUser()
     if (user) {
       const supabase = getSupabaseServer()

@@ -8,28 +8,20 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGci
 const AI_SPLITTER_URL = `${SUPABASE_URL}/functions/v1/ai-doc-splitter`
 
 // ─────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────
-const LINKEDIN_MAX = 3000
-const POST_MIN = 100       // below this = definitely not a full post
-const POST_SWEET_MIN = 150 // ideally a LinkedIn post is at least 150 chars
-const POST_SWEET_MAX = 2800
-
-
-// ─────────────────────────────────────────────────────────────
 // Quota check helper (import IA uniquement)
 // ─────────────────────────────────────────────────────────────
-async function checkImportQuota(): Promise<{ allowed: boolean; response?: NextResponse }> {
+async function checkImportQuota(request: NextRequest): Promise<{ allowed: boolean; response?: NextResponse }> {
   try {
     const cookieStore = await cookies()
     const supabaseAuth = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       cookies: {
         getAll() { return cookieStore.getAll() },
-        setAll(c: any[]) { c.forEach(({ name, value, options }: any) => cookieStore.set(name, value, options)) },
+        setAll(c) { c.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) },
       },
     })
     const { data: { user } } = await supabaseAuth.auth.getUser()
-    if (!user) return { allowed: true }
+    if (!user) return { allowed: true } // pas connecté → on laisse passer (sera bloqué ailleurs)
+
     const supabase = getSupabaseServer()
     const { data: quota } = await supabase.rpc('check_and_increment_ai_usage', {
       p_user_id: user.id,
@@ -45,9 +37,17 @@ async function checkImportQuota(): Promise<{ allowed: boolean; response?: NextRe
         }, { status: 429 }),
       }
     }
-  } catch (_) { /* si erreur inattendue, laisser passer */ }
+  } catch (_) { /* en cas d'erreur inattendue, on laisse passer */ }
   return { allowed: true }
 }
+
+// ─────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────
+const LINKEDIN_MAX = 3000
+const POST_MIN = 100       // below this = definitely not a full post
+const POST_SWEET_MIN = 150 // ideally a LinkedIn post is at least 150 chars
+const POST_SWEET_MAX = 2800
 
 // ─────────────────────────────────────────────────────────────
 // BLOCK PARSING — the foundation of everything
@@ -558,7 +558,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Step 2: AI chunked split (avec vérification quota) ──
-    const quotaCheck = await checkImportQuota()
+    const quotaCheck = await checkImportQuota(request)
     if (!quotaCheck.allowed) return quotaCheck.response!
     try {
       const { posts, structure } = await aiSplit(rawText)
