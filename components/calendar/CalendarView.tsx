@@ -24,10 +24,10 @@ const MONTHS_FR = [
 ]
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string }> = {
-  scheduled: { bg: 'rgba(124,58,237,0.18)', color: '#A78BFA', dot: '#A78BFA' },
+  scheduled: { bg: 'rgba(0,119,181,0.1)', color: '#0077B5', dot: '#0077B5' },
   published:  { bg: 'rgba(16,185,129,0.15)', color: '#34D399',  dot: '#34D399' },
   failed:     { bg: 'rgba(239,68,68,0.15)',  color: '#F87171',  dot: '#EF4444' },
-  draft:      { bg: 'rgba(255,255,255,0.06)', color: '#9CA3AF', dot: '#6B7280' },
+  draft:      { bg: '#F8FAFC', color: '#64748B', dot: '#94A3B8' },
 }
 
 function toLocalDateStr(date: Date): string {
@@ -104,7 +104,7 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
 
   return (
     <div style={{
-      background: 'linear-gradient(145deg, #0d0d1a 0%, #080812 100%)',
+      background: '#FFFFFF',
       border: '1px solid rgba(255,255,255,0.07)',
       borderRadius: 20,
       overflow: 'hidden',
@@ -114,26 +114,26 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '18px 24px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid #F8FAFC',
         background: 'rgba(255,255,255,0.02)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <h2 style={{
             fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 20,
-            color: '#E5E7EB', letterSpacing: '-0.02em',
+            color: '#0F172A', letterSpacing: '-0.02em',
           }}>
-            {MONTHS_FR[month]} <span style={{ color: '#9CA3AF', fontWeight: 500, fontSize: 18 }}>{year}</span>
+            {MONTHS_FR[month]} <span style={{ color: '#64748B', fontWeight: 500, fontSize: 18 }}>{year}</span>
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {([-1, 1] as const).map(dir => (
               <button key={dir} onClick={() => navigate(dir)} style={{
-                width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)', color: '#9CA3AF', cursor: 'pointer',
+                width: 30, height: 30, borderRadius: 8, border: '1px solid #E2E8F0',
+                background: 'rgba(255,255,255,0.03)', color: '#64748B', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.2s',
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.15)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(124,58,237,0.3)'; (e.currentTarget as HTMLElement).style.color = '#A78BFA' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#9CA3AF' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,119,181,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,119,181,0.25)'; (e.currentTarget as HTMLElement).style.color = '#0077B5' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as HTMLElement).style.borderColor = '#E2E8F0'; (e.currentTarget as HTMLElement).style.color = '#64748B' }}
               >
                 {dir === -1 ? <ChevronLeft style={{ width: 15, height: 15 }} /> : <ChevronRight style={{ width: 15, height: 15 }} />}
               </button>
@@ -142,12 +142,12 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
               onClick={() => setCurrentDate(new Date())}
               style={{
                 padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                border: '1px solid rgba(124,58,237,0.3)',
-                background: 'rgba(124,58,237,0.1)', color: '#A78BFA', cursor: 'pointer',
+                border: '1px solid rgba(0,119,181,0.25)',
+                background: 'rgba(0,119,181,0.06)', color: '#0077B5', cursor: 'pointer',
                 transition: 'all 0.2s', marginLeft: 4,
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.2)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.1)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,119,181,0.06)' }}
             >
               Aujourd'hui
             </button>
@@ -156,21 +156,21 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {onPostReschedule && (
-            <p style={{ fontSize: 11, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <p style={{ fontSize: 11, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ opacity: 0.6 }}>🖱️</span> Glisse pour reprogrammer
             </p>
           )}
           {/* View toggle */}
           <div style={{
-            display: 'flex', background: 'rgba(255,255,255,0.04)',
-            borderRadius: 10, padding: 3, border: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex', background: '#F1F5F9',
+            borderRadius: 10, padding: 3, border: '1px solid #F8FAFC',
           }}>
             {(['week', 'month'] as const).map(v => (
               <button key={v} onClick={() => setView(v)} style={{
                 padding: '5px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                 border: 'none', cursor: 'pointer', transition: 'all 0.2s',
                 background: view === v ? 'rgba(124,58,237,0.25)' : 'transparent',
-                color: view === v ? '#A78BFA' : '#6B7280',
+                color: view === v ? '#0077B5' : '#94A3B8',
                 boxShadow: view === v ? '0 0 12px rgba(124,58,237,0.2)' : 'none',
               }}>
                 {v === 'week' ? 'Semaine' : 'Mois'}
@@ -220,12 +220,12 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
               style={{
                 minHeight: view === 'week' ? 140 : 100,
                 padding: '10px 8px 8px',
-                borderBottom: isLastRow ? 'none' : '1px solid rgba(255,255,255,0.04)',
-                borderRight: isLastCol ? 'none' : '1px solid rgba(255,255,255,0.04)',
+                borderBottom: isLastRow ? 'none' : '1px solid #F1F5F9',
+                borderRight: isLastCol ? 'none' : '1px solid #F1F5F9',
                 cursor: 'pointer',
                 transition: 'background 0.15s',
                 background: isDragOver
-                  ? 'rgba(124,58,237,0.15)'
+                  ? 'rgba(0,119,181,0.08)'
                   : today
                     ? 'rgba(124,58,237,0.07)'
                     : isHovered
@@ -243,11 +243,11 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
                   width: today ? 26 : 'auto',
                   height: today ? 26 : 'auto',
                   borderRadius: today ? '50%' : 0,
-                  background: today ? 'linear-gradient(135deg, #7C3AED, #A78BFA)' : 'transparent',
+                  background: today ? 'linear-gradient(135deg, #0077B5, #3B9FD1)' : 'transparent',
                   boxShadow: today ? '0 0 12px rgba(124,58,237,0.6)' : 'none',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 12, fontWeight: today ? 700 : 500,
-                  color: today ? '#fff' : !currentMonth ? '#374151' : '#9CA3AF',
+                  color: today ? '#fff' : !currentMonth ? '#374151' : '#64748B',
                 }}>
                   {date.getDate()}
                 </span>
@@ -291,7 +291,7 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
                 )}
                 {isDragOver && (
                   <div style={{
-                    fontSize: 10, color: '#A78BFA', fontWeight: 700,
+                    fontSize: 10, color: '#0077B5', fontWeight: 700,
                     textAlign: 'center', padding: '4px 0',
                     animation: 'pulse 1s infinite',
                   }}>

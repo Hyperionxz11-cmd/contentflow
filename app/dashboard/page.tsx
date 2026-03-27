@@ -376,18 +376,18 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={{minHeight:'100vh',background:'#050508',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{minHeight:'100vh',background:'#F8FAFC',display:'flex',alignItems:'center',justifyContent:'center'}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'24px'}}>
           <div style={{position:'relative',width:'56px',height:'56px'}}>
-            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid rgba(124,58,237,0.15)'}} />
-            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid transparent',borderTopColor:'#A78BFA',animation:'spin 1s linear infinite'}} />
-            <div style={{position:'absolute',inset:'8px',borderRadius:'50%',background:'rgba(124,58,237,0.15)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <Zap style={{width:'18px',height:'18px',color:'#A78BFA'}} />
+            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid rgba(0,119,181,0.1)'}} />
+            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid transparent',borderTopColor:'#0077B5',animation:'spin 1s linear infinite'}} />
+            <div style={{position:'absolute',inset:'8px',borderRadius:'50%',background:'rgba(0,119,181,0.1)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <Zap style={{width:'18px',height:'18px',color:'#0077B5'}} />
             </div>
           </div>
           <div>
-            <p style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB',textAlign:'center'}}>ContentFlow</p>
-            <p style={{fontSize:'12px',color:'#9CA3AF',letterSpacing:'0.1em',textTransform:'uppercase',textAlign:'center',marginTop:'4px'}}>Chargement…</p>
+            <p style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#0F172A',textAlign:'center'}}>ContentFlow</p>
+            <p style={{fontSize:'12px',color:'#64748B',letterSpacing:'0.1em',textTransform:'uppercase',textAlign:'center',marginTop:'4px'}}>Chargement…</p>
           </div>
         </div>
         <style>{`
@@ -400,51 +400,51 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{minHeight:'100vh',background:'#050508',position:'relative',overflow:'hidden'}}>
+    <div style={{minHeight:'100vh',background:'#F8FAFC',position:'relative',overflow:'hidden'}}>
 
       {/* Upgrade modal */}
       {showUpgradeModal && (
         <div style={{
           position:'fixed',inset:0,zIndex:200,
-          background:'rgba(0,0,0,0.6)',backdropFilter:'blur(20px)',
+          background:'rgba(0,0,0,0.4)',backdropFilter:'blur(16px)',
           display:'flex',alignItems:'center',justifyContent:'center',padding:16,
         }}>
           <div style={{
-            background:'#111116',border:'1px solid rgba(124,58,237,0.25)',
+            background:'#FFFFFF',border:'1px solid rgba(0,119,181,0.2)',
             borderRadius:24,padding:'32px 28px',maxWidth:400,width:'100%',
-            boxShadow:'0 40px 80px rgba(0,0,0,0.5)',
+            boxShadow:'0 20px 60px rgba(0,0,0,0.12)',
           }}>
             <div style={{textAlign:'center',marginBottom:24}}>
               <div style={{
                 width:64,height:64,borderRadius:'50%',
-                background:'rgba(124,58,237,0.15)',
+                background:'rgba(0,119,181,0.1)',
                 display:'flex',alignItems:'center',justifyContent:'center',
                 margin:'0 auto 16px',
               }}>
-                <Zap style={{width:28,height:28,color:'#A78BFA'}} />
+                <Zap style={{width:28,height:28,color:'#0077B5'}} />
               </div>
-              <h2 style={{fontFamily:'Syne,sans-serif',fontSize:22,fontWeight:800,color:'#E5E7EB',margin:'0 0 8px',letterSpacing:'-0.02em'}}>
+              <h2 style={{fontFamily:'Syne,sans-serif',fontSize:22,fontWeight:800,color:'#0F172A',margin:'0 0 8px',letterSpacing:'-0.02em'}}>
                 Limite atteinte
               </h2>
-              <p style={{fontSize:13,color:'#9CA3AF',lineHeight:1.6,margin:0}}>
+              <p style={{fontSize:13,color:'#64748B',lineHeight:1.6,margin:0}}>
                 {upgradeReason} Passe en Solo ou Agence pour publier sans limite.
               </p>
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:20}}>
               {[
-                {plan:'solo',price:'19€/mois',posts:'Posts illimités',ai:'5 imports IA · 20 reformulations',color:'#6366f1'},
-                {plan:'agence',price:'59€/mois',posts:'Posts illimités · 10 workspaces',ai:'20 imports IA · 80 reformulations',color:'#A78BFA'},
+                {plan:'solo',price:'19€/mois',posts:'Posts illimités',ai:'5 imports IA · 20 reformulations',color:'#0077B5'},
+                {plan:'agence',price:'59€/mois',posts:'Posts illimités · 10 workspaces',ai:'20 imports IA · 80 reformulations',color:'#0077B5'},
               ].map(p => (
                 <button key={p.plan}
                   onClick={() => { window.location.href = '/api/stripe/checkout?plan=' + p.plan.toLowerCase(); }}
                   style={{
                     display:'flex',alignItems:'center',justifyContent:'space-between',
-                    padding:'14px 16px',borderRadius:14,border:`1.5px solid ${p.color}33`,
+                    padding:'14px 16px',borderRadius:14,border:`1.5px solid ${p.color}40`,
                     background:`${p.color}0d`,cursor:'pointer',textAlign:'left',
                   }}>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:'#E5E7EB'}}>{p.plan.charAt(0).toUpperCase()+p.plan.slice(1)} — {p.price}</div>
-                    <div style={{fontSize:11,color:'#9CA3AF',marginTop:3}}>{p.posts} · {p.ai}</div>
+                    <div style={{fontSize:14,fontWeight:700,color:'#0F172A'}}>{p.plan.charAt(0).toUpperCase()+p.plan.slice(1)} — {p.price}</div>
+                    <div style={{fontSize:11,color:'#64748B',marginTop:3}}>{p.posts} · {p.ai}</div>
                   </div>
                   <div style={{
                     padding:'6px 14px',borderRadius:999,
@@ -455,8 +455,8 @@ export default function DashboardPage() {
               ))}
             </div>
             <button onClick={() => setShowUpgradeModal(false)}
-              style={{width:'100%',padding:'10px',borderRadius:999,border:'1px solid rgba(255,255,255,0.08)',
-                background:'transparent',color:'#6B7280',fontSize:13,cursor:'pointer'}}>
+              style={{width:'100%',padding:'10px',borderRadius:999,border:'1px solid #E2E8F0',
+                background:'transparent',color:'#94A3B8',fontSize:13,cursor:'pointer'}}>
               Plus tard
             </button>
           </div>
@@ -464,8 +464,8 @@ export default function DashboardPage() {
       )}
 
       {/* Background orbs */}
-      <div style={{position:'absolute',top:'-40%',left:'-10%',width:'400px',height:'400px',borderRadius:'50%',background:'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)',filter:'blur(80px)',zIndex:0}} />
-      <div style={{position:'absolute',bottom:'-20%',right:'-15%',width:'350px',height:'350px',borderRadius:'50%',background:'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)',filter:'blur(100px)',zIndex:0}} />
+      <div style={{position:'absolute',top:'-40%',left:'-10%',width:'400px',height:'400px',borderRadius:'50%',background:'radial-gradient(circle, rgba(0,119,181,0.06) 0%, transparent 70%)',filter:'blur(80px)',zIndex:0}} />
+      <div style={{position:'absolute',bottom:'-20%',right:'-15%',width:'350px',height:'350px',borderRadius:'50%',background:'radial-gradient(circle, rgba(0,119,181,0.04) 0%, transparent 70%)',filter:'blur(100px)',zIndex:0}} />
 
       <div style={{position:'relative',zIndex:1,display:'flex',minHeight:'100vh'}}>
         {/* SIDEBAR */}
@@ -479,9 +479,9 @@ export default function DashboardPage() {
             top:0,
             height:'100vh',
             width:'240px',
-            background:'#080812',
-            borderRight:'1px solid rgba(124,58,237,0.15)',
-            boxShadow:'inset -1px 0 0 rgba(255,255,255,0.04), 4px 0 20px rgba(0,0,0,0.3)',
+            background:'#FFFFFF',
+            borderRight:'1px solid rgba(0,119,181,0.1)',
+            boxShadow:'0 1px 0 0 #E2E8F0, 4px 0 12px rgba(0,0,0,0.04)',
             display:'flex',
             flexDirection:'column',
             zIndex:40,
@@ -497,13 +497,13 @@ export default function DashboardPage() {
             <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'32px'}}>
               <div style={{
                 width:'32px',height:'32px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',
-                background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
-                boxShadow:'0 0 20px rgba(124,58,237,0.6)',
+                background:'linear-gradient(135deg, #0077B5 0%, #3B9FD1 100%)',
+                boxShadow:'0 0 20px rgba(0,119,181,0.6)',
                 flexShrink:0
               }}>
                 <Zap style={{width:'16px',height:'16px',color:'white'}} />
               </div>
-              <span style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB',letterSpacing:'-0.01em'}}>ContentFlow</span>
+              <span style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#0F172A',letterSpacing:'-0.01em'}}>ContentFlow</span>
             </div>
 
             {/* Nav */}
@@ -532,15 +532,15 @@ export default function DashboardPage() {
                     border:'none',
                     cursor:'pointer',
                     transition:'all 0.3s cubic-bezier(0.16,1,0.3,1)',
-                    background:activeTab===item.id?'rgba(124,58,237,0.12)':'transparent',
-                    color:activeTab===item.id?'#A78BFA':'#9CA3AF',
-                    boxShadow:activeTab===item.id?'inset 0 0 20px rgba(124,58,237,0.06)':'none',
+                    background:activeTab===item.id?'rgba(0,119,181,0.08)':'transparent',
+                    color:activeTab===item.id?'#0077B5':'#64748B',
+                    boxShadow:activeTab===item.id?'inset 0 0 20px rgba(0,119,181,0.05)':'none',
                     position:'relative'
                   }}
                   onMouseEnter={(e)=>{
                     if(activeTab!==item.id) {
-                      e.currentTarget.style.background='rgba(124,58,237,0.06)'
-                      e.currentTarget.style.color='#C4B5FD'
+                      e.currentTarget.style.background='rgba(0,119,181,0.05)'
+                      e.currentTarget.style.color='#005A8C'
                     }
                   }}
                   onMouseLeave={(e)=>{
@@ -553,7 +553,7 @@ export default function DashboardPage() {
                   <item.icon style={{
                     width:'16px',
                     height:'16px',
-                    filter:activeTab===item.id?'drop-shadow(0 0 8px rgba(124,58,237,0.8))':'none'
+                    filter:activeTab===item.id?'drop-shadow(0 0 8px rgba(0,119,181,0.8))':'none'
                   }} />
                   {item.label}
                 </button>
@@ -573,8 +573,8 @@ export default function DashboardPage() {
               marginTop:'16px',
               padding:'16px',
               borderRadius:'12px',
-              background:'rgba(255,255,255,0.025)',
-              border:'1px solid rgba(255,255,255,0.06)',
+              background:'#FFFFFF',
+              border:'1px solid #E2E8F0',
               fontSize:'13px'
             }}>
               {profile?.linkedin_connected?(
@@ -588,7 +588,7 @@ export default function DashboardPage() {
                         style={{width:'36px',height:'36px',borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(16,185,129,0.4)',flexShrink:0}}
                       />
                     ) : (
-                      <div style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#7C3AED,#A78BFA)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>
+                      <div style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#0077B5,#3B9FD1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>
                         {(profile.linkedin_name||profile.full_name||'?').charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -597,7 +597,7 @@ export default function DashboardPage() {
                         <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#10B981',flexShrink:0}} />
                         <span style={{fontSize:'10px',fontWeight:600,color:'#10B981'}}>Connecté</span>
                       </div>
-                      <p style={{fontSize:'11px',color:'#D1D5DB',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'2px',fontWeight:500}}>
+                      <p style={{fontSize:'11px',color:'#1E293B',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'2px',fontWeight:500}}>
                         {profile.linkedin_name||profile.full_name||'Compte vérifié'}
                       </p>
                     </div>
@@ -608,19 +608,19 @@ export default function DashboardPage() {
                 </div>
               ):(
                 <div>
-                  <p style={{fontSize:'11px',color:'#9CA3AF',marginBottom:'12px'}}>Connecte LinkedIn pour publier</p>
+                  <p style={{fontSize:'11px',color:'#64748B',marginBottom:'12px'}}>Connecte LinkedIn pour publier</p>
                   <button
                     onClick={handleConnectLinkedIn}
                     style={{
                       width:'100%',
                       display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',
                       padding:'8px 12px',borderRadius:'8px',fontSize:'12px',fontWeight:600,
-                      background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                      background:'linear-gradient(135deg, #0077B5 0%, #3B9FD1 100%)',
                       color:'white',border:'none',cursor:'pointer',
-                      boxShadow:'0 0 16px rgba(124,58,237,0.3)',transition:'all 0.3s'
+                      boxShadow:'0 0 16px rgba(0,119,181,0.25)',transition:'all 0.3s'
                     }}
-                    onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 0 24px rgba(124,58,237,0.5)'}}
-                    onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 0 16px rgba(124,58,237,0.3)'}}
+                    onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 0 24px rgba(0,119,181,0.5)'}}
+                    onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 0 16px rgba(0,119,181,0.25)'}}
                   >
                     <Linkedin style={{width:'14px',height:'14px'}} />
                     Connecter
@@ -634,12 +634,12 @@ export default function DashboardPage() {
               marginTop:'12px',
               padding:'16px',
               borderRadius:'12px',
-              background:'rgba(255,255,255,0.025)',
-              border:'1px solid rgba(255,255,255,0.06)',
+              background:'#FFFFFF',
+              border:'1px solid #E2E8F0',
             }}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:'11px'}}>
-                <span style={{color:'#9CA3AF'}}>Plan actuel</span>
-                <span style={{fontSize:'10px',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#A78BFA'}}>
+                <span style={{color:'#64748B'}}>Plan actuel</span>
+                <span style={{fontSize:'10px',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#0077B5'}}>
                   {profile?.plan ? profile.plan.charAt(0).toUpperCase()+profile.plan.slice(1) : 'Free'}
                 </span>
               </div>
@@ -648,10 +648,10 @@ export default function DashboardPage() {
                   onClick={()=>router.push('/pricing')}
                   style={{
                     width:'100%',marginTop:'12px',padding:'8px 12px',borderRadius:'8px',
-                    fontSize:'11px',fontWeight:600,border:'1px solid #A78BFA',
-                    color:'#A78BFA',background:'transparent',cursor:'pointer',transition:'all 0.3s'
+                    fontSize:'11px',fontWeight:600,border:'1px solid #0077B5',
+                    color:'#0077B5',background:'transparent',cursor:'pointer',transition:'all 0.3s'
                   }}
-                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.1)'}}
+                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(0,119,181,0.08)'}}
                   onMouseLeave={(e)=>{e.currentTarget.style.background='transparent'}}
                 >
                   Passer en Premium ↗
@@ -665,22 +665,22 @@ export default function DashboardPage() {
 
 
 
-            style={{padding:'16px',borderTop:'1px solid rgba(255,255,255,0.04)',marginTop:'auto'}}
+            style={{padding:'16px',borderTop:'1px solid #E2E8F0',marginTop:'auto'}}
           >
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <div style={{display:'flex',alignItems:'center',gap:'8px',minWidth:0}}>
                 <div style={{
                   width:'32px',height:'32px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',
-                  background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                  background:'linear-gradient(135deg, #0077B5 0%, #3B9FD1 100%)',
                   color:'white',fontSize:'11px',fontWeight:700,flexShrink:0
                 }}>
                   {user?.email?.charAt(0).toUpperCase()||'U'}
                 </div>
-                <span style={{fontSize:'12px',color:'#D1D5DB',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                <span style={{fontSize:'12px',color:'#1E293B',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                   {user?.email}
                 </span>
               </div>
-              <button onClick={handleLogout} style={{padding:'6px',borderRadius:'8px',color:'#9CA3AF',background:'none',border:'none',cursor:'pointer',transition:'all 0.3s'}}>
+              <button onClick={handleLogout} style={{padding:'6px',borderRadius:'8px',color:'#64748B',background:'none',border:'none',cursor:'pointer',transition:'all 0.3s'}}>
                 <LogOut style={{width:'16px',height:'16px'}} />
               </button>
             </div>
@@ -697,21 +697,21 @@ export default function DashboardPage() {
           {/* Header */}
           <div style={{
             display:'flex',justifyContent:'space-between',alignItems:'flex-start',
-            paddingBottom:'24px',borderBottom:'1px solid rgba(255,255,255,0.05)',
+            paddingBottom:'24px',borderBottom:'1px solid #E2E8F0',
             marginBottom:'32px'
           }}>
             <div>
-              <p style={{fontSize:'12px',color:'#6B7280',letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:'monospace',fontWeight:500}}>
+              <p style={{fontSize:'12px',color:'#94A3B8',letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:'monospace',fontWeight:500}}>
                 {capitalizedDate}
               </p>
-              <h1 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'26px',letterSpacing:'-0.02em',marginTop:'4px',color:'#E5E7EB'}}>
-                Bonjour,{' '}<span style={{background:'linear-gradient(135deg,#A78BFA 0%,#7C3AED 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+              <h1 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'26px',letterSpacing:'-0.02em',marginTop:'4px',color:'#0F172A'}}>
+                Bonjour,{' '}<span style={{background:'linear-gradient(135deg,#3B9FD1 0%,#0077B5 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
                   {profile?.full_name?.split(' ')[0]||'André'}
                 </span>
               </h1>
               {scheduledCount > 0 && (
-                <p style={{fontSize:'12px',color:'#6B7280',marginTop:'4px'}}>
-                  <span style={{color:'#A78BFA',fontWeight:600}}>{scheduledCount}</span> post{scheduledCount>1?'s':''} en attente de publication
+                <p style={{fontSize:'12px',color:'#94A3B8',marginTop:'4px'}}>
+                  <span style={{color:'#0077B5',fontWeight:600}}>{scheduledCount}</span> post{scheduledCount>1?'s':''} en attente de publication
                 </p>
               )}
             </div>
@@ -728,10 +728,10 @@ export default function DashboardPage() {
                   style={{
                     display:'flex',alignItems:'center',gap:'8px',padding:'10px 16px',borderRadius:'10px',
                     fontSize:'14px',fontWeight:500,border:'1px solid rgba(167,139,250,0.3)',
-                    color:'#A78BFA',background:'rgba(124,58,237,0.08)',cursor:'pointer',transition:'all 0.3s'
+                    color:'#0077B5',background:'rgba(0,119,181,0.06)',cursor:'pointer',transition:'all 0.3s'
                   }}
-                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.15)'}}
-                  onMouseLeave={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.08)'}}
+                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(0,119,181,0.1)'}}
+                  onMouseLeave={(e)=>{e.currentTarget.style.background='rgba(0,119,181,0.06)'}}
                 >
                   <Layers style={{width:'16px',height:'16px'}} />
                   Carousel
@@ -741,12 +741,12 @@ export default function DashboardPage() {
                 onClick={()=>setShowBulkImport(true)}
                 style={{
                   display:'flex',alignItems:'center',gap:'8px',padding:'10px 16px',borderRadius:'10px',
-                  fontSize:'14px',fontWeight:500,border:'1px solid rgba(255,255,255,0.1)',
-                  color:'#D1D5DB',background:'rgba(255,255,255,0.02)',cursor:'pointer',transition:'all 0.3s'
+                  fontSize:'14px',fontWeight:500,border:'1px solid #CBD5E1',
+                  color:'#1E293B',background:'#F8FAFC',cursor:'pointer',transition:'all 0.3s'
                 }}
                 onMouseEnter={(e)=>{
-                  e.currentTarget.style.background='rgba(255,255,255,0.05)'
-                  e.currentTarget.style.borderColor='rgba(124,58,237,0.3)'
+                  e.currentTarget.style.background='#F1F5F9'
+                  e.currentTarget.style.borderColor='rgba(0,119,181,0.25)'
                 }}
                 onMouseLeave={(e)=>{
                   e.currentTarget.style.background='rgba(255,255,255,0.02)'
@@ -760,12 +760,12 @@ export default function DashboardPage() {
                 onClick={()=>{setSelectedDate(new Date().toISOString().split('T')[0]);setShowEditor(true)}}
                 style={{
                   display:'flex',alignItems:'center',gap:'8px',padding:'10px 20px',borderRadius:'10px',
-                  fontSize:'14px',fontWeight:600,background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                  fontSize:'14px',fontWeight:600,background:'linear-gradient(135deg, #0077B5 0%, #3B9FD1 100%)',
                   color:'white',border:'none',cursor:'pointer',
-                  boxShadow:'0 4px 20px rgba(124,58,237,0.3)',transition:'all 0.3s'
+                  boxShadow:'0 4px 20px rgba(0,119,181,0.25)',transition:'all 0.3s'
                 }}
-                onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 8px 32px rgba(124,58,237,0.4)'}}
-                onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 4px 20px rgba(124,58,237,0.3)'}}
+                onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 8px 32px rgba(0,119,181,0.35)'}}
+                onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 4px 20px rgba(0,119,181,0.25)'}}
               >
                 <Plus style={{width:'16px',height:'16px'}} />
                 Nouveau post
@@ -778,7 +778,7 @@ export default function DashboardPage() {
             style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:'16px',marginBottom:'32px'}}
           >
             {[
-              {icon:FileText,value:totalCount,label:'Posts créés',color:'#A78BFA',delay:0.5},
+              {icon:FileText,value:totalCount,label:'Posts créés',color:'#0077B5',delay:0.5},
               {icon:Clock,value:scheduledCount,label:'Programmés',color:'#60A5FA',delay:0.55},
               {icon:CheckCircle2,value:publishedCount,label:'Publiés',color:'#34D399',delay:0.6},
               {icon:TrendingUp,value:failedCount,label:'Échecs',color:failedCount>0?'#F87171':'#4B5563',delay:0.65},
@@ -884,70 +884,70 @@ export default function DashboardPage() {
                   onClick={(e)=>e.stopPropagation()}
                   style={{
                     borderRadius:'16px',width:'100%',maxWidth:'480px',
-                    background:'#1A1A22',boxShadow:'0 25px 64px rgba(0,0,0,0.8)',
-                    border:'1px solid rgba(255,255,255,0.05)',overflow:'hidden'
+                    background:'#FFFFFF',boxShadow:'0 8px 32px rgba(0,0,0,0.12)',
+                    border:'1px solid #E2E8F0',overflow:'hidden'
                   }}
                 >
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-                    <h2 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB'}}>Modifier le post</h2>
-                    <button onClick={()=>setEditingPost(null)} style={{padding:'8px',borderRadius:'8px',color:'#9CA3AF',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:'1px solid #E2E8F0'}}>
+                    <h2 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#0F172A'}}>Modifier le post</h2>
+                    <button onClick={()=>setEditingPost(null)} style={{padding:'8px',borderRadius:'8px',color:'#64748B',background:'#F1F5F9',border:'none',cursor:'pointer'}}>
                       <X style={{width:'18px',height:'18px'}} />
                     </button>
                   </div>
                   <div style={{padding:'20px',display:'flex',flexDirection:'column',gap:'16px'}}>
                     <div>
-                      <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Contenu</label>
+                      <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#1E293B',marginBottom:'8px'}}>Contenu</label>
                       <textarea
                         value={editContent}
                         onChange={e=>setEditContent(e.target.value)}
                         rows={10}
                         style={{
                           width:'100%',padding:'12px 14px',borderRadius:'10px',fontSize:'13px',resize:'none',fontFamily:'monospace',
-                          outline:'none',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',
-                          color:'#E5E7EB',transition:'all 0.3s'
+                          outline:'none',background:'#F8FAFC',border:'1px solid #E2E8F0',
+                          color:'#0F172A',transition:'all 0.3s'
                         }}
-                        onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
+                        onFocus={(e)=>e.currentTarget.style.borderColor='rgba(0,119,181,0.5)'}
                         onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
                       />
-                      <p style={{fontSize:'11px',marginTop:'6px',textAlign:'right',color:'#9CA3AF'}}>{editContent.length} caractères</p>
+                      <p style={{fontSize:'11px',marginTop:'6px',textAlign:'right',color:'#64748B'}}>{editContent.length} caractères</p>
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
                       <div>
-                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Date</label>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#1E293B',marginBottom:'8px'}}>Date</label>
                         <input
                           type="date"
                           value={editDate}
                           onChange={e=>setEditDate(e.target.value)}
                           style={{
                             width:'100%',padding:'10px 12px',borderRadius:'10px',fontSize:'13px',outline:'none',
-                            background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',color:'#E5E7EB',transition:'all 0.3s'
+                            background:'#F8FAFC',border:'1px solid #E2E8F0',color:'#0F172A',transition:'all 0.3s'
                           }}
-                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
+                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(0,119,181,0.5)'}
                           onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
                         />
                       </div>
                       <div>
-                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Heure</label>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#1E293B',marginBottom:'8px'}}>Heure</label>
                         <input
                           type="time"
                           value={editTime}
                           onChange={e=>setEditTime(e.target.value)}
                           style={{
                             width:'100%',padding:'10px 12px',borderRadius:'10px',fontSize:'13px',outline:'none',
-                            background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',color:'#E5E7EB',transition:'all 0.3s'
+                            background:'#F8FAFC',border:'1px solid #E2E8F0',color:'#0F172A',transition:'all 0.3s'
                           }}
-                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
+                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(0,119,181,0.5)'}
                           onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
                         />
                       </div>
                     </div>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'12px',padding:'16px 24px',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'12px',padding:'16px 24px',borderTop:'1px solid #E2E8F0'}}>
                     <button
                       onClick={()=>setEditingPost(null)}
                       style={{
-                        padding:'8px 16px',fontSize:'13px',borderRadius:'8px',color:'#9CA3AF',
-                        background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',transition:'all 0.3s'
+                        padding:'8px 16px',fontSize:'13px',borderRadius:'8px',color:'#64748B',
+                        background:'#F1F5F9',border:'none',cursor:'pointer',transition:'all 0.3s'
                       }}
                     >
                       Annuler
@@ -957,9 +957,9 @@ export default function DashboardPage() {
                       disabled={savingEdit}
                       style={{
                         display:'flex',alignItems:'center',gap:'8px',padding:'8px 18px',fontSize:'13px',fontWeight:600,
-                        borderRadius:'8px',background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                        borderRadius:'8px',background:'linear-gradient(135deg, #0077B5 0%, #3B9FD1 100%)',
                         color:'white',border:'none',cursor:'pointer',opacity:savingEdit?0.7:1,transition:'all 0.3s',
-                        boxShadow:'0 4px 16px rgba(124,58,237,0.3)'
+                        boxShadow:'0 4px 16px rgba(0,119,181,0.25)'
                       }}
                     >
                       {savingEdit?<Loader2 style={{width:'14px',height:'14px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'14px',height:'14px'}} />}
@@ -977,7 +977,7 @@ export default function DashboardPage() {
 
 
                 onClick={()=>setShowEditor(false)}
-                style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}}
+                style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',backdropFilter:'blur(8px)',zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}}
               >
                 <div
 
@@ -1020,8 +1020,8 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
 
 
       style={{
-        background:'rgba(255,255,255,0.025)',
-        border:'1px solid rgba(255,255,255,0.06)',
+        background:'#FFFFFF',
+        border:'1px solid #E2E8F0',
         borderRadius:'16px',
         padding:'24px',
         position:'relative',
@@ -1029,8 +1029,8 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
         cursor:'default',
       }}
     >
-      <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',background:`linear-gradient(90deg,transparent,${color},transparent)`}} />
-      <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.02) 50%,transparent 60%)',backgroundSize:'200%',animation:'shimmer 3s linear infinite'}} />
+      <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',background:`linear-gradient(90deg,transparent,${color}80,transparent)`}} />
+      <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 40%,rgba(0,0,0,0.015) 50%,transparent 60%)',backgroundSize:'200%',animation:'shimmer 3s linear infinite'}} />
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',position:'relative',zIndex:1}}>
         <div>
@@ -1040,13 +1040,13 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
 
             style={{
               fontSize:'36px',fontWeight:800,fontFamily:'Syne,sans-serif',letterSpacing:'-0.03em',
-              lineHeight:1,background:`linear-gradient(135deg,#FFFFFF 0%,${color} 100%)`,
+              lineHeight:1,background:`linear-gradient(135deg,${color} 0%,${color} 100%)`,
               WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'
             }}
           >
             {value}
           </div>
-          <div style={{fontSize:'13px',color:'#9CA3AF',marginTop:'6px',fontWeight:500}}>
+          <div style={{fontSize:'13px',color:'#64748B',marginTop:'6px',fontWeight:500}}>
             {label}
           </div>
         </div>
@@ -1058,7 +1058,7 @@ function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value
             width:'40px',height:'40px',borderRadius:'10px',
             background:`rgba(${hexToRgb(color)},0.1)`,
             display:'flex',alignItems:'center',justifyContent:'center',
-            border:`1px solid ${color}40`
+            border:`1px solid ${color}30`
           }}
         >
           <Icon style={{width:'18px',height:'18px',color}} />
@@ -1073,16 +1073,16 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
   const paginated=posts.slice((currentPage-1)*POSTS_PER_PAGE,currentPage*POSTS_PER_PAGE)
 
   return (
-    <div style={{borderRadius:'16px',overflow:'hidden',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)'}}>
-      <div style={{padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-        <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB'}}>Tous les posts</h3>
-        <span style={{fontSize:'12px',color:'#9CA3AF'}}>{posts.length} post{posts.length>1?'s':''} au total</span>
+    <div style={{borderRadius:'16px',overflow:'hidden',background:'#FFFFFF',border:'1px solid #E2E8F0'}}>
+      <div style={{padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid #E2E8F0'}}>
+        <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#0F172A'}}>Tous les posts</h3>
+        <span style={{fontSize:'12px',color:'#64748B'}}>{posts.length} post{posts.length>1?'s':''} au total</span>
       </div>
-      <div style={{borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+      <div style={{borderTop:'1px solid #E2E8F0'}}>
         {posts.length===0?(
           <div style={{padding:'48px 24px',textAlign:'center'}}>
-            <p style={{fontSize:'16px',marginBottom:'8px',fontWeight:500,color:'#E5E7EB'}}>Aucun post pour l'instant</p>
-            <p style={{fontSize:'13px',color:'#9CA3AF'}}>Clique sur "Nouveau post" ou "Importer" pour commencer !</p>
+            <p style={{fontSize:'16px',marginBottom:'8px',fontWeight:500,color:'#0F172A'}}>Aucun post pour l'instant</p>
+            <p style={{fontSize:'13px',color:'#64748B'}}>Clique sur "Nouveau post" ou "Importer" pour commencer !</p>
           </div>
         ):(
           <>
@@ -1091,38 +1091,38 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
               const isConfirmingDelete=confirmDeleteId===post.id
               const isDeleting=deletingId===post.id
               const isRetrying=retryingId===post.id
-              const statusBg={'scheduled':'rgba(124,58,237,0.1)','published':'rgba(52,211,153,0.1)','failed':'rgba(239,68,68,0.1)','draft':'rgba(255,255,255,0.05)'}[post.status]||'rgba(255,255,255,0.05)'
-              const statusColor={'scheduled':'#A78BFA','published':'#34D399','failed':'#EF4444','draft':'#9CA3AF'}[post.status]||'#9CA3AF'
+              const statusBg={'scheduled':'rgba(0,119,181,0.08)','published':'rgba(52,211,153,0.1)','failed':'rgba(239,68,68,0.1)','draft':'rgba(255,255,255,0.05)'}[post.status]||'rgba(255,255,255,0.05)'
+              const statusColor={'scheduled':'#0077B5','published':'#34D399','failed':'#EF4444','draft':'#9CA3AF'}[post.status]||'#9CA3AF'
               const statusLabel={'scheduled':'⏰ Programmé','published':'✓ Publié','failed':'✗ Échoué','draft':'Brouillon'}[post.status]||'Brouillon'
               return (
-                <div key={post.id} style={{padding:'20px 24px',display:'flex',alignItems:'flex-start',gap:'16px',borderBottom:'1px solid rgba(255,255,255,0.05)',background:'transparent',transition:'background 0.3s',cursor:'default'}} onMouseEnter={(e)=>e.currentTarget.style.background='rgba(124,58,237,0.03)'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                <div key={post.id} style={{padding:'20px 24px',display:'flex',alignItems:'flex-start',gap:'16px',borderBottom:'1px solid #E2E8F0',background:'transparent',transition:'background 0.3s',cursor:'default'}} onMouseEnter={(e)=>e.currentTarget.style.background='rgba(124,58,237,0.03)'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
                   <div style={{flexShrink:0,width:'56px',textAlign:'center'}}>
-                    <p style={{fontSize:'18px',fontWeight:700,lineHeight:1,color:'#A78BFA',fontFamily:'Syne,sans-serif'}}>{d.getDate()}</p>
-                    <p style={{fontSize:'10px',textTransform:'uppercase',marginTop:'4px',color:'#9CA3AF'}}>{d.toLocaleDateString('fr-FR',{month:'short'})}</p>
-                    <p style={{fontSize:'10px',color:'#9CA3AF'}}>{d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</p>
+                    <p style={{fontSize:'18px',fontWeight:700,lineHeight:1,color:'#0077B5',fontFamily:'Syne,sans-serif'}}>{d.getDate()}</p>
+                    <p style={{fontSize:'10px',textTransform:'uppercase',marginTop:'4px',color:'#64748B'}}>{d.toLocaleDateString('fr-FR',{month:'short'})}</p>
+                    <p style={{fontSize:'10px',color:'#64748B'}}>{d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</p>
                   </div>
                   <div style={{flex:1,minWidth:0}}>
-                    <p style={{fontSize:'13px',color:'#D1D5DB',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{post.content.replace(/<[^>]+>/g,'').slice(0,200)}</p>
+                    <p style={{fontSize:'13px',color:'#1E293B',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{post.content.replace(/<[^>]+>/g,'').slice(0,200)}</p>
                     <div style={{display:'flex',alignItems:'center',gap:'12px',marginTop:'8px'}}>
-                      <span style={{fontSize:'12px',color:'#9CA3AF'}}>{post.content.replace(/<[^>]+>/g,'').length} car.</span>
-                      {post.images&&post.images.length>0&&(<span style={{fontSize:'12px',color:'#A78BFA'}}>🖼 {post.images.length} image{post.images.length>1?'s':''}</span>)}
+                      <span style={{fontSize:'12px',color:'#64748B'}}>{post.content.replace(/<[^>]+>/g,'').length} car.</span>
+                      {post.images&&post.images.length>0&&(<span style={{fontSize:'12px',color:'#0077B5'}}>🖼 {post.images.length} image{post.images.length>1?'s':''}</span>)}
                     </div>
                   </div>
                   <div style={{flexShrink:0,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px'}}>
                     <span style={{fontSize:'11px',fontWeight:600,padding:'4px 12px',borderRadius:'6px',background:statusBg,color:statusColor}}>{statusLabel}</span>
                     {isConfirmingDelete?(
                       <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
-                        <span style={{fontSize:'11px',color:'#9CA3AF',marginRight:'4px'}}>Supprimer ?</span>
+                        <span style={{fontSize:'11px',color:'#64748B',marginRight:'4px'}}>Supprimer ?</span>
                         <button onClick={()=>handleDeletePost(post.id)} disabled={isDeleting} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'6px',background:'#EF4444',color:'white',border:'none',cursor:'pointer',opacity:isDeleting?0.6:1,transition:'all 0.3s'}}>
                           {isDeleting?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'12px',height:'12px'}} />}
                           Oui
                         </button>
-                        <button onClick={()=>setConfirmDeleteId(null)} style={{padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#9CA3AF',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',transition:'all 0.3s'}}>Non</button>
+                        <button onClick={()=>setConfirmDeleteId(null)} style={{padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#64748B',background:'#F1F5F9',border:'none',cursor:'pointer',transition:'all 0.3s'}}>Non</button>
                       </div>
                     ):(
                       <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
-                        <button onClick={()=>setPreviewPost(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Eye style={{width:'12px',height:'12px'}} />Aperçu</button>
-                        {post.status!=='published'&&(<button onClick={()=>openEditModal(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Pencil style={{width:'12px',height:'12px'}} />Modifier</button>)}
+                        <button onClick={()=>setPreviewPost(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#0077B5',background:'rgba(0,119,181,0.08)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Eye style={{width:'12px',height:'12px'}} />Aperçu</button>
+                        {post.status!=='published'&&(<button onClick={()=>openEditModal(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#0077B5',background:'rgba(0,119,181,0.08)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Pencil style={{width:'12px',height:'12px'}} />Modifier</button>)}
                         {post.status==='failed'&&(<button onClick={()=>handleRetryPost(post)} disabled={isRetrying} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:500,borderRadius:'6px',color:'#FCD34D',background:'rgba(245,158,11,0.1)',border:'none',cursor:'pointer',opacity:isRetrying?0.6:1,transition:'all 0.3s'}}>{isRetrying?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:'↺'}Réessayer</button>)}
                         <button onClick={()=>setConfirmDeleteId(post.id)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#EF4444',background:'rgba(239,68,68,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Trash2 style={{width:'12px',height:'12px'}} /></button>
                       </div>
@@ -1132,11 +1132,11 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
               )
             })}
             {totalPages>1&&(
-              <div style={{padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
-                <span style={{fontSize:'12px',color:'#9CA3AF'}}>Page {currentPage}/{totalPages} · {posts.length} posts</span>
+              <div style={{padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:'1px solid #E2E8F0'}}>
+                <span style={{fontSize:'12px',color:'#64748B'}}>Page {currentPage}/{totalPages} · {posts.length} posts</span>
                 <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                  <button onClick={()=>setCurrentPage(Math.max(1,currentPage-1))} disabled={currentPage===1} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#D1D5DB',border:'1px solid rgba(255,255,255,0.1)',background:'transparent',cursor:'pointer',opacity:currentPage===1?0.4:1,transition:'all 0.3s'}}>← Précédent</button>
-                  <button onClick={()=>setCurrentPage(Math.min(totalPages,currentPage+1))} disabled={currentPage===totalPages} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#D1D5DB',border:'1px solid rgba(255,255,255,0.1)',background:'transparent',cursor:'pointer',opacity:currentPage===totalPages?0.4:1,transition:'all 0.3s'}}>Suivant →</button>
+                  <button onClick={()=>setCurrentPage(Math.max(1,currentPage-1))} disabled={currentPage===1} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#1E293B',border:'1px solid #CBD5E1',background:'transparent',cursor:'pointer',opacity:currentPage===1?0.4:1,transition:'all 0.3s'}}>← Précédent</button>
+                  <button onClick={()=>setCurrentPage(Math.min(totalPages,currentPage+1))} disabled={currentPage===totalPages} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#1E293B',border:'1px solid #CBD5E1',background:'transparent',cursor:'pointer',opacity:currentPage===totalPages?0.4:1,transition:'all 0.3s'}}>Suivant →</button>
                 </div>
               </div>
             )}
