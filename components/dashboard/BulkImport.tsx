@@ -82,7 +82,13 @@ function htmlToText(html: string): string {
   if (typeof window === 'undefined') return html.replace(/<[^>]+>/g, '')
   const div = document.createElement('div')
   div.innerHTML = html
-  div.querySelectorAll('p, h1, h2, h3, li').forEach(el => el.insertAdjacentText('afterend', '\n'))
+  // Paragraphs and headings → double newline (block separator for getBlocksAndGaps)
+  div.querySelectorAll('p, h1, h2, h3, h4').forEach(el => el.insertAdjacentText('afterend', '\n\n'))
+  // List items → single newline (keeps bullet structure readable)
+  div.querySelectorAll('li').forEach(el => el.insertAdjacentText('afterend', '\n'))
+  // Table rows/cells → structure preservation
+  div.querySelectorAll('td, th').forEach(el => el.insertAdjacentText('afterend', ' | '))
+  div.querySelectorAll('tr').forEach(el => el.insertAdjacentText('afterend', '\n'))
   div.querySelectorAll('br').forEach(el => el.replaceWith('\n'))
   div.querySelectorAll('img').forEach(el => el.remove())
   let text = (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
@@ -148,19 +154,37 @@ function analyzeSmartSlots(publishedPosts: Array<{ scheduled_at: string; status:
 /**
  * Convert mammoth HTML to a "structured text" where Word headings
  * become ## markers — sent to the API as a reliable signal.
+ *
+ * Handles: headings, bold post-title paragraphs, lists, tables, entities.
  */
 function htmlToStructuredText(html: string): string {
   return html
+    // Word heading styles → ## markers
     .replace(/<h[1-4][^>]*>(.*?)<\/h[1-4]>/gi, '\n\n## $1\n\n')
+    // Bold paragraphs matching "Semaine N / Post N / Week N" → ## markers
+    // Covers docs where post titles are bold <p> (no Word heading styles applied)
+    .replace(/<p[^>]*><strong>((semaine|jour|day|week|post|partie|chapitre|module)\s+\d+[^<]*)<\/strong><\/p>/gi, '\n\n## $1\n\n')
+    // Line breaks
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
+    // Tables: cell separator + row newline
+    .replace(/<\/t[dh][^>]*>/gi, ' | ')
+    .replace(/<\/tr[^>]*>/gi, '\n')
+    // Lists: each item ends with newline, list block ends with blank line
+    .replace(/<\/li[^>]*>/gi, '\n')
+    .replace(/<\/(ul|ol)[^>]*>/gi, '\n')
+    // Paragraphs → double newline (block separator)
+    .replace(/<\/p[^>]*>/gi, '\n\n')
+    // Strip all remaining tags
     .replace(/<[^>]*>/g, '')
+    // Decode HTML entities (full set)
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
     .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code)))
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
