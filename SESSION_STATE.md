@@ -4,28 +4,24 @@
 
 ---
 
-## ⚡ État instantané (mise à jour : 2026-03-27)
+## ⚡ État instantané (mise à jour : 2026-03-27 — session 2)
 
 | Info | Valeur |
 |------|--------|
-| **HEAD local** | `faf2815` — chore: SESSION_STATE push status updated |
-| **Dernier push GitHub** | `faf2815` — ✅ POUSSÉ 2026-03-27 à 10h57 |
+| **HEAD local** | `0dee5f9` — fix: supprimer framer-motion + corriger import bulk |
+| **Dernier push GitHub** | `0dee5f9` — ✅ POUSSÉ 2026-03-27 |
 | **Production Vercel** | https://contentflow-gilt.vercel.app |
-| **Dernier déploiement stable** | `5385d6c` — landing page fix |
+| **Dernier déploiement stable** | `0dee5f9` — fix import bulk (en déploiement) |
 | **Plan André** | TEAM |
-| **Index git** | ✅ Propre |
+| **Index git** | ✅ Propre (HEAD.lock détecté + supprimé par plumbing) |
 | **Branch active** | `main` |
 
 ---
 
 ## ⚠️ ACTIONS REQUISES AU PROCHAIN DÉMARRAGE
 
-1. **Vérifier Vercel auto-deploy** de `faf2815` sur https://vercel.com/dashboard
-2. **Supprimer manuellement depuis Windows** les fichiers lock stale :
-   - `.git/index.lock`
-   - `.git/refs/heads/main.lock`
-   - `.git/refs/stash.lock`
-   *(Ces fichiers bloquent git add/commit/stash depuis Linux — pas critiques si on utilise le plumbing)*
+1. **Vérifier Vercel auto-deploy** de `0dee5f9` sur https://vercel.com/dashboard
+2. **HEAD.lock** régulièrement stale — utiliser git plumbing si `git commit` échoue (voir RÈGLES GIT #6)
 
 ---
 
@@ -34,13 +30,16 @@
 | Feature | Status | Commit |
 |---------|--------|--------|
 | Landing page (Tailwind, sans framer-motion) | ✅ PROD | `5385d6c` |
-| Import multi-posts (rule-based + IA) | ✅ PROD | `fe5a04b` |
+| Import multi-posts (rule-based + IA) | ✅ PUSHED | `0dee5f9` |
+| Dashboard sans framer-motion (React 19 fix) | ✅ PUSHED | `0dee5f9` |
+| handleBulkImport erreur silencieuse fixée | ✅ PUSHED | `0dee5f9` |
+| htmlToText — marqueurs Semaine X préservés | ✅ PUSHED | `0dee5f9` |
+| API import multipart — blocage DOCX/PDF binaire | ✅ PUSHED | `0dee5f9` |
 | Free plan gate (teaser → upgrade modal) | ✅ PROD | `fbc955e` |
 | Bulk schedule (timeline preview + success) | ✅ PROD | `9c34893` |
 | Quotas IA par plan (imports + reformulations) | ✅ PROD | `fe5a04b` |
-| BulkImport fréquences (daily/3x week/weekdays/weekly) | ✅ LOCAL | `64dc389` |
-| Login/Signup refactorisés (sans framer-motion) | ✅ LOCAL | `64dc389` |
-| Pilier3 supprimé | ✅ LOCAL | `64dc389` |
+| BulkImport fréquences (daily/3x week/weekdays/weekly) | ✅ PUSHED | `0dee5f9` |
+| Login/Signup refactorisés (sans framer-motion) | ✅ PUSHED | `0dee5f9` |
 
 ---
 
@@ -99,6 +98,5 @@ lib/
 
 | Problème | Statut | Fix |
 |---------|--------|-----|
-| 3 fichiers lock stale (.git/*.lock) | ⚠️ Actif | Supprimer manuellement sur Windows |
+| HEAD.lock stale récurrent | ⚠️ Actif | Git plumbing Python (write-tree → commit-tree → écrire ref) |
 | `next.config.ts` sans ignoreBuildErrors | ⚠️ Risque | Tester build avant push |
-| Stash obsolète | ✅ Supprimé | — |
