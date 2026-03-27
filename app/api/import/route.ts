@@ -62,6 +62,7 @@ interface Block {
 function getBlocksAndGaps(rawText: string): Block[] {
   const result: Block[] = []
   let lastIndex = 0
+  let pendingSmall = ''   // accumulates tiny blocks before the first valid block
   // Match any sequence of 2+ newlines (possibly with spaces/tabs in between)
   const regex = /\n([ \t]*\n)+/g
   let match: RegExpExecArray | null
@@ -71,10 +72,31 @@ function getBlocksAndGaps(rawText: string): Block[] {
     // Count actual blank lines = number of \n minus 1
     const blankLines = (match[0].match(/\n/g) || []).length - 1
     if (blockText.length >= POST_MIN) {
-      result.push({ text: blockText, blankLinesAfter: blankLines })
-    } else if (blockText.length > 0 && result.length > 0) {
-      // Tiny block: append to previous block's text instead of dropping it
-      result[result.length - 1].text += '\n\n' + blockText
+      // Prepend any pending small blocks that couldn't be attached earlier
+      const fullText = pendingSmall ? pendingSmall + '\n\n' + blockText : blockText
+      pendingSmall = ''
+      result.push({ text: fullText, blankLinesAfter: blankLines })
+    } else if (blockText.length > 0) {
+      if (result.length > 0) {
+        const prevGap = result[result.length - 1].blankLinesAfter
+        if (prevGap >= 2) {
+          // Large gap before this tiny block → it starts a new post, buffer forward
+          pendingSmall = pendingSmall ? pendingSmall + '\n\n' + blockText : blockText
+        } else {
+          // Small gap → merge into previous block
+          result[result.length - 1].text += '\n\n' + blockText
+          result[result.length - 1].blankLinesAfter = blankLines
+        }
+      } else {
+        // No previous block yet — buffer it, will merge into next valid block
+        pendingSmall = pendingSmall ? pendingSmall + '\n\n' + blockText : blockText
+      }
+      // Flush pendingSmall if a large gap follows this tiny block
+      // (case: all paras of a post are < POST_MIN, separated by \n\n\n)
+      if (blankLines >= 2 && pendingSmall.length >= POST_MIN) {
+        result.push({ text: pendingSmall, blankLinesAfter: blankLines })
+        pendingSmall = ''
+      }
     }
     lastIndex = match.index + match[0].length
   }
@@ -82,9 +104,19 @@ function getBlocksAndGaps(rawText: string): Block[] {
   // Last block (no gap after)
   const lastBlock = rawText.slice(lastIndex).trim()
   if (lastBlock.length >= POST_MIN) {
-    result.push({ text: lastBlock, blankLinesAfter: 0 })
-  } else if (lastBlock.length > 0 && result.length > 0) {
-    result[result.length - 1].text += '\n\n' + lastBlock
+    const fullText = pendingSmall ? pendingSmall + '\n\n' + lastBlock : lastBlock
+    result.push({ text: fullText, blankLinesAfter: 0 })
+  } else if (lastBlock.length > 0) {
+    // Tiny last block — attach to pendingSmall if exists, else to previous block
+    if (pendingSmall) {
+      pendingSmall = pendingSmall + '\n\n' + lastBlock
+    } else if (result.length > 0) {
+      result[result.length - 1].text += '\n\n' + lastBlock
+    }
+  }
+  // Flush any remaining pendingSmall (post where all blocks are < POST_MIN)
+  if (pendingSmall) {
+    result.push({ text: pendingSmall, blankLinesAfter: 0 })
   }
 
   return result
@@ -145,7 +177,8 @@ function isGoodSplit(posts: string[]): boolean {
   if (posts.length < 2) return false
   if (posts.some(p => p.length > LINKEDIN_MAX + 500)) return false
   const avgLen = posts.reduce((s, p) => s + p.length, 0) / posts.length
-  if (avgLen < POST_SWEET_MIN) return false
+  // Use POST_MIN (not POST_SWEET_MIN) to allow short but valid posts
+  if (avgLen < POST_MIN) return false
   const sweetSpot = posts.filter(p => p.length >= POST_SWEET_MIN && p.length <= LINKEDIN_MAX)
   return sweetSpot.length >= Math.max(2, Math.ceil(posts.length * 0.4))
 }
@@ -159,8 +192,14 @@ function scoreSplit(posts: string[]): number {
   const variance = lengths.reduce((a, b) => a + Math.abs(b - avg), 0) / lengths.length
   const consistencyBonus = Math.max(0, 500 - variance / 8)
   const sweetRatio = sweetSpot.length / posts.length
-  // Reward: sweet spot posts + consistency + ratio
-  return sweetSpot.length * 100 + consistencyBonus + sweetRatio * 300
+  // Quality-weighted score: "ideal" posts (400-2800 chars) worth 3× more than
+  // short-but-valid posts (150-400 chars). This prevents micro-splits from winning
+  // over correct full-post splits just because they produce more sweet-spot items.
+  const IDEAL_MIN = 400
+  const idealPosts = sweetSpot.filter(p => p.length >= IDEAL_MIN).length
+  const okPosts = sweetSpot.length - idealPosts
+  const postScore = idealPosts * 150 + okPosts * 50
+  return postScore + consistencyBonus + sweetRatio * 300
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -215,18 +254,19 @@ function markdownHeadingSplit(text: string): string[] | null {
 // STRATEGY 1 — EXPLICIT SEPARATORS (---, ===, ***, ___  etc.)
 // ─────────────────────────────────────────────────────────────
 
-function explicitSepSplit(text: string): string[] | null {
+function explicitSepSplit(text: string, minLen = POST_MIN): string[] | null {
+  // Allow optional leading/trailing whitespace on separator lines (e.g. "   ---   ")
   const seps = [
-    /^[-]{3,}$/m,
-    /^[=]{3,}$/m,
-    /^[*]{3,}$/m,
-    /^[_]{3,}$/m,
-    /^[#]{3,}$/m,
-    /^[~]{3,}$/m,
+    /^\s*[-]{3,}\s*$/m,
+    /^\s*[=]{3,}\s*$/m,
+    /^\s*[*]{3,}\s*$/m,
+    /^\s*[_]{3,}\s*$/m,
+    /^\s*[#]{3,}\s*$/m,
+    /^\s*[~]{3,}\s*$/m,
   ]
   for (const sep of seps) {
     if (sep.test(text)) {
-      const parts = text.split(sep).map(s => cleanBlock(s)).filter(s => s.length >= POST_MIN)
+      const parts = text.split(sep).map(s => cleanBlock(s)).filter(s => s.length >= minLen)
       if (parts.length >= 2) return parts
     }
   }
@@ -381,7 +421,8 @@ function mergeShortPosts(posts: string[]): string[] {
     acc = acc ? acc + '\n\n' + posts[i] : posts[i]
 
     const isLast = i === posts.length - 1
-    const nextIsAlsoShort = !isLast && posts[i + 1].length < POST_SWEET_MIN
+    // Only merge if next post is truly too short (< POST_MIN), not just < POST_SWEET_MIN
+    const nextIsAlsoShort = !isLast && posts[i + 1].length < POST_MIN
     const currentIsLong = acc.length >= POST_SWEET_MIN
 
     if (currentIsLong || isLast || (!nextIsAlsoShort && acc.length >= POST_MIN)) {
@@ -410,7 +451,11 @@ function ruleSplit(rawText: string): string[] | null {
 
   // ── 0. Markdown headings (## / ###) — from htmlToStructuredText ──
   const mdHeadings = markdownHeadingSplit(text)
-  if (mdHeadings && mdHeadings.length >= 2 && isGoodSplit(mdHeadings)) return mdHeadings
+  if (mdHeadings && mdHeadings.length >= 2) {
+    if (isGoodSplit(mdHeadings)) return mdHeadings
+    // Not perfect quality but still structured — add as candidate
+    addCandidate(mdHeadings)
+  }
 
   // ── 1. Explicit separators (---, ===, etc.) — instant win ──
   const explicitResult = explicitSepSplit(text)
@@ -421,8 +466,13 @@ function ruleSplit(rawText: string): string[] | null {
     addCandidate(explicitResult)
   }
 
-  // ── 2. Labeled markers (Post N, Semaine N, 1.) ──
-  addCandidate(labeledMarkerSplit(text))
+  // ── 2. Labeled markers (Post N, Semaine N, 1.) — high confidence when found ──
+  const labeledResult = labeledMarkerSplit(text)
+  if (labeledResult && labeledResult.length >= 2) {
+    const merged = mergeShortPosts(labeledResult)
+    if (isGoodSplit(merged)) return merged
+    addCandidate(labeledResult)
+  }
 
   // ── 3. Block parsing — foundation for strategies 3 & 4 ──
   const blocks = getBlocksAndGaps(text)
@@ -435,10 +485,29 @@ function ruleSplit(rawText: string): string[] | null {
   addCandidate(signalBasedSplit(blocks))
 
   // ── 5. Fallback: try all single-line blocks (one post per line) ──
-  const lineBlocks = text.split('\n').map(l => l.trim()).filter(l => l.length >= POST_SWEET_MIN)
+  // For docs with no paragraph structure (e.g. list of hooks), lower the line threshold
+  const lineThreshold = blocks.length <= 1 ? 20 : POST_SWEET_MIN
+  const lineBlocks = text.split('\n').map(l => l.trim()).filter(l => l.length >= lineThreshold)
   if (lineBlocks.length >= 3) addCandidate(lineBlocks)
 
-  if (candidates.length === 0) return null
+  if (candidates.length === 0) {
+    // Last resort: explicit separators with a low minimum (for short docs like F08)
+    const shortExplicit = explicitSepSplit(text, 10)
+    if (shortExplicit && shortExplicit.length >= 2) return shortExplicit
+    // Emoji boundaries: if ≥ 2 sections start with an emoji, split there
+    // (e.g. 4 emoji posts separated by \n\n, all too short for getBlocksAndGaps)
+    const emojiBoundaryParts = text.split(/\n+(?=[\u{1F300}-\u{1FAFF}])/u)
+    if (emojiBoundaryParts.length >= 2) {
+      const emojiPosts = emojiBoundaryParts.map(p => p.trim()).filter(p => p.length >= POST_MIN)
+      if (emojiPosts.length >= 2) return emojiPosts
+    }
+    // Strong hook lines: if ≥ 4 lines have a strong open signal → list of one-liners
+    const strongHookLines = text.split('\n').map(l => l.trim()).filter(l => l.length >= 20 && postOpenStrength(l) >= 2)
+    if (strongHookLines.length >= 4) return strongHookLines
+    // No split possible — return the whole text if it's a valid post
+    if (text.length >= POST_MIN) return [text]
+    return null
+  }
 
   // Score all candidates, return best
   const scored = candidates
@@ -451,10 +520,46 @@ function ruleSplit(rawText: string): string[] | null {
     const fallback = candidates
       .map(posts => ({ posts, score: posts.length }))
       .sort((a, b) => b.score - a.score)
-    return fallback.length > 0 ? fallback[0].posts.slice(0, 500) : null
+    return fallback.length > 0 ? fallback[0].posts : null
   }
 
-  return scored[0].posts.slice(0, 500)
+  // Protection against over-splitting short, cohesive texts
+  const winner = scored[0]
+  const gapMaxSize = blocks.length > 0 ? Math.max(...blocks.map(b => b.blankLinesAfter)) : 0
+  if (gapMaxSize < 2) {
+    const largeBlocks = blocks.filter(b => b.text.length >= 400).length
+    const hasEnoughLargeBlocks = blocks.length > 0 && largeBlocks >= blocks.length / 2
+    if (!hasEnoughLargeBlocks) {
+      if (text.length <= LINKEDIN_MAX) {
+        // Short text with no structure → return as single post
+        return [text]
+      } else {
+        // Long unstructured text → split into balanced chunks at block boundaries
+        // Target size = LINKEDIN_MAX / num_parts for even distribution
+        const numParts = Math.ceil(text.length / LINKEDIN_MAX)
+        const chunkTarget = Math.floor(LINKEDIN_MAX / numParts)
+        const chunks: string[] = []
+        let current = ''
+        for (const block of blocks) {
+          const candidate = current ? current + '\n\n' + block.text : block.text
+          if (current && candidate.length > chunkTarget) {
+            const cleaned = cleanBlock(current)
+            if (cleaned.length >= POST_MIN) chunks.push(cleaned)
+            current = block.text
+          } else {
+            current = candidate
+          }
+        }
+        if (current) {
+          const cleaned = cleanBlock(current)
+          if (cleaned.length >= POST_MIN) chunks.push(cleaned)
+        }
+        if (chunks.length >= 1) return chunks
+      }
+    }
+  }
+
+  return winner.posts
 }
 
 // ─────────────────────────────────────────────────────────────
