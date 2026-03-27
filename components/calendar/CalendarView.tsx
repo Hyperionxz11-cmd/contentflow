@@ -24,10 +24,10 @@ const MONTHS_FR = [
 ]
 
 const statusColors: Record<string, string> = {
-  scheduled: 'bg-[var(--primary)] text-white',
-  published: 'bg-emerald-500 text-white',
-  failed: 'bg-red-500 text-white',
-  draft: 'bg-gray-300 text-gray-700',
+  scheduled: 'bg-[#0A66C2] text-white',
+  published: 'bg-[#057642] text-white',
+  failed: 'bg-[#CC1016] text-white',
+  draft: 'bg-gray-200 text-gray-600',
 }
 
 /** Converts a Date to local YYYY-MM-DD string (avoids UTC timezone shift) */
@@ -139,66 +139,61 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
     dragPostId.current = null
   }
 
+  const font = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div style={{background:'#FFFFFF',border:'1px solid rgba(0,0,0,0.08)',borderRadius:'8px',overflow:'hidden',boxShadow:'0 1px 3px rgba(0,0,0,0.06)',fontFamily:font}}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 20px',borderBottom:'1px solid rgba(0,0,0,0.08)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+          <h2 style={{fontWeight:700,fontSize:'18px',color:'rgba(0,0,0,0.9)',margin:0,letterSpacing:'-0.01em',fontFamily:font}}>
             {MONTHS_FR[month]} {year}
           </h2>
-          <div className="flex items-center gap-1">
-            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronLeft className="w-5 h-5 text-gray-500" />
+          <div style={{display:'flex',alignItems:'center',gap:'2px'}}>
+            <button onClick={() => navigate(-1)} style={{width:'28px',height:'28px',borderRadius:'50%',border:'none',background:'transparent',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(0,0,0,0.55)',transition:'background 150ms'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,0.06)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <ChevronLeft style={{width:'16px',height:'16px'}} />
             </button>
-            <button
-              onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-1 text-xs font-medium text-[var(--primary)] hover:bg-[var(--primary-light)] rounded-lg transition-colors"
-            >
-              Aujourd'hui
+            <button onClick={() => setCurrentDate(new Date())} style={{padding:'4px 12px',borderRadius:'9999px',border:'1px solid #0A66C2',background:'transparent',color:'#0A66C2',fontSize:'12px',fontWeight:600,fontFamily:font,cursor:'pointer',transition:'background 150ms'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(10,102,194,0.06)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              {"Aujourd'hui"}
             </button>
-            <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-              <ChevronRight className="w-5 h-5 text-gray-500" />
+            <button onClick={() => navigate(1)} style={{width:'28px',height:'28px',borderRadius:'50%',border:'none',background:'transparent',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(0,0,0,0.55)',transition:'background 150ms'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,0.06)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <ChevronRight style={{width:'16px',height:'16px'}} />
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
           {onPostReschedule && (
-            <p className="text-xs text-gray-400 hidden md:block">
-              🖱️ Glisse un post pour le reprogrammer
-            </p>
+            <p style={{fontSize:'11px',color:'rgba(0,0,0,0.4)'}}>🖱️ Glisse pour reprogrammer</p>
           )}
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setView('week')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'week' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
-            >
-              Semaine
-            </button>
-            <button
-              onClick={() => setView('month')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${view === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
-            >
-              Mois
-            </button>
+          <div style={{display:'flex',gap:'2px',background:'rgba(0,0,0,0.05)',borderRadius:'9999px',padding:'3px'}}>
+            {(['week','month'] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                style={{padding:'5px 14px',borderRadius:'9999px',border:'none',fontSize:'12px',fontWeight:600,fontFamily:font,cursor:'pointer',transition:'all 150ms',background:view===v?'#FFFFFF':'transparent',color:view===v?'rgba(0,0,0,0.9)':'rgba(0,0,0,0.5)',boxShadow:view===v?'0 1px 3px rgba(0,0,0,0.12)':'none'}}
+              >
+                {v==='week'?'Semaine':'Mois'}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-gray-100">
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7, 1fr)',borderBottom:'1px solid rgba(0,0,0,0.08)',background:'#FAFAFA'}}>
         {DAYS_FR.map(day => (
-          <div key={day} className="py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <div key={day} style={{padding:'10px 0',textAlign:'center',fontSize:'11px',fontWeight:700,color:'rgba(0,0,0,0.4)',letterSpacing:'0.05em',textTransform:'uppercase',fontFamily:font}}>
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className={`grid grid-cols-7 ${view === 'week' ? 'min-h-[200px]' : ''}`}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7, 1fr)'}}>
         {displayDays.map(({ date, currentMonth }, idx) => {
           const dayPosts = getPostsForDate(date)
           const dateStr = toLocalDateStr(date)
+          const today = isToday(date)
           const isDragOver = dragOverDate === dateStr
 
           return (
@@ -208,50 +203,63 @@ export default function CalendarView({ posts, onDayClick, onPostClick, onPostRes
               onDragOver={e => handleDragOver(e, dateStr)}
               onDragLeave={handleDragLeave}
               onDrop={e => handleDrop(e, dateStr)}
-              className={`
-                min-h-[100px] p-2 border-b border-r border-gray-50 cursor-pointer transition-colors
-                hover:bg-blue-50/50
-                ${!currentMonth ? 'bg-gray-50/50' : ''}
-                ${isToday(date) ? 'bg-blue-50/80' : ''}
-                ${isDragOver ? 'bg-violet-100 border-violet-300 border-2 scale-[1.01] transition-transform' : ''}
-              `}
+              style={{
+                minHeight:view==='week'?'160px':'100px',
+                padding:'8px',
+                borderBottom:'1px solid rgba(0,0,0,0.06)',
+                borderRight:'1px solid rgba(0,0,0,0.06)',
+                cursor:'pointer',
+                transition:'background 120ms',
+                background: isDragOver
+                  ? 'rgba(10,102,194,0.08)'
+                  : today
+                  ? 'rgba(10,102,194,0.04)'
+                  : !currentMonth
+                  ? 'rgba(0,0,0,0.01)'
+                  : '#FFFFFF',
+                outline: isDragOver ? '2px solid #0A66C2' : 'none',
+              }}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`
-                  text-sm font-medium
-                  ${isToday(date) ? 'w-7 h-7 bg-[var(--primary)] text-white rounded-full flex items-center justify-center text-xs' : ''}
-                  ${!currentMonth ? 'text-gray-300' : 'text-gray-700'}
-                `}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'4px'}}>
+                <span style={{
+                  width:'26px',height:'26px',display:'flex',alignItems:'center',justifyContent:'center',
+                  borderRadius:'50%',fontSize:'13px',fontWeight:today?700:400,fontFamily:font,
+                  background:today?'#0A66C2':'transparent',
+                  color:today?'#FFFFFF':!currentMonth?'rgba(0,0,0,0.25)':'rgba(0,0,0,0.75)',
+                }}>
                   {date.getDate()}
                 </span>
                 {currentMonth && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onDayClick(dateStr) }}
-                    className="p-0.5 rounded hover:bg-[var(--primary-light)] transition-all opacity-0 group-hover:opacity-100"
+                    onClick={e => { e.stopPropagation(); onDayClick(dateStr) }}
+                    style={{width:'20px',height:'20px',borderRadius:'50%',border:'none',background:'rgba(10,102,194,0.1)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',padding:0}}
                   >
-                    <Plus className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    <Plus style={{width:'12px',height:'12px',color:'#0A66C2'}} />
                   </button>
                 )}
               </div>
-              <div className="space-y-1">
+              <div style={{display:'flex',flexDirection:'column',gap:'3px'}}>
                 {dayPosts.slice(0, 3).map(post => (
                   <button
                     key={post.id}
                     draggable={!!onPostReschedule}
                     onDragStart={e => { e.stopPropagation(); handleDragStart(e, post.id) }}
                     onDragEnd={handleDragEnd}
-                    onClick={(e) => { e.stopPropagation(); onPostClick(post) }}
-                    className={`w-full text-left text-[10px] font-medium px-1.5 py-1 rounded truncate transition-transform ${statusColors[post.status]} ${onPostReschedule ? 'cursor-grab active:cursor-grabbing hover:opacity-90 hover:scale-[1.02]' : ''}`}
-                    title={onPostReschedule ? 'Glisse pour reprogrammer' : undefined}
+                    onClick={e => { e.stopPropagation(); onPostClick(post) }}
+                    className={`${statusColors[post.status]}`}
+                    style={{width:'100%',textAlign:'left',fontSize:'10px',fontWeight:600,fontFamily:font,padding:'3px 6px',borderRadius:'4px',border:'none',cursor:onPostReschedule?'grab':'pointer',overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis',transition:'opacity 120ms'}}
+                    title={onPostReschedule?'Glisse pour reprogrammer':undefined}
+                    onMouseEnter={e=>e.currentTarget.style.opacity='0.8'}
+                    onMouseLeave={e=>e.currentTarget.style.opacity='1'}
                   >
-                    {post.content.replace(/<[^>]+>/g, '').substring(0, 25)}...
+                    {post.content.replace(/<[^>]+>/g, '').substring(0, 22)}…
                   </button>
                 ))}
                 {dayPosts.length > 3 && (
-                  <span className="text-[10px] text-gray-400 font-medium">+{dayPosts.length - 3} autres</span>
+                  <span style={{fontSize:'10px',fontWeight:600,color:'rgba(0,0,0,0.4)',paddingLeft:'2px',fontFamily:font}}>+{dayPosts.length - 3} autres</span>
                 )}
                 {isDragOver && (
-                  <div className="text-[10px] text-violet-600 font-semibold text-center py-1 animate-pulse">
+                  <div style={{fontSize:'10px',color:'#0A66C2',fontWeight:700,textAlign:'center',padding:'2px 0'}}>
                     ↓ Déplacer ici
                   </div>
                 )}

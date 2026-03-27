@@ -6,9 +6,10 @@ interface LinkedInPreviewProps {
   content: string
   authorName?: string
   authorTitle?: string
+  authorAvatar?: string
 }
 
-export default function LinkedInPreview({ content, authorName = 'Ton Nom', authorTitle = 'Ton titre LinkedIn' }: LinkedInPreviewProps) {
+export default function LinkedInPreview({ content, authorName = 'Ton Nom', authorTitle = 'Ton titre LinkedIn', authorAvatar }: LinkedInPreviewProps) {
   const formatContent = (text: string) => {
     if (!text) return <span className="text-gray-300 italic">Écris quelque chose pour voir la preview...</span>
     return text.split('\n').map((line, i) => (
@@ -23,9 +24,17 @@ export default function LinkedInPreview({ content, authorName = 'Ton Nom', autho
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden max-w-md">
       {/* Header */}
       <div className="p-4 flex items-start gap-3">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-blue-400 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-          {authorName.charAt(0).toUpperCase()}
-        </div>
+        {authorAvatar ? (
+          <img
+            src={authorAvatar}
+            alt={authorName}
+            className="w-12 h-12 rounded-full object-cover flex-shrink-0 border border-gray-200"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0A66C2] to-blue-400 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            {authorName.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-gray-900">{authorName}</p>
           <p className="text-xs text-gray-500 truncate">{authorTitle}</p>

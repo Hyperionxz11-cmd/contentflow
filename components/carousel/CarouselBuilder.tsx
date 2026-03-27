@@ -171,114 +171,93 @@ export default function CarouselBuilder({ initialText = '', onClose, onInsert }:
     onClose()
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col">
+  const SF = '-apple-system, "SF Pro Display", BlinkMacSystemFont, "Helvetica Neue", sans-serif'
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-              <Layers className="w-4 h-4 text-violet-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Carousel Builder</h2>
-              <p className="text-xs text-gray-400">{slides.length} slide{slides.length > 1 ? 's' : ''} · LinkedIn carousel</p>
-            </div>
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.35)', backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)', zIndex:70, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', fontFamily:SF }}>
+      <div style={{ background:'#fff', borderRadius:'28px', boxShadow:'0 48px 96px -24px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.04)', width:'100%', maxWidth:'960px', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+        {/* ── HEADER ── */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'22px 28px 18px', borderBottom:'1px solid rgba(0,0,0,0.06)', flexShrink:0 }}>
+          <div>
+            <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.08em', textTransform:'uppercase', color:'#0A66C2', margin:'0 0 4px' }}>ContentFlow</p>
+            <h2 style={{ fontSize:'22px', fontWeight:700, letterSpacing:'-0.4px', color:'#1d1d1f', margin:0, lineHeight:1.1 }}>
+              Carousel Builder
+            </h2>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50">
-            <X className="w-5 h-5" />
-          </button>
+          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+            <span style={{ fontSize:'12px', color:'#86868b' }}>{slides.length} slide{slides.length > 1 ? 's' : ''}</span>
+            <button onClick={onClose}
+              style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#f2f2f7', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#86868b' }}>
+              <X style={{ width:'16px', height:'16px' }} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        {/* ── BODY (3 columns) ── */}
+        <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
 
-          {/* Left: Slide list + controls */}
-          <div className="w-64 border-r border-gray-100 flex flex-col">
-            {/* Text input section */}
-            <div className="p-4 border-b border-gray-50">
+          {/* ── LEFT: slides list + regen ── */}
+          <div style={{ width:'220px', borderRight:'1px solid rgba(0,0,0,0.06)', display:'flex', flexDirection:'column', flexShrink:0 }}>
+
+            {/* Regen input */}
+            <div style={{ padding:'14px', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
               {showTextInput ? (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Colle ton texte ici</label>
-                  <textarea
-                    value={inputText}
-                    onChange={e => setInputText(e.target.value)}
-                    className="w-full text-xs text-gray-700 border border-gray-200 rounded-lg p-2 resize-none focus:outline-none focus:ring-2 focus:ring-violet-400 h-24 font-mono"
+                <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                  <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.05em', textTransform:'uppercase', color:'#86868b', margin:0 }}>Texte source</p>
+                  <textarea value={inputText} onChange={e => setInputText(e.target.value)}
                     placeholder="Colle ton contenu LinkedIn..."
-                  />
-                  <button
-                    onClick={handleRegenerate}
-                    disabled={!inputText.trim()}
-                    className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 bg-violet-600 text-white text-xs font-semibold rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-40"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Générer les slides
+                    style={{ width:'100%', fontSize:'12px', color:'#1d1d1f', background:'#f5f5f7', border:'none', borderRadius:'12px', padding:'10px', resize:'none', outline:'none', fontFamily:'ui-monospace, monospace', lineHeight:1.5, height:'88px', boxSizing:'border-box' }} />
+                  <button onClick={handleRegenerate} disabled={!inputText.trim()}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', padding:'9px', background: inputText.trim() ? '#0A66C2' : '#d1d1d6', color:'#fff', fontSize:'12px', fontWeight:600, border:'none', borderRadius:'999px', cursor: inputText.trim() ? 'pointer' : 'not-allowed' }}>
+                    <RefreshCw style={{ width:'12px', height:'12px' }} /> Générer
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowTextInput(true)}
-                  className="w-full flex items-center gap-1.5 py-2 text-xs text-violet-600 hover:bg-violet-50 rounded-lg transition-colors font-medium justify-center"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Régénérer depuis texte
+                <button onClick={() => setShowTextInput(true)}
+                  style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', padding:'9px', background:'rgba(10,102,194,0.07)', color:'#0A66C2', fontSize:'12px', fontWeight:600, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                  <RefreshCw style={{ width:'12px', height:'12px' }} /> Régénérer
                 </button>
               )}
             </div>
 
-            {/* Slides list */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {/* Slide list */}
+            <div style={{ flex:1, overflowY:'auto', padding:'10px', display:'flex', flexDirection:'column', gap:'6px' }}>
               {slides.map((s, i) => (
-                <div
-                  key={s.id}
-                  onClick={() => { setCurrentIdx(i); setEditingTitle(false); setEditingBody(false) }}
-                  className={`relative group p-3 rounded-xl cursor-pointer transition-all text-left ${
-                    i === currentIdx
-                      ? 'ring-2 ring-violet-500 bg-violet-50'
-                      : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-0.5">Slide {i + 1}</p>
-                      <p className="text-xs font-semibold text-gray-700 truncate">{s.title || '(vide)'}</p>
-                      {s.body && <p className="text-[10px] text-gray-400 truncate mt-0.5">{s.body}</p>}
+                <div key={s.id} onClick={() => { setCurrentIdx(i); setEditingTitle(false); setEditingBody(false) }}
+                  style={{ position:'relative', padding:'10px 12px', borderRadius:'14px', cursor:'pointer', background: i === currentIdx ? '#fff' : '#f5f5f7', boxShadow: i === currentIdx ? '0 2px 10px rgba(0,0,0,0.08), 0 0 0 2px rgba(10,102,194,0.25)' : 'none', transition:'all 0.15s' }}>
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'6px' }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:'10px', fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color: i === currentIdx ? '#0A66C2' : '#86868b', margin:'0 0 3px' }}>Slide {i + 1}</p>
+                      <p style={{ fontSize:'12px', fontWeight:600, color:'#1d1d1f', margin:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.title || '(vide)'}</p>
+                      {s.body && <p style={{ fontSize:'11px', color:'#86868b', margin:'2px 0 0', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.body}</p>}
                     </div>
                     {slides.length > 1 && (
-                      <button
-                        onClick={e => { e.stopPropagation(); deleteSlide(i) }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-all flex-shrink-0"
-                      >
-                        <Trash2 className="w-3 h-3" />
+                      <button onClick={e => { e.stopPropagation(); deleteSlide(i) }}
+                        style={{ width:'22px', height:'22px', borderRadius:'50%', background:'rgba(255,59,48,0.1)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#ff3b30', flexShrink:0, opacity:0 }}
+                        onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.opacity = '1'}
+                        onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.opacity = '0'}>
+                        <Trash2 style={{ width:'11px', height:'11px' }} />
                       </button>
                     )}
                   </div>
                 </div>
               ))}
               {slides.length < 10 && (
-                <button
-                  onClick={addSlide}
-                  className="w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-xs text-gray-400 hover:border-violet-300 hover:text-violet-500 transition-colors flex items-center justify-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Ajouter un slide
+                <button onClick={addSlide}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', background:'none', border:'1.5px dashed #d1d1d6', borderRadius:'14px', color:'#86868b', fontSize:'12px', fontWeight:500, cursor:'pointer' }}>
+                  <Plus style={{ width:'13px', height:'13px' }} /> Ajouter
                 </button>
               )}
             </div>
 
             {/* Theme selector */}
-            <div className="p-3 border-t border-gray-100">
-              <p className="text-xs font-medium text-gray-500 mb-2">Thème</p>
-              <div className="grid grid-cols-2 gap-1.5">
+            <div style={{ padding:'12px', borderTop:'1px solid rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize:'10px', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', color:'#86868b', margin:'0 0 8px' }}>Thème</p>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
                 {THEMES.map((t, i) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setThemeIdx(i)}
-                    className={`p-2 rounded-lg text-[10px] font-semibold transition-all ${
-                      i === themeIdx ? 'ring-2 ring-violet-500' : 'hover:ring-1 hover:ring-gray-300'
-                    }`}
-                    style={{ background: t.bg, color: t.text }}
-                  >
+                  <button key={t.id} onClick={() => setThemeIdx(i)}
+                    style={{ padding:'8px 6px', borderRadius:'12px', border: i === themeIdx ? '2px solid rgba(255,255,255,0.6)' : '2px solid transparent', background:t.bg, color:t.text, fontSize:'10px', fontWeight:700, cursor:'pointer', boxShadow: i === themeIdx ? '0 0 0 2px #0A66C2' : 'none', transition:'all 0.15s' }}>
                     {t.label}
                   </button>
                 ))}
@@ -286,143 +265,87 @@ export default function CarouselBuilder({ initialText = '', onClose, onInsert }:
             </div>
           </div>
 
-          {/* Center: Slide preview */}
-          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
-            {/* Phone frame */}
-            <div
-              className="w-72 h-96 rounded-3xl shadow-2xl overflow-hidden relative flex flex-col"
-              style={{ background: theme.bg }}
-            >
-              {/* Slide number */}
-              <div className="absolute top-4 right-4 text-xs font-bold" style={{ color: theme.number }}>
+          {/* ── CENTER: preview ── */}
+          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'32px 24px', background:'#f5f5f7' }}>
+
+            {/* Slide card */}
+            <div style={{ width:'288px', height:'384px', borderRadius:'28px', boxShadow:'0 24px 64px -16px rgba(0,0,0,0.28)', overflow:'hidden', position:'relative', display:'flex', flexDirection:'column', background:theme.bg, flexShrink:0 }}>
+              <div style={{ position:'absolute', top:'14px', right:'16px', fontSize:'11px', fontWeight:700, color:theme.number }}>
                 {currentIdx + 1}/{slides.length}
               </div>
-
-              {/* Slide content */}
-              <div className="flex-1 flex flex-col justify-center px-8 py-10">
-                {/* Title */}
-                <div
-                  className="mb-4 px-3 py-2 rounded-xl cursor-text"
-                  style={{ background: theme.accent }}
-                  onClick={() => { setEditingTitle(true); setEditingBody(false) }}
-                >
+              <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'32px 28px 20px' }}>
+                <div style={{ marginBottom:'16px', padding:'10px 14px', borderRadius:'14px', background:theme.accent, cursor:'text' }}
+                  onClick={() => { setEditingTitle(true); setEditingBody(false) }}>
                   {editingTitle ? (
-                    <textarea
-                      autoFocus
-                      value={slide.title}
-                      onChange={e => updateSlide('title', e.target.value)}
-                      onBlur={() => setEditingTitle(false)}
-                      className="w-full bg-transparent text-lg font-bold resize-none focus:outline-none"
-                      style={{ color: theme.text }}
-                      rows={3}
-                    />
+                    <textarea autoFocus value={slide.title} onChange={e => updateSlide('title', e.target.value)} onBlur={() => setEditingTitle(false)}
+                      style={{ width:'100%', background:'transparent', fontSize:'18px', fontWeight:700, border:'none', outline:'none', resize:'none', color:theme.text, fontFamily:SF, lineHeight:1.3 }} rows={3} />
                   ) : (
-                    <p className="text-lg font-bold leading-tight" style={{ color: theme.text }}>
-                      {slide.title || 'Titre ici...'}
-                    </p>
+                    <p style={{ fontSize:'18px', fontWeight:700, color:theme.text, margin:0, lineHeight:1.3 }}>{slide.title || 'Titre ici…'}</p>
                   )}
                 </div>
-
-                {/* Body */}
-                <div
-                  className="cursor-text"
-                  onClick={() => { setEditingBody(true); setEditingTitle(false) }}
-                >
+                <div style={{ cursor:'text' }} onClick={() => { setEditingBody(true); setEditingTitle(false) }}>
                   {editingBody ? (
-                    <textarea
-                      autoFocus
-                      value={slide.body}
-                      onChange={e => updateSlide('body', e.target.value)}
-                      onBlur={() => setEditingBody(false)}
-                      className="w-full bg-transparent text-sm resize-none focus:outline-none"
-                      style={{ color: theme.text, opacity: 0.85 }}
-                      rows={4}
-                    />
+                    <textarea autoFocus value={slide.body} onChange={e => updateSlide('body', e.target.value)} onBlur={() => setEditingBody(false)}
+                      style={{ width:'100%', background:'transparent', fontSize:'13px', border:'none', outline:'none', resize:'none', color:theme.text, opacity:0.82, fontFamily:SF, lineHeight:1.5 }} rows={4} />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: theme.text, opacity: 0.85 }}>
-                      {slide.body || 'Corps du slide...'}
-                    </p>
+                    <p style={{ fontSize:'13px', color:theme.text, opacity:0.82, margin:0, lineHeight:1.5, whiteSpace:'pre-wrap' }}>{slide.body || 'Corps du slide…'}</p>
                   )}
                 </div>
               </div>
-
-              {/* Brand footer */}
-              <div className="px-8 pb-5">
-                <div className="h-px mb-3" style={{ background: theme.accent }} />
-                <p className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: theme.number }}>
-                  ContentFlow
-                </p>
+              <div style={{ padding:'0 28px 18px' }}>
+                <div style={{ height:'1px', background:theme.accent, marginBottom:'10px' }} />
+                <p style={{ fontSize:'9px', fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:theme.number, margin:0 }}>ContentFlow</p>
               </div>
             </div>
 
-            {/* Navigation */}
-            <div className="flex items-center gap-4 mt-5">
-              <button
-                onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
-                disabled={currentIdx === 0}
-                className="p-2 rounded-full bg-white shadow border border-gray-200 disabled:opacity-30 hover:bg-gray-50 transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
+            {/* Nav */}
+            <div style={{ display:'flex', alignItems:'center', gap:'16px', marginTop:'20px' }}>
+              <button onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))} disabled={currentIdx === 0}
+                style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#fff', border:'none', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', cursor: currentIdx === 0 ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#48484a', opacity: currentIdx === 0 ? 0.3 : 1 }}>
+                <ChevronLeft style={{ width:'18px', height:'18px' }} />
               </button>
-              <div className="flex gap-1.5">
+              <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
                 {slides.map((_, i) => (
-                  <div
-                    key={i}
-                    onClick={() => setCurrentIdx(i)}
-                    className="cursor-pointer transition-all rounded-full"
-                    style={{
-                      width: i === currentIdx ? 20 : 8,
-                      height: 8,
-                      background: i === currentIdx ? '#7C3AED' : '#d1d5db',
-                    }}
-                  />
+                  <div key={i} onClick={() => setCurrentIdx(i)} style={{ width: i === currentIdx ? 20 : 7, height:7, borderRadius:'999px', background: i === currentIdx ? '#0A66C2' : '#c7c7cc', cursor:'pointer', transition:'all 0.2s' }} />
                 ))}
               </div>
-              <button
-                onClick={() => setCurrentIdx(Math.min(slides.length - 1, currentIdx + 1))}
-                disabled={currentIdx === slides.length - 1}
-                className="p-2 rounded-full bg-white shadow border border-gray-200 disabled:opacity-30 hover:bg-gray-50 transition-colors"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
+              <button onClick={() => setCurrentIdx(Math.min(slides.length - 1, currentIdx + 1))} disabled={currentIdx === slides.length - 1}
+                style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#fff', border:'none', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', cursor: currentIdx === slides.length - 1 ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#48484a', opacity: currentIdx === slides.length - 1 ? 0.3 : 1 }}>
+                <ChevronRight style={{ width:'18px', height:'18px' }} />
               </button>
             </div>
-
-            <p className="mt-3 text-xs text-gray-400 text-center">Clique sur le titre ou le corps pour modifier</p>
+            <p style={{ marginTop:'12px', fontSize:'11px', color:'#86868b' }}>Clique sur le titre ou le texte pour modifier</p>
           </div>
 
-          {/* Right: Post generator */}
-          <div className="w-72 border-l border-gray-100 flex flex-col">
-            <div className="p-4 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-900 mb-1">Post LinkedIn généré</h3>
-              <p className="text-xs text-gray-400">Texte à publier avec ton carousel</p>
+          {/* ── RIGHT: post preview + actions ── */}
+          <div style={{ width:'260px', borderLeft:'1px solid rgba(0,0,0,0.06)', display:'flex', flexDirection:'column', flexShrink:0 }}>
+            <div style={{ padding:'18px 18px 14px', borderBottom:'1px solid rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize:'11px', fontWeight:600, letterSpacing:'0.07em', textTransform:'uppercase', color:'#86868b', margin:'0 0 4px' }}>Post LinkedIn</p>
+              <p style={{ fontSize:'13px', fontWeight:700, color:'#1d1d1f', margin:0 }}>Texte à publier</p>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
+            <div style={{ flex:1, overflowY:'auto', padding:'14px' }}>
+              <div style={{ background:'#f5f5f7', borderRadius:'16px', padding:'14px', fontSize:'12px', color:'#3a3a3c', lineHeight:1.6, whiteSpace:'pre-wrap', fontFamily:'ui-monospace, monospace' }}>
                 {generateLinkedInPost(slides, theme.label)}
               </div>
-              <div className="mt-3 p-3 bg-blue-50 rounded-xl">
-                <p className="text-[11px] text-blue-700 font-medium mb-1">💡 Comment publier</p>
-                <p className="text-[10px] text-blue-600 leading-relaxed">
-                  1. Exporte chaque slide en image (capture d'écran)<br/>
-                  2. Sur LinkedIn → Créer un post → Ajoute les images dans l'ordre<br/>
+              <div style={{ marginTop:'12px', padding:'12px 14px', background:'rgba(10,102,194,0.05)', borderRadius:'14px' }}>
+                <p style={{ fontSize:'11px', fontWeight:600, color:'#0A66C2', margin:'0 0 6px' }}>Comment publier</p>
+                <p style={{ fontSize:'11px', color:'#86868b', lineHeight:1.5, margin:0 }}>
+                  1. Capture chaque slide<br/>
+                  2. LinkedIn → Créer un post → Ajoute les images<br/>
                   3. Colle le texte ci-dessus
                 </p>
               </div>
             </div>
-            <div className="p-4 border-t border-gray-100 space-y-2">
-              <button
-                onClick={handleCopyPost}
-                className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+            <div style={{ padding:'14px', borderTop:'1px solid rgba(0,0,0,0.06)', display:'flex', flexDirection:'column', gap:'8px' }}>
+              <button onClick={handleCopyPost}
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'11px', background:'#f5f5f7', color: copied ? '#22c55e' : '#1d1d1f', fontSize:'13px', fontWeight:600, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                {copied ? <Check style={{ width:'15px', height:'15px' }} /> : <Copy style={{ width:'15px', height:'15px' }} />}
                 {copied ? 'Copié !' : 'Copier le post'}
               </button>
               {onInsert && (
-                <button
-                  onClick={handleInsert}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors"
-                >
-                  <Check className="w-4 h-4" />
+                <button onClick={handleInsert}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'11px', background:'#0A66C2', color:'#fff', fontSize:'13px', fontWeight:600, border:'none', borderRadius:'999px', cursor:'pointer' }}>
+                  <Check style={{ width:'15px', height:'15px' }} />
                   Insérer comme post
                 </button>
               )}
