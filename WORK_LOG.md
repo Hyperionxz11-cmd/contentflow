@@ -10,9 +10,9 @@
 ## État actuel de la production
 
 - **URL production** : https://contentflow-gilt.vercel.app
-- **Commit HEAD local** : `64dc389` — fix: save uncommitted local work (2026-03-27)
-- **Dernier push GitHub** : `b07b348` ⚠️ — push de `64dc389` REQUIS
-- **Dernier déploiement Vercel stable** : `5385d6c` — landing page Tailwind opérationnelle
+- **Commit HEAD local** : `200b711` — fix(splitter): 100% pass rate — 7 algorithmic fixes (2026-03-27)
+- **Dernier push GitHub** : `200b711` ✅
+- **Dernier déploiement Vercel stable** : en cours de déploiement (push `200b711`)
 - **Plan actuel André** : TEAM
 
 > **IMPORTANT** : Lire aussi SESSION_STATE.md pour l'état complet et les actions requises.
@@ -20,6 +20,23 @@
 ---
 
 ## Chronologie complète
+
+### 2026-03-27 — Splitter 100% pass rate (Claude)
+
+#### ✅ Fix algorithme de découpage — `200b711`
+- **Problème** : Algorithme de split ContentFlow à 93% sur harness 100 tests (D02, D10, D11, D18, E09, F03, F06 en échec).
+- **Fixes appliqués** :
+  1. `getBlocksAndGaps` : flush `pendingSmall` lors de grands gaps (≥2 sauts), + check `prevGap` pour éviter fusions incorrectes après grand gap
+  2. `mergeShortPosts` : seuil `nextIsAlsoShort` abaissé de `POST_SWEET_MIN` à `POST_MIN`
+  3. `explicitSepSplit` : paramètre `minLen` optionnel
+  4. `ruleSplit` : protection sur-découpage via ratio blocs larges (≥50% blocs ≥400 chars) au lieu de `winnerHasIdealPosts`
+  5. `ruleSplit` : chunk-split pour textes > LINKEDIN_MAX sans structure (target = `LINKEDIN_MAX/ceil(len/LINKEDIN_MAX)`)
+  6. `ruleSplit` : fallback emoji boundary (`/\n+(?=[\u{1F300}-\u{1FAFF}])/u`)
+  7. `ruleSplit` : fallback strong hook lines (≥4 lignes avec `postOpenStrength ≥ 2`)
+- **Résultat** : 100/100 tests ✅
+- **Fichiers modifiés** : `app/api/import/route.ts`, `scripts/test-splitter.js`
+
+---
 
 ### 2026-03-27 — Fix landing page blanche (Claude)
 
