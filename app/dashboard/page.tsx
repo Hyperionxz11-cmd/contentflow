@@ -18,29 +18,6 @@ import Analytics from '@/components/analytics/Analytics'
 import CarouselBuilder from '@/components/carousel/CarouselBuilder'
 import { defaultTemplates } from '@/lib/templates'
 
-// ── LinkedIn design tokens ──────────────────────────────
-const LI = {
-  bg:          '#F3F2EF',
-  white:       '#FFFFFF',
-  border:      'rgba(0,0,0,0.08)',
-  blue:        '#0A66C2',
-  blueHover:   '#004182',
-  blueBg:      'rgba(10,102,194,0.08)',
-  blueBgHover: 'rgba(10,102,194,0.14)',
-  green:       '#057642',
-  greenBg:     'rgba(5,118,66,0.1)',
-  red:         '#CC1016',
-  redBg:       'rgba(204,16,22,0.1)',
-  amber:       '#B45309',
-  amberBg:     'rgba(180,83,9,0.1)',
-  text:        'rgba(0,0,0,0.9)',
-  text2:       'rgba(0,0,0,0.6)',
-  text3:       'rgba(0,0,0,0.4)',
-  shadow:      '0 1px 3px rgba(0,0,0,0.08)',
-  shadowMd:    '0 4px 12px rgba(0,0,0,0.10)',
-}
-const FONT = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-
 interface Post {
   id: string
   content: string
@@ -80,6 +57,8 @@ export default function DashboardPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [retryingId, setRetryingId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState('')
   const POSTS_PER_PAGE = 20
   const FREE_PLAN_LIMIT = 3
   const [loading, setLoading] = useState(true)
@@ -96,6 +75,7 @@ export default function DashboardPage() {
         }
         setUser(user)
 
+        // Fetch profile
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -116,6 +96,7 @@ export default function DashboardPage() {
           } as Profile)
         }
 
+        // Fetch posts
         const { data: userPosts } = await supabase
           .from('posts')
           .select('*')
@@ -146,6 +127,7 @@ export default function DashboardPage() {
   }
 
   const handleSavePost = async (post: { content: string; scheduledAt: string; status: string }) => {
+    // Vérifier limite plan gratuit
     if (profile && profile.plan === 'free') {
       const thisMonthPosts = posts.filter(p => {
         const d = new Date(p.scheduled_at)
@@ -153,7 +135,8 @@ export default function DashboardPage() {
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
       })
       if (thisMonthPosts.length >= FREE_PLAN_LIMIT) {
-        alert(`Plan gratuit : ${FREE_PLAN_LIMIT} posts par mois maximum. Passez en Premium pour des posts illimités.`)
+        setUpgradeReason(`Tu as atteint la limite de ${FREE_PLAN_LIMIT} posts/mois du plan gratuit.`)
+        setShowUpgradeModal(true)
         setShowEditor(false)
         return
       }
@@ -165,6 +148,7 @@ export default function DashboardPage() {
       status: post.status === 'publish_now' ? 'published' : 'scheduled',
     }
 
+    // Save to Supabase if connected
     if (user) {
       const supabase = createClient()
       const { data } = await supabase.from('posts').insert({
@@ -212,6 +196,11 @@ export default function DashboardPage() {
   }
 
   const handleBulkImport = async (importedPosts: { content: string; scheduledAt: string; status: string; images?: string[] }[]) => {
+    if (profile?.plan === 'free' && importedPosts.length > FREE_PLAN_LIMIT) {
+      setUpgradeReason(`Le plan gratuit permet ${FREE_PLAN_LIMIT} posts/mois. Tu essaies d'en planifier ${importedPosts.length}.`)
+      setShowUpgradeModal(true)
+      return
+    }
     if (user) {
       const supabase = createClient()
 
@@ -330,6 +319,7 @@ export default function DashboardPage() {
     window.location.href = '/api/linkedin/auth'
   }
 
+  /** Drag & drop : reprogramme un post sur une nouvelle date (conserve l'heure originale) */
   const handleReschedule = async (postId: string, newDate: string) => {
     if (!user) return
     const post = posts.find(p => p.id === postId)
@@ -373,295 +363,426 @@ export default function DashboardPage() {
   const scheduledCount = posts.filter(p => p.status === 'scheduled').length
   const publishedCount = posts.filter(p => p.status === 'published').length
   const totalCount = posts.length
+  const draftCount = posts.filter(p => p.status === 'draft').length
 
   const today = new Date()
   const dateStr = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   const capitalizedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1)
 
-  const firstName = profile?.full_name?.split(' ')[0] || profile?.linkedin_name?.split(' ')[0] || 'André'
-  const avatarInitial = (profile?.linkedin_name || profile?.full_name || profile?.email || 'U').charAt(0).toUpperCase()
-
-  // ── NAV ITEMS ──
-  const navItems = [
-    { id: 'calendar' as const, icon: CalendarIcon, label: 'Calendrier' },
-    { id: 'posts'    as const, icon: LayoutGrid,   label: 'Mes posts' },
-    { id: 'analytics'as const, icon: BarChart3,    label: 'Analytics' },
-  ]
-
   if (loading) {
     return (
-      <div style={{minHeight:'100vh',background:LI.bg,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:FONT}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'16px'}}>
-          <div style={{position:'relative',width:'48px',height:'48px'}}>
-            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:`2px solid ${LI.border}`}} />
-            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid transparent',borderTopColor:LI.blue,animation:'spin 0.8s linear infinite'}} />
-            <div style={{position:'absolute',inset:'10px',borderRadius:'50%',background:LI.blueBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <Zap style={{width:'14px',height:'14px',color:LI.blue}} />
+      <div style={{minHeight:'100vh',background:'#050508',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'24px'}}>
+          <div style={{position:'relative',width:'56px',height:'56px'}}>
+            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid rgba(124,58,237,0.15)'}} />
+            <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid transparent',borderTopColor:'#A78BFA',animation:'spin 1s linear infinite'}} />
+            <div style={{position:'absolute',inset:'8px',borderRadius:'50%',background:'rgba(124,58,237,0.15)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <Zap style={{width:'18px',height:'18px',color:'#A78BFA'}} />
             </div>
           </div>
-          <p style={{fontSize:'14px',fontWeight:600,color:LI.text2}}>Chargement…</p>
+          <div>
+            <p style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB',textAlign:'center'}}>ContentFlow</p>
+            <p style={{fontSize:'12px',color:'#9CA3AF',letterSpacing:'0.1em',textTransform:'uppercase',textAlign:'center',marginTop:'4px'}}>Chargement…</p>
+          </div>
         </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     )
   }
 
   return (
-    <div style={{minHeight:'100vh',background:LI.bg,fontFamily:FONT}}>
+    <div style={{minHeight:'100vh',background:'#050508',position:'relative',overflow:'hidden'}}>
 
-      {/* ── TOP NAVBAR ─────────────────────────────────── */}
-      <div style={{
-        position:'fixed',top:0,left:0,right:0,height:'52px',
-        background:LI.white,borderBottom:`1px solid ${LI.border}`,
-        display:'flex',alignItems:'center',justifyContent:'space-between',
-        padding:'0 20px 0 16px',zIndex:50,
-        boxShadow:'0 1px 3px rgba(0,0,0,0.06)',
-      }}>
-        {/* Logo */}
-        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-          <div style={{width:'32px',height:'32px',borderRadius:'6px',background:LI.blue,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <Zap style={{width:'16px',height:'16px',color:'#FFFFFF'}} />
-          </div>
-          <span style={{fontWeight:700,fontSize:'16px',color:LI.text,letterSpacing:'-0.01em'}}>ContentFlow</span>
-        </div>
-
-        {/* Right side */}
-        <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-          <span style={{fontSize:'12px',color:LI.text3,display:'none'}}>{capitalizedDate}</span>
-
-          {/* Avatar navbar */}
-          {profile?.linkedin_picture_url ? (
-            <img
-              src={profile.linkedin_picture_url}
-              alt="Photo LinkedIn"
-              style={{width:'32px',height:'32px',borderRadius:'50%',objectFit:'cover',border:`2px solid ${LI.blue}`,flexShrink:0}}
-            />
-          ) : (
-            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:LI.blue,display:'flex',alignItems:'center',justifyContent:'center',color:'#FFFFFF',fontWeight:700,fontSize:'13px',flexShrink:0}}>
-              {avatarInitial}
-            </div>
-          )}
-
-          <button
-            onClick={handleLogout}
-            style={{display:'flex',alignItems:'center',gap:'6px',padding:'6px 12px',borderRadius:'9999px',border:`1px solid ${LI.border}`,background:'transparent',color:LI.text2,fontSize:'13px',fontWeight:600,cursor:'pointer',transition:'all 140ms'}}
-            onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,0,0,0.04)'}}
-            onMouseLeave={e=>{e.currentTarget.style.background='transparent'}}
-          >
-            <LogOut style={{width:'14px',height:'14px'}} />
-            Déconnexion
-          </button>
-        </div>
-      </div>
-
-      {/* ── LAYOUT ─────────────────────────────────────── */}
-      <div style={{display:'flex',paddingTop:'52px',minHeight:'calc(100vh - 52px)'}}>
-
-        {/* ── LEFT SIDEBAR ─────────────────────────────── */}
-        <aside style={{
-          position:'fixed',left:0,top:'52px',
-          width:'280px',height:'calc(100vh - 52px)',
-          background:LI.white,borderRight:`1px solid ${LI.border}`,
-          display:'flex',flexDirection:'column',
-          overflowY:'auto',zIndex:30,
-          boxShadow:'1px 0 3px rgba(0,0,0,0.04)',
+      {/* Upgrade modal */}
+      {showUpgradeModal && (
+        <div style={{
+          position:'fixed',inset:0,zIndex:200,
+          background:'rgba(0,0,0,0.6)',backdropFilter:'blur(20px)',
+          display:'flex',alignItems:'center',justifyContent:'center',padding:16,
         }}>
-          {/* Profile card */}
-          <div style={{borderBottom:`1px solid ${LI.border}`,overflow:'hidden'}}>
-            {/* Blue banner */}
-            <div style={{height:'52px',background:`linear-gradient(135deg, ${LI.blue} 0%, ${LI.blueHover} 100%)`}} />
-            {/* Avatar */}
-            <div style={{padding:'0 20px 16px',position:'relative'}}>
-              <div style={{marginTop:'-28px',marginBottom:'10px'}}>
-                {profile?.linkedin_picture_url ? (
-                  <img
-                    src={profile.linkedin_picture_url}
-                    alt="Photo LinkedIn"
-                    style={{width:'56px',height:'56px',borderRadius:'50%',border:`3px solid ${LI.white}`,objectFit:'cover',boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}
-                  />
-                ) : (
-                  <div style={{width:'56px',height:'56px',borderRadius:'50%',background:LI.blue,border:`3px solid ${LI.white}`,display:'flex',alignItems:'center',justifyContent:'center',color:'#FFFFFF',fontWeight:700,fontSize:'20px',boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
-                    {avatarInitial}
-                  </div>
-                )}
+          <div style={{
+            background:'#111116',border:'1px solid rgba(124,58,237,0.25)',
+            borderRadius:24,padding:'32px 28px',maxWidth:400,width:'100%',
+            boxShadow:'0 40px 80px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{textAlign:'center',marginBottom:24}}>
+              <div style={{
+                width:64,height:64,borderRadius:'50%',
+                background:'rgba(124,58,237,0.15)',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                margin:'0 auto 16px',
+              }}>
+                <Zap style={{width:28,height:28,color:'#A78BFA'}} />
               </div>
-              <p style={{fontWeight:700,fontSize:'14px',color:LI.text,margin:0}}>{profile?.linkedin_name||profile?.full_name||user?.email||'Utilisateur'}</p>
-              <p style={{fontSize:'12px',color:LI.text2,marginTop:'2px'}}>{profile?.email||user?.email}</p>
+              <h2 style={{fontFamily:'Syne,sans-serif',fontSize:22,fontWeight:800,color:'#E5E7EB',margin:'0 0 8px',letterSpacing:'-0.02em'}}>
+                Limite atteinte
+              </h2>
+              <p style={{fontSize:13,color:'#9CA3AF',lineHeight:1.6,margin:0}}>
+                {upgradeReason} Passe en Solo ou Agence pour publier sans limite.
+              </p>
             </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:20}}>
+              {[
+                {plan:'Solo',price:'9€/mois',posts:'50 posts/mois',ai:'5 imports IA · 20 reformulations',color:'#6366f1'},
+                {plan:'Agence',price:'29€/mois',posts:'Posts illimités',ai:'20 imports IA · 80 reformulations',color:'#A78BFA'},
+              ].map(p => (
+                <button key={p.plan}
+                  onClick={() => { window.location.href = '/api/stripe/checkout?plan=' + p.plan.toLowerCase(); }}
+                  style={{
+                    display:'flex',alignItems:'center',justifyContent:'space-between',
+                    padding:'14px 16px',borderRadius:14,border:`1.5px solid ${p.color}33`,
+                    background:`${p.color}0d`,cursor:'pointer',textAlign:'left',
+                  }}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:'#E5E7EB'}}>{p.plan} — {p.price}</div>
+                    <div style={{fontSize:11,color:'#9CA3AF',marginTop:3}}>{p.posts} · {p.ai}</div>
+                  </div>
+                  <div style={{
+                    padding:'6px 14px',borderRadius:999,
+                    background:p.color,color:'#fff',
+                    fontSize:12,fontWeight:700,whiteSpace:'nowrap',
+                  }}>Choisir →</div>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowUpgradeModal(false)}
+              style={{width:'100%',padding:'10px',borderRadius:999,border:'1px solid rgba(255,255,255,0.08)',
+                background:'transparent',color:'#6B7280',fontSize:13,cursor:'pointer'}}>
+              Plus tard
+            </button>
           </div>
+        </div>
+      )}
 
-          {/* Nav */}
-          <nav style={{padding:'12px 10px'}}>
-            {navItems.map(item => (
-              <button
-                key={item.id}
-                onClick={()=>setActiveTab(item.id)}
-                style={{
-                  width:'100%',display:'flex',alignItems:'center',gap:'12px',
-                  padding:'10px 14px',borderRadius:'6px',
-                  border:'none',cursor:'pointer',textAlign:'left',
-                  fontSize:'14px',fontWeight:activeTab===item.id?700:400,
-                  fontFamily:FONT,transition:'all 120ms',
-                  background:activeTab===item.id?LI.blueBg:'transparent',
-                  color:activeTab===item.id?LI.blue:LI.text2,
-                  marginBottom:'2px',
-                }}
-                onMouseEnter={e=>{if(activeTab!==item.id)e.currentTarget.style.background='rgba(0,0,0,0.04)'}}
-                onMouseLeave={e=>{if(activeTab!==item.id)e.currentTarget.style.background='transparent'}}
-              >
-                <item.icon style={{width:'18px',height:'18px',flexShrink:0}} />
-                {item.label}
-              </button>
-            ))}
-          </nav>
+      {/* Background orbs */}
+      <div style={{position:'absolute',top:'-40%',left:'-10%',width:'400px',height:'400px',borderRadius:'50%',background:'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)',filter:'blur(80px)',zIndex:0}} />
+      <div style={{position:'absolute',bottom:'-20%',right:'-15%',width:'350px',height:'350px',borderRadius:'50%',background:'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)',filter:'blur(100px)',zIndex:0}} />
 
-          {/* LinkedIn connection */}
-          <div style={{padding:'10px 16px'}}>
-            <div style={{background:LI.bg,border:`1px solid ${LI.border}`,borderRadius:'8px',padding:'14px'}}>
-              {profile?.linkedin_connected ? (
+      <div style={{position:'relative',zIndex:1,display:'flex',minHeight:'100vh'}}>
+        {/* SIDEBAR */}
+        <motion.aside
+          initial={{x:-240}}
+          animate={{x:0}}
+          transition={{duration:0.5,ease: "easeOut"}}
+          style={{
+            position:'fixed',
+            left:0,
+            top:0,
+            height:'100vh',
+            width:'240px',
+            background:'#080812',
+            borderRight:'1px solid rgba(124,58,237,0.15)',
+            boxShadow:'inset -1px 0 0 rgba(255,255,255,0.04), 4px 0 20px rgba(0,0,0,0.3)',
+            display:'flex',
+            flexDirection:'column',
+            zIndex:40,
+          }}
+        >
+          {/* Logo */}
+          <motion.div
+            initial={{opacity:0,y:-10}}
+            animate={{opacity:1,y:0}}
+            transition={{delay:0.1,duration:0.5}}
+            style={{padding:'24px 24px 20px'}}
+          >
+            <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'32px'}}>
+              <div style={{
+                width:'32px',height:'32px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',
+                background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                boxShadow:'0 0 20px rgba(124,58,237,0.6)',
+                flexShrink:0
+              }}>
+                <Zap style={{width:'16px',height:'16px',color:'white'}} />
+              </div>
+              <span style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB',letterSpacing:'-0.01em'}}>ContentFlow</span>
+            </div>
+
+            {/* Nav */}
+            <nav style={{display:'flex',flexDirection:'column',gap:'2px'}}>
+              {[
+                { id: 'calendar' as const, icon: CalendarIcon, label: 'Calendrier' },
+                { id: 'posts' as const, icon: LayoutGrid, label: 'Mes posts' },
+                { id: 'analytics' as const, icon: BarChart3, label: 'Analytics' },
+              ].map((item,idx) => (
+                <motion.button
+                  key={item.id}
+                  initial={{opacity:0,x:-20}}
+                  animate={{opacity:1,x:0}}
+                  transition={{delay:0.15+idx*0.05,duration:0.4}}
+                  onClick={() => setActiveTab(item.id)}
+                  style={{
+                    width:'100%',
+                    display:'flex',
+                    alignItems:'center',
+                    gap:'12px',
+                    padding:'8px 12px',
+                    borderRadius:'10px',
+                    fontSize:'13px',
+                    fontWeight:500,
+                    textAlign:'left',
+                    border:'none',
+                    cursor:'pointer',
+                    transition:'all 0.3s cubic-bezier(0.16,1,0.3,1)',
+                    background:activeTab===item.id?'rgba(124,58,237,0.12)':'transparent',
+                    color:activeTab===item.id?'#A78BFA':'#9CA3AF',
+                    boxShadow:activeTab===item.id?'inset 0 0 20px rgba(124,58,237,0.06)':'none',
+                    position:'relative'
+                  }}
+                  onMouseEnter={(e)=>{
+                    if(activeTab!==item.id) {
+                      e.currentTarget.style.background='rgba(124,58,237,0.06)'
+                      e.currentTarget.style.color='#C4B5FD'
+                    }
+                  }}
+                  onMouseLeave={(e)=>{
+                    if(activeTab!==item.id) {
+                      e.currentTarget.style.background='transparent'
+                      e.currentTarget.style.color='#9CA3AF'
+                    }
+                  }}
+                >
+                  <item.icon style={{
+                    width:'16px',
+                    height:'16px',
+                    filter:activeTab===item.id?'drop-shadow(0 0 8px rgba(124,58,237,0.8))':'none'
+                  }} />
+                  {item.label}
+                </motion.button>
+              ))}
+            </nav>
+          </motion.div>
+
+          {/* LinkedIn + Plan sections */}
+          <motion.div
+            initial={{opacity:0}}
+            animate={{opacity:1}}
+            transition={{delay:0.3,duration:0.5}}
+            style={{flex:1,overflow:'auto',padding:'0 16px'}}
+          >
+            {/* LinkedIn */}
+            <div style={{
+              marginTop:'16px',
+              padding:'16px',
+              borderRadius:'12px',
+              background:'rgba(255,255,255,0.025)',
+              border:'1px solid rgba(255,255,255,0.06)',
+              fontSize:'13px'
+            }}>
+              {profile?.linkedin_connected?(
                 <div>
-                  <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px'}}>
+                  {/* Photo LinkedIn + nom */}
+                  <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
                     {profile.linkedin_picture_url ? (
-                      <img src={profile.linkedin_picture_url} alt="LinkedIn" style={{width:'32px',height:'32px',borderRadius:'50%',objectFit:'cover',border:`2px solid ${LI.green}`,flexShrink:0}} />
+                      <img
+                        src={profile.linkedin_picture_url}
+                        alt="LinkedIn"
+                        style={{width:'36px',height:'36px',borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(16,185,129,0.4)',flexShrink:0}}
+                      />
                     ) : (
-                      <div style={{width:'32px',height:'32px',borderRadius:'50%',background:LI.blue,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:700,color:'white',flexShrink:0}}>
-                        {avatarInitial}
+                      <div style={{width:'36px',height:'36px',borderRadius:'50%',background:'linear-gradient(135deg,#7C3AED,#A78BFA)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',fontWeight:700,color:'white',flexShrink:0}}>
+                        {(profile.linkedin_name||profile.full_name||'?').charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
-                        <div style={{width:'6px',height:'6px',borderRadius:'50%',background:LI.green}} />
-                        <span style={{fontSize:'10px',fontWeight:700,color:LI.green,textTransform:'uppercase',letterSpacing:'0.05em'}}>Connecté</span>
+                      <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                        <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#10B981',flexShrink:0}} />
+                        <span style={{fontSize:'10px',fontWeight:600,color:'#10B981'}}>Connecté</span>
                       </div>
-                      <p style={{fontSize:'12px',color:LI.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',margin:0,fontWeight:600}}>
+                      <p style={{fontSize:'11px',color:'#D1D5DB',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'2px',fontWeight:500}}>
                         {profile.linkedin_name||profile.full_name||'Compte vérifié'}
                       </p>
                     </div>
-                    <button onClick={handleDisconnectLinkedIn} style={{fontSize:'10px',color:LI.red,background:'none',border:'none',cursor:'pointer',flexShrink:0,padding:'2px 4px'}}>
+                    <button onClick={handleDisconnectLinkedIn} style={{fontSize:'10px',fontWeight:500,color:'#EF4444',background:'none',border:'none',cursor:'pointer',flexShrink:0}}>
                       Déco
                     </button>
                   </div>
                 </div>
-              ) : (
+              ):(
                 <div>
-                  <p style={{fontSize:'12px',color:LI.text2,marginBottom:'10px',margin:'0 0 10px'}}>Connecte LinkedIn pour publier</p>
+                  <p style={{fontSize:'11px',color:'#9CA3AF',marginBottom:'12px'}}>Connecte LinkedIn pour publier</p>
                   <button
                     onClick={handleConnectLinkedIn}
-                    style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',padding:'8px 12px',borderRadius:'9999px',fontSize:'13px',fontWeight:700,background:LI.blue,color:'white',border:'none',cursor:'pointer',transition:'background 140ms'}}
-                    onMouseEnter={e=>{e.currentTarget.style.background=LI.blueHover}}
-                    onMouseLeave={e=>{e.currentTarget.style.background=LI.blue}}
+                    style={{
+                      width:'100%',
+                      display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',
+                      padding:'8px 12px',borderRadius:'8px',fontSize:'12px',fontWeight:600,
+                      background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                      color:'white',border:'none',cursor:'pointer',
+                      boxShadow:'0 0 16px rgba(124,58,237,0.3)',transition:'all 0.3s'
+                    }}
+                    onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 0 24px rgba(124,58,237,0.5)'}}
+                    onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 0 16px rgba(124,58,237,0.3)'}}
                   >
                     <Linkedin style={{width:'14px',height:'14px'}} />
-                    Connecter LinkedIn
+                    Connecter
                   </button>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Plan */}
-          <div style={{padding:'0 16px 16px'}}>
-            <div style={{background:LI.bg,border:`1px solid ${LI.border}`,borderRadius:'8px',padding:'14px'}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'8px'}}>
-                <span style={{fontSize:'12px',color:LI.text2}}>Plan actuel</span>
-                <span style={{fontSize:'11px',fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',color:LI.blue,background:LI.blueBg,padding:'2px 8px',borderRadius:'9999px'}}>
+            {/* Plan */}
+            <div style={{
+              marginTop:'12px',
+              padding:'16px',
+              borderRadius:'12px',
+              background:'rgba(255,255,255,0.025)',
+              border:'1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:'11px'}}>
+                <span style={{color:'#9CA3AF'}}>Plan actuel</span>
+                <span style={{fontSize:'10px',fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'#A78BFA'}}>
                   {profile?.plan||'Free'}
                 </span>
               </div>
               {(!profile||profile.plan==='free')&&(
                 <button
                   onClick={()=>router.push('/pricing')}
-                  style={{width:'100%',padding:'7px 12px',borderRadius:'9999px',fontSize:'12px',fontWeight:700,border:`1px solid ${LI.blue}`,color:LI.blue,background:'transparent',cursor:'pointer',transition:'background 140ms'}}
-                  onMouseEnter={e=>{e.currentTarget.style.background=LI.blueBg}}
-                  onMouseLeave={e=>{e.currentTarget.style.background='transparent'}}
+                  style={{
+                    width:'100%',marginTop:'12px',padding:'8px 12px',borderRadius:'8px',
+                    fontSize:'11px',fontWeight:600,border:'1px solid #A78BFA',
+                    color:'#A78BFA',background:'transparent',cursor:'pointer',transition:'all 0.3s'
+                  }}
+                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.1)'}}
+                  onMouseLeave={(e)=>{e.currentTarget.style.background='transparent'}}
                 >
                   Passer en Premium ↗
                 </button>
               )}
             </div>
-          </div>
-        </aside>
+          </motion.div>
 
-        {/* ── MAIN CONTENT ─────────────────────────────── */}
-        <main style={{marginLeft:'280px',padding:'28px 28px 28px 32px',flex:1,minHeight:'calc(100vh - 52px)'}}>
+          {/* User footer */}
+          <motion.div
+            initial={{opacity:0}}
+            animate={{opacity:1}}
+            transition={{delay:0.4,duration:0.5}}
+            style={{padding:'16px',borderTop:'1px solid rgba(255,255,255,0.04)',marginTop:'auto'}}
+          >
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'8px',minWidth:0}}>
+                <div style={{
+                  width:'32px',height:'32px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',
+                  background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                  color:'white',fontSize:'11px',fontWeight:700,flexShrink:0
+                }}>
+                  {user?.email?.charAt(0).toUpperCase()||'U'}
+                </div>
+                <span style={{fontSize:'12px',color:'#D1D5DB',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {user?.email}
+                </span>
+              </div>
+              <button onClick={handleLogout} style={{padding:'6px',borderRadius:'8px',color:'#9CA3AF',background:'none',border:'none',cursor:'pointer',transition:'all 0.3s'}}>
+                <LogOut style={{width:'16px',height:'16px'}} />
+              </button>
+            </div>
+          </motion.div>
+        </motion.aside>
 
+        {/* MAIN CONTENT */}
+        <motion.main
+          initial={{opacity:0}}
+          animate={{opacity:1}}
+          transition={{delay:0.2,duration:0.5}}
+          style={{marginLeft:'240px',padding:'32px',width:'calc(100% - 240px)',minHeight:'100vh'}}
+        >
           {/* Header */}
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'24px',paddingBottom:'20px',borderBottom:`1px solid ${LI.border}`}}>
-            <div>
-              <p style={{fontSize:'12px',color:LI.text3,textTransform:'uppercase',letterSpacing:'0.08em',fontWeight:600,margin:'0 0 4px'}}>
+          <div style={{
+            display:'flex',justifyContent:'space-between',alignItems:'flex-start',
+            paddingBottom:'24px',borderBottom:'1px solid rgba(255,255,255,0.05)',
+            marginBottom:'32px'
+          }}>
+            <motion.div initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} transition={{delay:0.3,duration:0.5}}>
+              <p style={{fontSize:'12px',color:'#9CA3AF',letterSpacing:'0.08em',textTransform:'uppercase',fontFamily:'monospace',fontWeight:500}}>
                 {capitalizedDate}
               </p>
-              <h1 style={{fontWeight:700,fontSize:'24px',letterSpacing:'-0.02em',color:LI.text,margin:0}}>
-                Bonjour, <span style={{color:LI.blue}}>{firstName}</span> 👋
+              <h1 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'28px',letterSpacing:'-0.02em',marginTop:'4px',color:'#E5E7EB'}}>
+                Bonjour, <span style={{background:'linear-gradient(135deg,#A78BFA 0%,#7C3AED 100%)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+                  {profile?.full_name?.split(' ')[0]||'André'}
+                </span> 👋
               </h1>
-            </div>
+            </motion.div>
 
-            <div style={{display:'flex',gap:'10px',alignItems:'center'}}>
+            <motion.div
+              initial={{opacity:0,y:-10}}
+              animate={{opacity:1,y:0}}
+              transition={{delay:0.35,duration:0.5}}
+              style={{display:'flex',gap:'12px'}}
+            >
               {['premium','team','agency'].includes(profile?.plan||'') && (
                 <button
                   onClick={()=>setShowCarousel(true)}
-                  style={{display:'flex',alignItems:'center',gap:'7px',padding:'9px 16px',borderRadius:'9999px',fontSize:'13px',fontWeight:700,border:`1px solid ${LI.border}`,color:LI.text2,background:LI.white,cursor:'pointer',transition:'all 140ms'}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=LI.blue;e.currentTarget.style.color=LI.blue}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=LI.border;e.currentTarget.style.color=LI.text2}}
+                  style={{
+                    display:'flex',alignItems:'center',gap:'8px',padding:'10px 16px',borderRadius:'10px',
+                    fontSize:'14px',fontWeight:500,border:'1px solid rgba(167,139,250,0.3)',
+                    color:'#A78BFA',background:'rgba(124,58,237,0.08)',cursor:'pointer',transition:'all 0.3s'
+                  }}
+                  onMouseEnter={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.15)'}}
+                  onMouseLeave={(e)=>{e.currentTarget.style.background='rgba(124,58,237,0.08)'}}
                 >
-                  <Layers style={{width:'15px',height:'15px'}} />
+                  <Layers style={{width:'16px',height:'16px'}} />
                   Carousel
                 </button>
               )}
               <button
                 onClick={()=>setShowBulkImport(true)}
-                style={{display:'flex',alignItems:'center',gap:'7px',padding:'9px 16px',borderRadius:'9999px',fontSize:'13px',fontWeight:700,border:`1px solid ${LI.border}`,color:LI.text2,background:LI.white,cursor:'pointer',transition:'all 140ms'}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=LI.blue;e.currentTarget.style.color=LI.blue}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=LI.border;e.currentTarget.style.color=LI.text2}}
+                style={{
+                  display:'flex',alignItems:'center',gap:'8px',padding:'10px 16px',borderRadius:'10px',
+                  fontSize:'14px',fontWeight:500,border:'1px solid rgba(255,255,255,0.1)',
+                  color:'#D1D5DB',background:'rgba(255,255,255,0.02)',cursor:'pointer',transition:'all 0.3s'
+                }}
+                onMouseEnter={(e)=>{
+                  e.currentTarget.style.background='rgba(255,255,255,0.05)'
+                  e.currentTarget.style.borderColor='rgba(124,58,237,0.3)'
+                }}
+                onMouseLeave={(e)=>{
+                  e.currentTarget.style.background='rgba(255,255,255,0.02)'
+                  e.currentTarget.style.borderColor='rgba(255,255,255,0.1)'
+                }}
               >
-                <Upload style={{width:'15px',height:'15px'}} />
-                Importer DOCX
+                <Upload style={{width:'16px',height:'16px'}} />
+                Importer
               </button>
               <button
                 onClick={()=>{setSelectedDate(new Date().toISOString().split('T')[0]);setShowEditor(true)}}
-                style={{display:'flex',alignItems:'center',gap:'7px',padding:'9px 20px',borderRadius:'9999px',fontSize:'13px',fontWeight:700,background:LI.blue,color:'#FFFFFF',border:'none',cursor:'pointer',boxShadow:'0 2px 8px rgba(10,102,194,0.3)',transition:'background 140ms'}}
-                onMouseEnter={e=>{e.currentTarget.style.background=LI.blueHover}}
-                onMouseLeave={e=>{e.currentTarget.style.background=LI.blue}}
+                style={{
+                  display:'flex',alignItems:'center',gap:'8px',padding:'10px 20px',borderRadius:'10px',
+                  fontSize:'14px',fontWeight:600,background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                  color:'white',border:'none',cursor:'pointer',
+                  boxShadow:'0 4px 20px rgba(124,58,237,0.3)',transition:'all 0.3s'
+                }}
+                onMouseEnter={(e)=>{e.currentTarget.style.boxShadow='0 8px 32px rgba(124,58,237,0.4)'}}
+                onMouseLeave={(e)=>{e.currentTarget.style.boxShadow='0 4px 20px rgba(124,58,237,0.3)'}}
               >
-                <Plus style={{width:'15px',height:'15px'}} />
+                <Plus style={{width:'16px',height:'16px'}} />
                 Nouveau post
               </button>
-            </div>
+            </motion.div>
           </div>
 
           {/* Stat Cards */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',gap:'14px',marginBottom:'24px'}}>
+          <motion.div
+            initial={{opacity:0}}
+            animate={{opacity:1}}
+            transition={{delay:0.4,duration:0.5}}
+            style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))',gap:'16px',marginBottom:'32px'}}
+          >
             {[
-              {icon:FileText,     value:totalCount,     label:'Posts créés',      color:LI.blue,  bg:LI.blueBg},
-              {icon:Clock,        value:scheduledCount, label:'Posts programmés',  color:LI.blue,  bg:LI.blueBg},
-              {icon:CheckCircle2, value:publishedCount, label:'Publiés',          color:LI.green, bg:LI.greenBg},
+              {icon:FileText,value:totalCount,label:'Posts créés',color:'#A78BFA',delay:0.5},
+              {icon:Clock,value:scheduledCount,label:'Posts programmés',color:'#60A5FA',delay:0.55},
+              {icon:CheckCircle2,value:publishedCount,label:'Publiés',color:'#34D399',delay:0.6},
             ].map((stat,idx)=>(
-              <div
-                key={idx}
-                style={{
-                  background:LI.white,
-                  border:`1px solid ${LI.border}`,
-                  borderRadius:'8px',
-                  padding:'18px 20px',
-                  display:'flex',alignItems:'center',gap:'14px',
-                  boxShadow:LI.shadow,
-                }}
-              >
-                <div style={{width:'42px',height:'42px',borderRadius:'8px',background:stat.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  <stat.icon style={{width:'20px',height:'20px',color:stat.color}} />
-                </div>
-                <div>
-                  <p style={{fontSize:'28px',fontWeight:700,color:LI.text,margin:0,lineHeight:1}}>{stat.value}</p>
-                  <p style={{fontSize:'13px',color:LI.text2,margin:'4px 0 0'}}>{stat.label}</p>
-                </div>
-              </div>
+              <StatCard key={idx} icon={stat.icon} value={stat.value} label={stat.label} color={stat.color} delay={stat.delay} />
             ))}
-          </div>
+          </motion.div>
 
-          {/* Tab Content */}
+          {/* Tabs Content */}
           <AnimatePresence mode="wait">
             {activeTab==='calendar'&&(
-              <motion.div key="calendar" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+              <motion.div key="calendar" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
                 <CalendarView
                   posts={posts}
                   onDayClick={handleDayClick}
@@ -672,7 +793,7 @@ export default function DashboardPage() {
             )}
 
             {activeTab==='posts'&&(
-              <motion.div key="posts" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+              <motion.div key="posts" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
                 <PostsTable
                   posts={posts}
                   currentPage={currentPage}
@@ -691,7 +812,7 @@ export default function DashboardPage() {
             )}
 
             {activeTab==='analytics'&&(
-              <motion.div key="analytics" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+              <motion.div key="analytics" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.3}}>
                 <Analytics
                   posts={posts}
                   isPremium={['premium', 'team', 'agency'].includes(profile?.plan || '')}
@@ -701,9 +822,7 @@ export default function DashboardPage() {
             )}
           </AnimatePresence>
 
-          {/* ── MODALS ─────────────────────────────────── */}
-
-          {/* LinkedIn Preview */}
+          {/* Modals */}
           <AnimatePresence>
             {previewPost&&(
               <LinkedInPreview
@@ -719,7 +838,6 @@ export default function DashboardPage() {
             )}
           </AnimatePresence>
 
-          {/* BulkImport */}
           <AnimatePresence>
             {showBulkImport&&(
               <BulkImport
@@ -727,13 +845,10 @@ export default function DashboardPage() {
                 onClose={()=>setShowBulkImport(false)}
                 isPremium={['premium', 'team', 'agency'].includes(profile?.plan || '')}
                 publishedPosts={posts.map(p => ({ scheduled_at: p.scheduled_at, status: p.status }))}
-                authorAvatar={profile?.linkedin_picture_url}
-                authorName={profile?.linkedin_name||profile?.full_name}
               />
             )}
           </AnimatePresence>
 
-          {/* CarouselBuilder */}
           <AnimatePresence>
             {showCarousel&&(
               <CarouselBuilder
@@ -747,59 +862,105 @@ export default function DashboardPage() {
             )}
           </AnimatePresence>
 
-          {/* Edit Modal */}
           <AnimatePresence>
             {editingPost&&(
               <motion.div
-                initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.2}}
+                initial={{opacity:0}}
+                animate={{opacity:1}}
+                exit={{opacity:0}}
+                transition={{duration:0.2}}
                 onClick={()=>setEditingPost(null)}
-                style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}}
+                style={{
+                  position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',
+                  backdropFilter:'blur(4px)',zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',
+                  padding:'16px'
+                }}
               >
                 <motion.div
-                  initial={{opacity:0,scale:0.96,y:16}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.96,y:16}} transition={{duration:0.25}}
-                  onClick={e=>e.stopPropagation()}
-                  style={{borderRadius:'12px',width:'100%',maxWidth:'500px',background:LI.white,boxShadow:'0 20px 60px rgba(0,0,0,0.2)',border:`1px solid ${LI.border}`,overflow:'hidden',fontFamily:FONT}}
+                  initial={{opacity:0,scale:0.95,y:20}}
+                  animate={{opacity:1,scale:1,y:0}}
+                  exit={{opacity:0,scale:0.95,y:20}}
+                  transition={{duration:0.3,ease: "easeOut"}}
+                  onClick={(e)=>e.stopPropagation()}
+                  style={{
+                    borderRadius:'16px',width:'100%',maxWidth:'480px',
+                    background:'#1A1A22',boxShadow:'0 25px 64px rgba(0,0,0,0.8)',
+                    border:'1px solid rgba(255,255,255,0.05)',overflow:'hidden'
+                  }}
                 >
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 22px',borderBottom:`1px solid ${LI.border}`}}>
-                    <h2 style={{fontWeight:700,fontSize:'16px',color:LI.text,margin:0}}>Modifier le post</h2>
-                    <button onClick={()=>setEditingPost(null)} style={{padding:'6px',borderRadius:'8px',color:LI.text3,background:'none',border:'none',cursor:'pointer'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 24px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                    <h2 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB'}}>Modifier le post</h2>
+                    <button onClick={()=>setEditingPost(null)} style={{padding:'8px',borderRadius:'8px',color:'#9CA3AF',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer'}}>
                       <X style={{width:'18px',height:'18px'}} />
                     </button>
                   </div>
-                  <div style={{padding:'20px 22px',display:'flex',flexDirection:'column',gap:'16px'}}>
+                  <div style={{padding:'20px',display:'flex',flexDirection:'column',gap:'16px'}}>
                     <div>
-                      <label style={{display:'block',fontSize:'12px',fontWeight:700,color:LI.text3,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'8px'}}>Contenu</label>
+                      <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Contenu</label>
                       <textarea
                         value={editContent}
                         onChange={e=>setEditContent(e.target.value)}
                         rows={10}
-                        style={{width:'100%',padding:'12px 14px',borderRadius:'6px',fontSize:'13px',lineHeight:1.6,resize:'vertical',fontFamily:FONT,outline:'none',background:'#FFFFFF',border:`1px solid ${LI.border}`,color:LI.text,transition:'border 150ms',boxSizing:'border-box'}}
-                        onFocus={e=>e.currentTarget.style.border=`2px solid ${LI.blue}`}
-                        onBlur={e=>e.currentTarget.style.border=`1px solid ${LI.border}`}
+                        style={{
+                          width:'100%',padding:'12px 14px',borderRadius:'10px',fontSize:'13px',resize:'none',fontFamily:'monospace',
+                          outline:'none',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',
+                          color:'#E5E7EB',transition:'all 0.3s'
+                        }}
+                        onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
+                        onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
                       />
-                      <p style={{fontSize:'11px',marginTop:'4px',textAlign:'right',color:editContent.length>2800?LI.red:LI.text3,fontFamily:'monospace'}}>{editContent.length} / 3000</p>
+                      <p style={{fontSize:'11px',marginTop:'6px',textAlign:'right',color:'#9CA3AF'}}>{editContent.length} caractères</p>
                     </div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px'}}>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
                       <div>
-                        <label style={{display:'block',fontSize:'12px',fontWeight:700,color:LI.text3,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'8px'}}>Date</label>
-                        <input type="date" value={editDate} onChange={e=>setEditDate(e.target.value)} style={{width:'100%',padding:'9px 12px',borderRadius:'6px',fontSize:'13px',outline:'none',background:LI.white,border:`1px solid ${LI.border}`,color:LI.text,transition:'border 150ms',boxSizing:'border-box',fontFamily:FONT}} onFocus={e=>e.currentTarget.style.border=`2px solid ${LI.blue}`} onBlur={e=>e.currentTarget.style.border=`1px solid ${LI.border}`} />
+                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Date</label>
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={e=>setEditDate(e.target.value)}
+                          style={{
+                            width:'100%',padding:'10px 12px',borderRadius:'10px',fontSize:'13px',outline:'none',
+                            background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',color:'#E5E7EB',transition:'all 0.3s'
+                          }}
+                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
+                          onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
+                        />
                       </div>
                       <div>
-                        <label style={{display:'block',fontSize:'12px',fontWeight:700,color:LI.text3,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'8px'}}>Heure</label>
-                        <input type="time" value={editTime} onChange={e=>setEditTime(e.target.value)} style={{width:'100%',padding:'9px 12px',borderRadius:'6px',fontSize:'13px',outline:'none',background:LI.white,border:`1px solid ${LI.border}`,color:LI.text,transition:'border 150ms',boxSizing:'border-box',fontFamily:FONT}} onFocus={e=>e.currentTarget.style.border=`2px solid ${LI.blue}`} onBlur={e=>e.currentTarget.style.border=`1px solid ${LI.border}`} />
+                        <label style={{display:'block',fontSize:'13px',fontWeight:500,color:'#D1D5DB',marginBottom:'8px'}}>Heure</label>
+                        <input
+                          type="time"
+                          value={editTime}
+                          onChange={e=>setEditTime(e.target.value)}
+                          style={{
+                            width:'100%',padding:'10px 12px',borderRadius:'10px',fontSize:'13px',outline:'none',
+                            background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',color:'#E5E7EB',transition:'all 0.3s'
+                          }}
+                          onFocus={(e)=>e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}
+                          onBlur={(e)=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
+                        />
                       </div>
                     </div>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'10px',padding:'14px 22px',borderTop:`1px solid ${LI.border}`}}>
-                    <button onClick={()=>setEditingPost(null)} style={{padding:'8px 16px',fontSize:'13px',fontWeight:600,borderRadius:'9999px',color:LI.text2,background:'transparent',border:`1px solid ${LI.border}`,cursor:'pointer',fontFamily:FONT}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'12px',padding:'16px 24px',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+                    <button
+                      onClick={()=>setEditingPost(null)}
+                      style={{
+                        padding:'8px 16px',fontSize:'13px',borderRadius:'8px',color:'#9CA3AF',
+                        background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',transition:'all 0.3s'
+                      }}
+                    >
                       Annuler
                     </button>
                     <button
                       onClick={handleSaveEdit}
                       disabled={savingEdit}
-                      style={{display:'flex',alignItems:'center',gap:'8px',padding:'8px 20px',fontSize:'13px',fontWeight:700,borderRadius:'9999px',background:LI.blue,color:'white',border:'none',cursor:'pointer',opacity:savingEdit?0.7:1,transition:'background 140ms',fontFamily:FONT}}
-                      onMouseEnter={e=>{if(!savingEdit)e.currentTarget.style.background=LI.blueHover}}
-                      onMouseLeave={e=>{e.currentTarget.style.background=LI.blue}}
+                      style={{
+                        display:'flex',alignItems:'center',gap:'8px',padding:'8px 18px',fontSize:'13px',fontWeight:600,
+                        borderRadius:'8px',background:'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+                        color:'white',border:'none',cursor:'pointer',opacity:savingEdit?0.7:1,transition:'all 0.3s',
+                        boxShadow:'0 4px 16px rgba(124,58,237,0.3)'
+                      }}
                     >
                       {savingEdit?<Loader2 style={{width:'14px',height:'14px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'14px',height:'14px'}} />}
                       Enregistrer
@@ -810,17 +971,22 @@ export default function DashboardPage() {
             )}
           </AnimatePresence>
 
-          {/* PostEditor Modal */}
           <AnimatePresence>
             {showEditor&&(
               <motion.div
-                initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.2}}
+                initial={{opacity:0}}
+                animate={{opacity:1}}
+                exit={{opacity:0}}
+                transition={{duration:0.2}}
                 onClick={()=>setShowEditor(false)}
                 style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(4px)',zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}}
               >
                 <motion.div
-                  initial={{opacity:0,scale:0.96,y:16}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:0.96,y:16}} transition={{duration:0.25}}
-                  onClick={e=>e.stopPropagation()}
+                  initial={{opacity:0,scale:0.95,y:20}}
+                  animate={{opacity:1,scale:1,y:0}}
+                  exit={{opacity:0,scale:0.95,y:20}}
+                  transition={{duration:0.3,ease: "easeOut"}}
+                  onClick={(e)=>e.stopPropagation()}
                   style={{width:'100%',maxWidth:'720px',maxHeight:'90vh',overflow:'auto'}}
                 >
                   <PostEditor
@@ -828,51 +994,98 @@ export default function DashboardPage() {
                     onClose={()=>setShowEditor(false)}
                     initialDate={selectedDate}
                     templates={defaultTemplates}
-                    authorAvatar={profile?.linkedin_picture_url}
-                    authorName={profile?.linkedin_name||profile?.full_name}
                   />
                 </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
-        </main>
+        </motion.main>
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes shimmer {
+          0% { background-position: -1000% 0; }
+          100% { background-position: 1000% 0; }
+        }
+      `}</style>
     </div>
   )
 }
 
-// ── PostsTable component ─────────────────────────────────
+function StatCard({ icon: Icon, value, label, color, delay }: { icon: any; value: number; label: string; color: string; delay: number }) {
+  return (
+    <motion.div
+      initial={{opacity:0,y:20}}
+      animate={{opacity:1,y:0}}
+      transition={{delay,duration:0.5,ease: "easeOut"}}
+      whileHover={{y:-3}}
+      style={{
+        background:'rgba(255,255,255,0.025)',
+        border:'1px solid rgba(255,255,255,0.06)',
+        borderRadius:'16px',
+        padding:'24px',
+        position:'relative',
+        overflow:'hidden',
+        cursor:'default',
+      }}
+    >
+      <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',background:`linear-gradient(90deg,transparent,${color},transparent)`}} />
+      <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.02) 50%,transparent 60%)',backgroundSize:'200%',animation:'shimmer 3s linear infinite'}} />
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',position:'relative',zIndex:1}}>
+        <div>
+          <motion.div
+            initial={{opacity:0}}
+            animate={{opacity:1}}
+            transition={{delay:delay+0.2,duration:0.6}}
+            style={{
+              fontSize:'36px',fontWeight:800,fontFamily:'Syne,sans-serif',letterSpacing:'-0.03em',
+              lineHeight:1,background:`linear-gradient(135deg,#FFFFFF 0%,${color} 100%)`,
+              WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'
+            }}
+          >
+            {value}
+          </motion.div>
+          <div style={{fontSize:'13px',color:'#9CA3AF',marginTop:'6px',fontWeight:500}}>
+            {label}
+          </div>
+        </div>
+        <motion.div
+          initial={{scale:0}}
+          animate={{scale:1}}
+          transition={{delay:delay+0.1,duration:0.4,type:'spring'}}
+          style={{
+            width:'40px',height:'40px',borderRadius:'10px',
+            background:`rgba(${hexToRgb(color)},0.1)`,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            border:`1px solid ${color}40`
+          }}
+        >
+          <Icon style={{width:'18px',height:'18px',color}} />
+        </motion.div>
+      </div>
+    </motion.div>
+  )
+}
+
 function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDeleteId,setConfirmDeleteId,deletingId,retryingId,handleDeletePost,handleRetryPost,setPreviewPost,openEditModal}:{posts:Post[],currentPage:number,setCurrentPage:(page:number)=>void,POSTS_PER_PAGE:number,confirmDeleteId:string|null,setConfirmDeleteId:(id:string|null)=>void,deletingId:string|null,retryingId:string|null,handleDeletePost:(id:string)=>Promise<void>,handleRetryPost:(post:Post)=>Promise<void>,setPreviewPost:(post:Post|null)=>void,openEditModal:(post:Post)=>void}) {
-  const FONT2 = "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-  const LI2 = {
-    white:'#FFFFFF',border:'rgba(0,0,0,0.08)',blue:'#0A66C2',blueBg:'rgba(10,102,194,0.08)',
-    green:'#057642',greenBg:'rgba(5,118,66,0.1)',red:'#CC1016',redBg:'rgba(204,16,22,0.1)',
-    amber:'#B45309',amberBg:'rgba(180,83,9,0.1)',
-    text:'rgba(0,0,0,0.9)',text2:'rgba(0,0,0,0.6)',text3:'rgba(0,0,0,0.4)',
-  }
   const totalPages=Math.ceil(posts.length/POSTS_PER_PAGE)
   const paginated=posts.slice((currentPage-1)*POSTS_PER_PAGE,currentPage*POSTS_PER_PAGE)
 
-  const statusStyle: Record<string, {bg:string; color:string; label:string}> = {
-    scheduled: {bg:LI2.blueBg,  color:LI2.blue,  label:'⏰ Programmé'},
-    published: {bg:LI2.greenBg, color:LI2.green, label:'✓ Publié'},
-    failed:    {bg:LI2.redBg,   color:LI2.red,   label:'✗ Échoué'},
-    draft:     {bg:'rgba(0,0,0,0.05)', color:LI2.text3, label:'Brouillon'},
-  }
-
   return (
-    <div style={{borderRadius:'8px',overflow:'hidden',background:LI2.white,border:`1px solid ${LI2.border}`,boxShadow:'0 1px 3px rgba(0,0,0,0.06)',fontFamily:FONT2}}>
-      <div style={{padding:'18px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${LI2.border}`}}>
-        <h3 style={{fontWeight:700,fontSize:'16px',color:LI2.text,margin:0}}>Tous les posts</h3>
-        <span style={{fontSize:'12px',color:LI2.text3}}>{posts.length} post{posts.length>1?'s':''} au total</span>
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{duration:0.4}} style={{borderRadius:'16px',overflow:'hidden',background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)'}}>
+      <div style={{padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+        <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:'16px',color:'#E5E7EB'}}>Tous les posts</h3>
+        <span style={{fontSize:'12px',color:'#9CA3AF'}}>{posts.length} post{posts.length>1?'s':''} au total</span>
       </div>
-      <div>
+      <div style={{borderTop:'1px solid rgba(255,255,255,0.05)'}}>
         {posts.length===0?(
           <div style={{padding:'48px 24px',textAlign:'center'}}>
-            <p style={{fontSize:'16px',fontWeight:600,color:LI2.text,marginBottom:'6px'}}>Aucun post pour l&apos;instant</p>
-            <p style={{fontSize:'13px',color:LI2.text2}}>Clique sur &quot;Nouveau post&quot; ou &quot;Importer&quot; pour commencer !</p>
+            <p style={{fontSize:'16px',marginBottom:'8px',fontWeight:500,color:'#E5E7EB'}}>Aucun post pour l'instant</p>
+            <p style={{fontSize:'13px',color:'#9CA3AF'}}>Clique sur "Nouveau post" ou "Importer" pour commencer !</p>
           </div>
         ):(
           <>
@@ -881,55 +1094,65 @@ function PostsTable({posts,currentPage,setCurrentPage,POSTS_PER_PAGE,confirmDele
               const isConfirmingDelete=confirmDeleteId===post.id
               const isDeleting=deletingId===post.id
               const isRetrying=retryingId===post.id
-              const ss=statusStyle[post.status]||statusStyle.draft
+              const statusBg={'scheduled':'rgba(124,58,237,0.1)','published':'rgba(52,211,153,0.1)','failed':'rgba(239,68,68,0.1)','draft':'rgba(255,255,255,0.05)'}[post.status]||'rgba(255,255,255,0.05)'
+              const statusColor={'scheduled':'#A78BFA','published':'#34D399','failed':'#EF4444','draft':'#9CA3AF'}[post.status]||'#9CA3AF'
+              const statusLabel={'scheduled':'⏰ Programmé','published':'✓ Publié','failed':'✗ Échoué','draft':'Brouillon'}[post.status]||'Brouillon'
               return (
-                <div key={post.id} style={{padding:'16px 24px',display:'flex',alignItems:'flex-start',gap:'14px',borderBottom:`1px solid ${LI2.border}`,background:'transparent',transition:'background 120ms'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,0.02)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <div style={{flexShrink:0,width:'52px',textAlign:'center',paddingTop:'2px'}}>
-                    <p style={{fontSize:'20px',fontWeight:700,lineHeight:1,color:LI2.blue,margin:0}}>{d.getDate()}</p>
-                    <p style={{fontSize:'10px',textTransform:'uppercase',marginTop:'3px',color:LI2.text3,margin:'3px 0 0'}}>{d.toLocaleDateString('fr-FR',{month:'short'})}</p>
-                    <p style={{fontSize:'10px',color:LI2.text3,margin:'2px 0 0'}}>{d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</p>
+                <motion.div key={post.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{duration:0.3}} style={{padding:'20px 24px',display:'flex',alignItems:'flex-start',gap:'16px',borderBottom:'1px solid rgba(255,255,255,0.05)',background:'transparent',transition:'background 0.3s',cursor:'default'}} onMouseEnter={(e)=>e.currentTarget.style.background='rgba(124,58,237,0.03)'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                  <div style={{flexShrink:0,width:'56px',textAlign:'center'}}>
+                    <p style={{fontSize:'18px',fontWeight:700,lineHeight:1,color:'#A78BFA',fontFamily:'Syne,sans-serif'}}>{d.getDate()}</p>
+                    <p style={{fontSize:'10px',textTransform:'uppercase',marginTop:'4px',color:'#9CA3AF'}}>{d.toLocaleDateString('fr-FR',{month:'short'})}</p>
+                    <p style={{fontSize:'10px',color:'#9CA3AF'}}>{d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</p>
                   </div>
                   <div style={{flex:1,minWidth:0}}>
-                    <p style={{fontSize:'13px',color:LI2.text,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',margin:0}}>{post.content.replace(/<[^>]+>/g,'').slice(0,200)}</p>
-                    <div style={{display:'flex',alignItems:'center',gap:'10px',marginTop:'6px'}}>
-                      <span style={{fontSize:'12px',color:LI2.text3}}>{post.content.replace(/<[^>]+>/g,'').length} car.</span>
-                      {post.images&&post.images.length>0&&<span style={{fontSize:'12px',color:LI2.blue}}>🖼 {post.images.length} image{post.images.length>1?'s':''}</span>}
+                    <p style={{fontSize:'13px',color:'#D1D5DB',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{post.content.replace(/<[^>]+>/g,'').slice(0,200)}</p>
+                    <div style={{display:'flex',alignItems:'center',gap:'12px',marginTop:'8px'}}>
+                      <span style={{fontSize:'12px',color:'#9CA3AF'}}>{post.content.replace(/<[^>]+>/g,'').length} car.</span>
+                      {post.images&&post.images.length>0&&(<span style={{fontSize:'12px',color:'#A78BFA'}}>🖼 {post.images.length} image{post.images.length>1?'s':''}</span>)}
                     </div>
                   </div>
                   <div style={{flexShrink:0,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px'}}>
-                    <span style={{fontSize:'11px',fontWeight:700,padding:'3px 10px',borderRadius:'9999px',background:ss.bg,color:ss.color}}>{ss.label}</span>
+                    <span style={{fontSize:'11px',fontWeight:600,padding:'4px 12px',borderRadius:'6px',background:statusBg,color:statusColor}}>{statusLabel}</span>
                     {isConfirmingDelete?(
                       <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
-                        <span style={{fontSize:'11px',color:LI2.text3,marginRight:'4px'}}>Supprimer ?</span>
-                        <button onClick={()=>handleDeletePost(post.id)} disabled={isDeleting} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:700,borderRadius:'6px',background:LI2.red,color:'white',border:'none',cursor:'pointer',opacity:isDeleting?0.6:1}}>
-                          {isDeleting?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'12px',height:'12px'}} />}Oui
+                        <span style={{fontSize:'11px',color:'#9CA3AF',marginRight:'4px'}}>Supprimer ?</span>
+                        <button onClick={()=>handleDeletePost(post.id)} disabled={isDeleting} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'6px',background:'#EF4444',color:'white',border:'none',cursor:'pointer',opacity:isDeleting?0.6:1,transition:'all 0.3s'}}>
+                          {isDeleting?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:<Check style={{width:'12px',height:'12px'}} />}
+                          Oui
                         </button>
-                        <button onClick={()=>setConfirmDeleteId(null)} style={{padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:LI2.text2,background:'rgba(0,0,0,0.05)',border:'none',cursor:'pointer'}}>Non</button>
+                        <button onClick={()=>setConfirmDeleteId(null)} style={{padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#9CA3AF',background:'rgba(255,255,255,0.05)',border:'none',cursor:'pointer',transition:'all 0.3s'}}>Non</button>
                       </div>
                     ):(
                       <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
-                        <button onClick={()=>setPreviewPost(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'6px',color:LI2.blue,background:LI2.blueBg,border:'none',cursor:'pointer'}}><Eye style={{width:'12px',height:'12px'}} />Aperçu</button>
-                        {post.status!=='published'&&(<button onClick={()=>openEditModal(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'6px',color:LI2.blue,background:LI2.blueBg,border:'none',cursor:'pointer'}}><Pencil style={{width:'12px',height:'12px'}} />Modifier</button>)}
-                        {post.status==='failed'&&(<button onClick={()=>handleRetryPost(post)} disabled={isRetrying} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'6px',color:LI2.amber,background:LI2.amberBg,border:'none',cursor:'pointer',opacity:isRetrying?0.6:1}}>{isRetrying?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:'↺'}Réessayer</button>)}
-                        <button onClick={()=>setConfirmDeleteId(post.id)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:600,borderRadius:'6px',color:LI2.red,background:LI2.redBg,border:'none',cursor:'pointer'}}><Trash2 style={{width:'12px',height:'12px'}} /></button>
+                        <button onClick={()=>setPreviewPost(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Eye style={{width:'12px',height:'12px'}} />Aperçu</button>
+                        {post.status!=='published'&&(<button onClick={()=>openEditModal(post)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#A78BFA',background:'rgba(124,58,237,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Pencil style={{width:'12px',height:'12px'}} />Modifier</button>)}
+                        {post.status==='failed'&&(<button onClick={()=>handleRetryPost(post)} disabled={isRetrying} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',fontWeight:500,borderRadius:'6px',color:'#FCD34D',background:'rgba(245,158,11,0.1)',border:'none',cursor:'pointer',opacity:isRetrying?0.6:1,transition:'all 0.3s'}}>{isRetrying?<Loader2 style={{width:'12px',height:'12px',animation:'spin 1s linear infinite'}} />:'↺'}Réessayer</button>)}
+                        <button onClick={()=>setConfirmDeleteId(post.id)} style={{display:'flex',alignItems:'center',gap:'4px',padding:'4px 10px',fontSize:'11px',borderRadius:'6px',color:'#EF4444',background:'rgba(239,68,68,0.1)',border:'none',cursor:'pointer',transition:'all 0.3s'}}><Trash2 style={{width:'12px',height:'12px'}} /></button>
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               )
             })}
             {totalPages>1&&(
-              <div style={{padding:'14px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:`1px solid ${LI2.border}`}}>
-                <span style={{fontSize:'12px',color:LI2.text3}}>Page {currentPage}/{totalPages} · {posts.length} posts</span>
+              <div style={{padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+                <span style={{fontSize:'12px',color:'#9CA3AF'}}>Page {currentPage}/{totalPages} · {posts.length} posts</span>
                 <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                  <button onClick={()=>setCurrentPage(Math.max(1,currentPage-1))} disabled={currentPage===1} style={{padding:'6px 12px',fontSize:'12px',fontWeight:600,borderRadius:'6px',color:LI2.text,border:`1px solid ${LI2.border}`,background:LI2.white,cursor:'pointer',opacity:currentPage===1?0.4:1,fontFamily:FONT2}}>← Précédent</button>
-                  <button onClick={()=>setCurrentPage(Math.min(totalPages,currentPage+1))} disabled={currentPage===totalPages} style={{padding:'6px 12px',fontSize:'12px',fontWeight:600,borderRadius:'6px',color:LI2.text,border:`1px solid ${LI2.border}`,background:LI2.white,cursor:'pointer',opacity:currentPage===totalPages?0.4:1,fontFamily:FONT2}}>Suivant →</button>
+                  <button onClick={()=>setCurrentPage(Math.max(1,currentPage-1))} disabled={currentPage===1} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#D1D5DB',border:'1px solid rgba(255,255,255,0.1)',background:'transparent',cursor:'pointer',opacity:currentPage===1?0.4:1,transition:'all 0.3s'}}>← Précédent</button>
+                  <button onClick={()=>setCurrentPage(Math.min(totalPages,currentPage+1))} disabled={currentPage===totalPages} style={{padding:'6px 12px',fontSize:'12px',fontWeight:500,borderRadius:'8px',color:'#D1D5DB',border:'1px solid rgba(255,255,255,0.1)',background:'transparent',cursor:'pointer',opacity:currentPage===totalPages?0.4:1,transition:'all 0.3s'}}>Suivant →</button>
                 </div>
               </div>
             )}
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
+
+function hexToRgb(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}` : '124,58,237'
+}
+
+

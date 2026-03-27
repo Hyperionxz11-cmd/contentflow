@@ -335,7 +335,9 @@ function StepDots({ current }: { current: number }) {
 export default function BulkImport({
   onImport, onClose, isPremium = false, publishedPosts = [], authorAvatar, authorName,
 }: BulkImportProps) {
-  const [step, setStep] = useState<'upload' | 'preview' | 'schedule'>('upload')
+  const [step, setStep] = useState<'upload' | 'preview' | 'schedule' | 'success'>('upload')
+  const [successCount, setSuccessCount] = useState(0)
+  const [successRange, setSuccessRange] = useState('')
   const [posts, setPosts] = useState<string[]>([])
   const [postImages, setPostImages] = useState<Record<number, string[]>>({})
   const [filename, setFilename] = useState('')
@@ -538,16 +540,39 @@ export default function BulkImport({
   const handleSchedule = async () => {
     setScheduling(true)
     try {
-      const selected = posts.map((_, i) => i).filter(i => selectedPosts.has(i))
-      let currentDate = new Date(`${startDate}T${startTime}:00`)
-      const scheduled = selected.map((i, n) => {
-        if (n > 0) currentDate = getNextDate(currentDate, frequency)
-        return { content: getContent(i), scheduledAt: currentDate.toISOString(), status: 'scheduled', images: postImages[i] || [] }
-      })
+      const timeline = computeTimeline()
+      const scheduled = timeline.map(({ idx, date }) => ({
+        content: getContent(idx),
+        scheduledAt: date.toISOString(),
+        status: 'scheduled',
+        images: postImages[idx] || [],
+      }))
       await onImport(scheduled)
+      // Build range label for success screen
+      if (timeline.length > 0) {
+        const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+        const first = fmt(timeline[0].date)
+        const last = fmt(timeline[timeline.length - 1].date)
+        setSuccessRange(timeline.length === 1 ? `le ${first}` : `du ${first} au ${last}`)
+        setSuccessCount(timeline.length)
+      }
+      setStep('success')
     } finally {
       setScheduling(false)
     }
+  }
+
+  // ── Timeline compute ──
+
+  const computeTimeline = (): { idx: number; date: Date }[] => {
+    const selected = posts.map((_, i) => i).filter(i => selectedPosts.has(i))
+    if (!startDate || !startTime || selected.length === 0) return []
+    let currentDate = new Date(`${startDate}T${startTime}:00`)
+    if (isNaN(currentDate.getTime())) return []
+    return selected.map((i, n) => {
+      if (n > 0) currentDate = getNextDate(currentDate, frequency)
+      return { idx: i, date: new Date(currentDate) }
+    })
   }
 
   const applySmartSlot = (slot: SmartSlot) => {
@@ -561,7 +586,7 @@ export default function BulkImport({
 
   const smartSlots = analyzeSmartSlots(publishedPosts)
   const stepIndex = step === 'upload' ? 0 : step === 'preview' ? 1 : 2
-  const stepLabel = step === 'upload' ? 'Importer' : step === 'preview' ? 'Sélectionner les posts' : 'Programmer'
+  const stepLabel = step === 'upload' ? 'Importer' : step === 'preview' ? 'Sélectionner les posts' : step === 'schedule' ? 'Programmer' : '✓ Planifié'
 
   // ─────────────────────────────────────────────────────────
   // Render
@@ -655,7 +680,8 @@ export default function BulkImport({
             <div style={{ fontSize: 12, color: T.gray4, marginTop: 3 }}>
               {step === 'upload' ? 'Tout format accepté — l\'IA s\'adapte' :
                step === 'preview' ? `${selectedPosts.size} / ${posts.length} posts sélectionnés` :
-               'Fréquence et date de début'}
+               step === 'schedule' ? 'Fréquence et date de début' :
+               successRange}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1062,17 +1088,155 @@ export default function BulkImport({
                   à <strong>{startTime}</strong>
                 </span>
               </div>
+
+              {/* Timeline preview */}
+              {(() => {
+                const timeline = computeTimeline()
+                if (timeline.length === 0) return null
+                const SHOW = 5
+                const shown = timeline.slice(0, SHOW)
+                const hidden = timeline.length - SHOW
+                const lastItem = hidden > 0 ? timeline[timeline.length - 1] : null
+                const fmtDate = (d: Date) => d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+                const fmtTime = (d: Date) => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: T.gray4, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Calendrier de publication
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {shown.map(({ idx, date }, n) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px',
+                          background: n === 0 ? T.primaryLight : T.bg, borderRadius: T.radius.md,
+                          border: n === 0 ? `1px solid ${T.primaryRing}` : '1px solid transparent' }}>
+                          <div style={{ width: 20, height: 20, borderRadius: T.radius.pill, flexShrink: 0,
+                            background: n === 0 ? T.primary : T.gray5,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 700, color: n === 0 ? T.white : T.gray3 }}>
+                            {idx + 1}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 11, color: T.gray2, margin: 0,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
+                              {getContent(idx).slice(0, 60)}{getContent(idx).length > 60 ? '…' : ''}
+                            </p>
+                          </div>
+                          <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: n === 0 ? T.primary : T.gray2 }}>{fmtDate(date)}</div>
+                            <div style={{ fontSize: 10, color: T.gray4 }}>{fmtTime(date)}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {hidden > 0 && (
+                        <>
+                          <div style={{ textAlign: 'center', padding: '4px 0', fontSize: 11, color: T.gray4 }}>
+                            · · · {hidden} autres posts · · ·
+                          </div>
+                          {lastItem && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px',
+                              background: T.bg, borderRadius: T.radius.md, border: '1px solid transparent' }}>
+                              <div style={{ width: 20, height: 20, borderRadius: T.radius.pill, flexShrink: 0,
+                                background: T.gray5, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 10, fontWeight: 700, color: T.gray3 }}>
+                                {lastItem.idx + 1}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: 11, color: T.gray2, margin: 0,
+                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
+                                  {getContent(lastItem.idx).slice(0, 60)}{getContent(lastItem.idx).length > 60 ? '…' : ''}
+                                </p>
+                              </div>
+                              <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: T.gray2 }}>{fmtDate(lastItem.date)}</div>
+                                <div style={{ fontSize: 10, color: T.gray4 }}>{fmtTime(lastItem.date)}</div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
+          {/* ── STEP 4 : Success ── */}
+          {step === 'success' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 8px 16px', gap: 20 }}>
+              {/* Animated checkmark */}
+              <div style={{
+                width: 80, height: 80, borderRadius: '50%', background: 'rgba(52,199,89,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: 'successPop 0.5s cubic-bezier(.175,.885,.32,1.275) both',
+              }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%', background: '#34c759',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Check style={{ width: 28, height: 28, color: '#fff', strokeWidth: 3 }} />
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: T.gray1, letterSpacing: '-0.02em', marginBottom: 6 }}>
+                  {successCount} post{successCount > 1 ? 's' : ''} planifié{successCount > 1 ? 's' : ''} !
+                </div>
+                <div style={{ fontSize: 13, color: T.gray3 }}>
+                  {successRange}
+                </div>
+              </div>
+
+              {/* Stats grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, width: '100%', marginTop: 4 }}>
+                {[
+                  { value: successCount, label: 'posts' },
+                  { value: frequency === 'daily' ? '7×' : frequency === '3x_week' ? '3×' : frequency === 'weekdays' ? '5×' : '1×', label: 'par semaine' },
+                  {
+                    value: (() => {
+                      const tl = computeTimeline()
+                      if (tl.length < 2) return '—'
+                      const diff = tl[tl.length - 1].date.getTime() - tl[0].date.getTime()
+                      const weeks = Math.round(diff / (7 * 24 * 60 * 60 * 1000))
+                      return weeks < 2 ? `${Math.round(diff / (24 * 60 * 60 * 1000))}j` : `${weeks}sem`
+                    })(),
+                    label: 'de couverture',
+                  },
+                ].map(stat => (
+                  <div key={stat.label} style={{
+                    background: T.bg, borderRadius: T.radius.md, padding: '12px 10px', textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: T.primary, letterSpacing: '-0.02em' }}>{stat.value}</div>
+                    <div style={{ fontSize: 11, color: T.gray4, marginTop: 2 }}>{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ width: '100%', padding: '10px 14px', background: T.primaryLight,
+                borderRadius: T.radius.md, fontSize: 12, color: T.primary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Calendar style={{ width: 14, height: 14, flexShrink: 0 }} />
+                <span>Tes posts sont visibles dans le calendrier. LinkedIn les publiera automatiquement.</span>
+              </div>
+
+              <style>{`
+                @keyframes successPop {
+                  from { transform: scale(0.5); opacity: 0; }
+                  to { transform: scale(1); opacity: 1; }
+                }
+              `}</style>
+            </div>
+          )}
+
         </div>
 
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px 20px', borderTop: `1px solid ${T.gray6}` }}>
-          <button onClick={step === 'upload' ? onClose : () => setStep(step === 'schedule' ? 'preview' : 'upload')}
-            style={{ padding: '9px 16px', borderRadius: T.radius.pill, border: 'none', background: T.bg,
-              fontSize: 13, color: T.gray3, cursor: 'pointer', fontWeight: 500 }}>
-            {step === 'upload' ? 'Annuler' : '← Retour'}
-          </button>
+          {step !== 'success' && (
+            <button onClick={step === 'upload' ? onClose : () => setStep(step === 'schedule' ? 'preview' : 'upload')}
+              style={{ padding: '9px 16px', borderRadius: T.radius.pill, border: 'none', background: T.bg,
+                fontSize: 13, color: T.gray3, cursor: 'pointer', fontWeight: 500 }}>
+              {step === 'upload' ? 'Annuler' : '← Retour'}
+            </button>
+          )}
 
           {step === 'preview' && (
             <button onClick={() => setStep('schedule')} disabled={selectedPosts.size === 0}
@@ -1090,7 +1254,15 @@ export default function BulkImport({
                 color: T.white, fontSize: 13, fontWeight: 600, cursor: (scheduling || selectedPosts.size === 0) ? 'not-allowed' : 'pointer' }}>
               {scheduling
                 ? <><Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} /> Programmation…</>
-                : <><Calendar style={{ width: 14, height: 14 }} /> Confirmer</>}
+                : <><Calendar style={{ width: 14, height: 14 }} /> Planifier {selectedPosts.size} post{selectedPosts.size > 1 ? 's' : ''}</>}
+            </button>
+          )}
+
+          {step === 'success' && (
+            <button onClick={onClose}
+              style={{ width: '100%', padding: '12px 20px', borderRadius: T.radius.pill, border: 'none',
+                background: T.primary, color: T.white, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+              Voir mon calendrier →
             </button>
           )}
         </div>
