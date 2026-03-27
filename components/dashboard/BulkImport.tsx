@@ -206,6 +206,48 @@ function splitHtmlByHeadings(html: string): string[] | null {
 }
 
 // ─────────────────────────────────────────────────────────────
+// PDF text extraction via pdfjs CDN (no npm install needed)
+// ─────────────────────────────────────────────────────────────
+
+function loadPdfjsScript(): Promise<void> {
+  const SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+  if ((window as any).pdfjsLib) return Promise.resolve()
+  if (document.querySelector(`script[src="${SRC}"]`)) {
+    return new Promise(resolve => {
+      const check = setInterval(() => {
+        if ((window as any).pdfjsLib) { clearInterval(check); resolve() }
+      }, 50)
+    })
+  }
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = SRC
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('PDF.js CDN inaccessible — vérifie ta connexion.'))
+    document.head.appendChild(s)
+  })
+}
+
+async function extractPdfText(file: File): Promise<string> {
+  await loadPdfjsScript()
+  const pdfjs = (window as any).pdfjsLib
+  if (!pdfjs) throw new Error('PDF.js non chargé')
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  const arrayBuffer = await file.arrayBuffer()
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
+  const pages: string[] = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    const text = content.items.map((item: any) => item.str ?? '').join(' ')
+    if (text.trim().length > 0) pages.push(text)
+  }
+  if (pages.length === 0) throw new Error('Ce PDF ne contient pas de texte extractible (PDF scanné ?). Exporte-le en .txt depuis ton éditeur.')
+  return pages.join('\n\n').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+// ─────────────────────────────────────────────────────────────
 // Direct AI split — bypasses Vercel (avoids 10s timeout)
 // Calls Supabase edge function directly from the browser
 // ─────────────────────────────────────────────────────────────
@@ -416,7 +458,14 @@ export default function BulkImport({
           }
           setPosts(extracted); setPostImages(images); setStructure(s); setMethod(m); setImportWarning(w ?? null)
         }
-      } else if (['txt', 'md', 'csv', 'rtf', 'pdf'].includes(ext)) {
+      } else if (ext === 'pdf') {
+        setLoadingMsg('Extraction du texte PDF…')
+        rawText = await extractPdfText(file)
+        setLoadingMsg('Analyse de la structure…')
+        const { posts: extracted, structure: s, method: m, warning: w } = await apiSplit(rawText, file.name)
+        finalPosts = extracted
+        setPosts(extracted); setPostImages({}); setStructure(s); setMethod(m); setImportWarning(w ?? null)
+      } else if (['txt', 'md', 'csv', 'rtf'].includes(ext)) {
         setLoadingMsg('Lecture du fichier…')
         rawText = await file.text()
         setLoadingMsg('Analyse de la structure…')
@@ -673,25 +722,25 @@ export default function BulkImport({
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
       }}>
         <div style={{
-          background: '#111116', border: '1px solid rgba(10,102,194,0.2)',
+          background: T.white, border: `1px solid ${T.gray5}`,
           borderRadius: 24, padding: '32px 28px', maxWidth: 420, width: '100%',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.12)',
         }}>
           {/* Icon */}
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <div style={{
               width: 68, height: 68, borderRadius: '50%',
-              background: 'rgba(10,102,194,0.12)',
+              background: T.primaryLight,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px',
             }}>
               <Calendar style={{ width: 28, height: 28, color: T.primary }} />
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#E5E7EB', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: T.gray1, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
               Planification verrouillée
             </h2>
-            <p style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
-              Tu viens de voir l'IA détecter <strong style={{ color: '#E5E7EB' }}>{selectedPosts.size} posts</strong> dans ton document.
+            <p style={{ fontSize: 13, color: T.gray3, lineHeight: 1.6, margin: 0 }}>
+              Tu viens de voir l'IA détecter <strong style={{ color: T.gray1 }}>{selectedPosts.size} posts</strong> dans ton document.
               <br />Passe en Solo pour les planifier automatiquement.
             </p>
           </div>
@@ -707,13 +756,13 @@ export default function BulkImport({
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '14px 16px', borderRadius: 14,
-                  border: p.highlight ? `1.5px solid ${p.color}66` : `1.5px solid ${p.color}33`,
-                  background: p.highlight ? `${p.color}18` : `${p.color}0a`,
+                  border: p.highlight ? `1.5px solid ${p.color}66` : `1.5px solid ${T.gray5}`,
+                  background: p.highlight ? `${p.color}08` : T.bg,
                   cursor: 'pointer', textAlign: 'left',
                 }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#E5E7EB' }}>{p.label} — {p.price}</div>
-                  <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>{p.features}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.gray1 }}>{p.label} — {p.price}</div>
+                  <div style={{ fontSize: 11, color: T.gray3, marginTop: 3 }}>{p.features}</div>
                 </div>
                 <div style={{
                   padding: '7px 16px', borderRadius: 999,
@@ -725,7 +774,7 @@ export default function BulkImport({
           </div>
 
           {/* What they'll unlock */}
-          <div style={{ padding: '12px 14px', background: 'rgba(10,102,194,0.07)', borderRadius: 12, marginBottom: 16 }}>
+          <div style={{ padding: '12px 14px', background: T.primaryLight, borderRadius: 12, marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: T.primary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Ce que tu débloqueras
             </div>
@@ -736,15 +785,15 @@ export default function BulkImport({
             ].map((f, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: i < 2 ? 6 : 0 }}>
                 <Check style={{ width: 12, height: 12, color: T.primary, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: '#D1D5DB' }}>{f}</span>
+                <span style={{ fontSize: 12, color: T.gray2 }}>{f}</span>
               </div>
             ))}
           </div>
 
           <button onClick={() => setShowUpgradeGate(false)}
             style={{ width: '100%', padding: '10px', borderRadius: 999,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'transparent', color: '#6B7280', fontSize: 13, cursor: 'pointer' }}>
+              border: `1px solid ${T.gray5}`,
+              background: 'transparent', color: T.gray3, fontSize: 13, cursor: 'pointer' }}>
             Continuer sans planifier
           </button>
         </div>

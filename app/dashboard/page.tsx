@@ -228,7 +228,7 @@ export default function DashboardPage() {
       const { data, error: insertError } = await supabase.from('posts').insert(toInsert).select()
       if (insertError) {
         console.error('BulkImport insert error:', insertError)
-        alert('Erreur lors de la sauvegarde des posts : ' + insertError.message)
+        throw new Error('Erreur sauvegarde : ' + insertError.message)
         return
       }
       if (data) {
