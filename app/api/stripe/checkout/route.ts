@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Stripe Payment Links (created via Stripe API)
-const PAYMENT_LINKS: Record<string, string> = {
-    pro: 'https://buy.stripe.com/28E28rddR5kk0ieatm5kk01',     // €19/month
-    agence: 'https://buy.stripe.com/aFabJ1ehV9AA3uqgRK5kk02',  // €59/month
-}
+// Stripe Payment Link created via Stripe API
+// Supports client_reference_id as URL parameter
+const PAYMENT_LINK_URL = 'https://buy.stripe.com/bJe14n6PtfYYaWS7ha5kk00'
 
 export async function POST(request: NextRequest) {
-    const { userId, plan = 'pro' } = await request.json()
+  const { userId } = await request.json()
 
   if (!userId) {
-        return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
   }
 
-  const baseUrl = PAYMENT_LINKS[plan] || PAYMENT_LINKS.pro
-    const checkoutUrl = `${baseUrl}?client_reference_id=${encodeURIComponent(userId)}`
+  // Append client_reference_id to the payment link URL
+  // Stripe will include this in the checkout.session.completed webhook event
+  const checkoutUrl = `${PAYMENT_LINK_URL}?client_reference_id=${encodeURIComponent(userId)}`
 
   return NextResponse.json({ url: checkoutUrl })
 }
