@@ -9,13 +9,24 @@
 ## État actuel de la production
 
 - **URL production** : https://contentflow-gilt.vercel.app
-- **Commit HEAD** : `bc9206e` — revert sync destructeur (2026-03-27)
-- **Dernier état stable connu** : `416646c` — fix importer modal (2026-03-27)
+- **Commit HEAD** : `5385d6c` — fix landing page blanche (2026-03-27)
+- **Dernier état stable connu** : `5385d6c` — landing page Tailwind opérationnelle
 - **Plan actuel André** : TEAM
 
 ---
 
 ## Chronologie complète
+
+### 2026-03-27 — Fix landing page blanche (Claude)
+
+#### ✅ Fix landing page — `5385d6c`
+- **Problème** : Landing page complètement blanche après le revert `bc9206e`.
+- **Cause** : La version déployée (`416646c`) utilisait `framer-motion v11` avec `initial={{ opacity: 0 }}` sur tous les éléments hero. Incompatible avec React 19 — les animations ne se déclenchaient jamais, page restait à `opacity: 0`.
+- **Fix** : Commit chirurgical via Python git plumbing (NTFS). Remplacement de `page.tsx` (framer-motion → Tailwind + useState) et `globals.css` (LinkedIn design system → tokens propres).
+- **Fichiers modifiés** : `app/page.tsx`, `app/globals.css`
+- **Résultat** : Landing page visible et fonctionnelle en production.
+
+---
 
 ### 2026-03-27 — Session de debug + régression (Claude)
 
