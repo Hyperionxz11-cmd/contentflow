@@ -8,8 +8,8 @@
 
 | Info | Valeur |
 |------|--------|
-| **HEAD local** | `64dc389` — fix: save uncommitted local work |
-| **Dernier push GitHub** | `df8e7ab` — ✅ POUSSÉ 2026-03-27 |
+| **HEAD local** | `faf2815` — chore: SESSION_STATE push status updated |
+| **Dernier push GitHub** | `faf2815` — ✅ POUSSÉ 2026-03-27 à 10h57 |
 | **Production Vercel** | https://contentflow-gilt.vercel.app |
 | **Dernier déploiement stable** | `5385d6c` — landing page fix |
 | **Plan André** | TEAM |
@@ -20,7 +20,7 @@
 
 ## ⚠️ ACTIONS REQUISES AU PROCHAIN DÉMARRAGE
 
-1. **Vérifier Vercel auto-deploy** de `df8e7ab` sur https://vercel.com/dashboard
+1. **Vérifier Vercel auto-deploy** de `faf2815` sur https://vercel.com/dashboard
 2. **Supprimer manuellement depuis Windows** les fichiers lock stale :
    - `.git/index.lock`
    - `.git/refs/heads/main.lock`
