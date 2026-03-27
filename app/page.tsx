@@ -97,32 +97,51 @@ const plans = [
     price: '0',
     description: 'Pour tester et démarrer',
     features: [
-      { text: '3 posts programmés/semaine', included: true },
+      { text: '3 posts programmés/mois', included: true },
       { text: 'Calendrier basique', included: true },
-      { text: '5 templates inclus', included: true },
       { text: 'Preview LinkedIn', included: true },
+      { text: 'Import documents (détection auto)', included: true },
       { text: 'Analytics avancés', included: false },
-      { text: 'Templates illimités', included: false },
+      { text: 'Import IA (split intelligent)', included: false },
       { text: 'Support prioritaire', included: false },
     ],
     cta: 'Commencer gratuitement',
     popular: false,
+    plan: '',
   },
   {
-    name: 'Premium',
-    price: '9',
+    name: 'Solo',
+    price: '19',
     description: 'Pour les créateurs sérieux',
     features: [
       { text: 'Posts illimités', included: true },
       { text: 'Calendrier complet', included: true },
-      { text: '50+ templates premium', included: true },
-      { text: 'Preview LinkedIn', included: true },
+      { text: 'Import IA — 5 documents/mois', included: true },
+      { text: '20 reformulations IA/mois', included: true },
       { text: 'Analytics avancés', included: true },
-      { text: 'Rappels intelligents', included: true },
+      { text: 'Preview LinkedIn', included: true },
       { text: 'Support prioritaire', included: true },
     ],
-    cta: 'Commencer l\'essai gratuit',
+    cta: 'Commencer avec Solo',
     popular: true,
+    plan: 'solo',
+  },
+  {
+    name: 'Agence',
+    price: '59',
+    description: 'Pour les équipes et agences',
+    features: [
+      { text: 'Posts illimités', included: true },
+      { text: '10 workspaces clients', included: true },
+      { text: 'Import IA — 20 documents/mois', included: true },
+      { text: '80 reformulations IA/mois', included: true },
+      { text: 'Mode approbation client', included: true },
+      { text: 'Vue globale multi-comptes', included: true },
+      { text: 'Onboarding dédié', included: true },
+    ],
+    cta: 'Commencer avec Agence',
+    popular: false,
+    plan: 'agence',
   },
 ]
 
@@ -580,17 +599,19 @@ export default function LandingPage() {
                 </ul>
 
                 <Link
-                  href="/signup"
+                  href={plan.plan ? `/api/stripe/checkout?plan=${plan.plan}` : '/signup'}
                   className={`block text-center py-3.5 rounded-2xl font-bold text-sm transition-all ${
                     plan.popular
                       ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)] hover:shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : plan.plan
+                        ? 'bg-gray-800 text-white hover:bg-gray-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {plan.cta}
                 </Link>
                 {plan.popular && (
-                  <p className="text-center text-xs text-gray-400 mt-3">14 jours d'essai · Sans carte bancaire</p>
+                  <p className="text-center text-xs text-gray-400 mt-3">Sans engagement · Annulation à tout moment</p>
                 )}
               </div>
             ))}

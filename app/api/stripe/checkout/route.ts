@@ -1,19 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Stripe Payment Link created via Stripe API
-// Supports client_reference_id as URL parameter
-const PAYMENT_LINK_URL = 'https://buy.stripe.com/bJe14n6PtfYYaWS7ha5kk00'
+// Payment links créés via Stripe MCP — 2026-03-27
+// Solo  19€/mois : price_1TFEfYFjKl5nqEXCb4YtsD78 → prod_UDg1j8qnlPtb6a
+// Agence 59€/mois : price_1TFEfcFjKl5nqEXCGNvbWljN → prod_UDg1atmnISc9zj
+const PAYMENT_LINKS: Record<string, string> = {
+  solo:   'https://buy.stripe.com/7sYeVd0r54gg1mi7ha5kk03',
+  agence: 'https://buy.stripe.com/9B628rb5J3cc4yueJC5kk04',
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const plan = (searchParams.get('plan') || 'solo').toLowerCase()
+  const userId = searchParams.get('userId') || ''
+
+  const baseUrl = PAYMENT_LINKS[plan] || PAYMENT_LINKS['solo']
+  const checkoutUrl = userId
+    ? `${baseUrl}?client_reference_id=${encodeURIComponent(userId)}`
+    : baseUrl
+
+  return NextResponse.redirect(checkoutUrl)
+}
 
 export async function POST(request: NextRequest) {
-  const { userId } = await request.json()
+  const body = await request.json().catch(() => ({}))
+  const plan = ((body.plan as string) || 'solo').toLowerCase()
+  const userId = (body.userId as string) || ''
 
-  if (!userId) {
-    return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-  }
-
-  // Append client_reference_id to the payment link URL
-  // Stripe will include this in the checkout.session.completed webhook event
-  const checkoutUrl = `${PAYMENT_LINK_URL}?client_reference_id=${encodeURIComponent(userId)}`
+  const baseUrl = PAYMENT_LINKS[plan] || PAYMENT_LINKS['solo']
+  const checkoutUrl = userId
+    ? `${baseUrl}?client_reference_id=${encodeURIComponent(userId)}`
+    : baseUrl
 
   return NextResponse.json({ url: checkoutUrl })
 }

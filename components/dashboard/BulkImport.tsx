@@ -699,8 +699,8 @@ export default function BulkImport({
           {/* Plan cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
             {[
-              { plan: 'solo', label: 'Solo', price: '9€/mois', features: '5 imports · 20 reformulations · Posts illimités', color: '#6366f1', highlight: true },
-              { plan: 'agence', label: 'Agence', price: '29€/mois', features: '20 imports · 80 reformulations · Multi-comptes', color: T.primary, highlight: false },
+              { plan: 'solo', label: 'Solo', price: '19€/mois', features: '5 imports · 20 reformulations · Posts illimités', color: '#6366f1', highlight: true },
+              { plan: 'agence', label: 'Agence', price: '59€/mois', features: '20 imports · 80 reformulations · Multi-comptes', color: T.primary, highlight: false },
             ].map(p => (
               <button key={p.plan}
                 onClick={() => { window.location.href = `/api/stripe/checkout?plan=${p.plan}` }}

@@ -431,8 +431,8 @@ export default function DashboardPage() {
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:20}}>
               {[
-                {plan:'Solo',price:'9€/mois',posts:'50 posts/mois',ai:'5 imports IA · 20 reformulations',color:'#6366f1'},
-                {plan:'Agence',price:'29€/mois',posts:'Posts illimités',ai:'20 imports IA · 80 reformulations',color:'#A78BFA'},
+                {plan:'solo',price:'19€/mois',posts:'Posts illimités',ai:'5 imports IA · 20 reformulations',color:'#6366f1'},
+                {plan:'agence',price:'59€/mois',posts:'Posts illimités · 10 workspaces',ai:'20 imports IA · 80 reformulations',color:'#A78BFA'},
               ].map(p => (
                 <button key={p.plan}
                   onClick={() => { window.location.href = '/api/stripe/checkout?plan=' + p.plan.toLowerCase(); }}
@@ -442,7 +442,7 @@ export default function DashboardPage() {
                     background:`${p.color}0d`,cursor:'pointer',textAlign:'left',
                   }}>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:'#E5E7EB'}}>{p.plan} — {p.price}</div>
+                    <div style={{fontSize:14,fontWeight:700,color:'#E5E7EB'}}>{p.plan.charAt(0).toUpperCase()+p.plan.slice(1)} — {p.price}</div>
                     <div style={{fontSize:11,color:'#9CA3AF',marginTop:3}}>{p.posts} · {p.ai}</div>
                   </div>
                   <div style={{
