@@ -277,67 +277,33 @@ async function extractPdfText(file: File): Promise<string> {
 // ─────────────────────────────────────────────────────────────
 
 const AI_SPLITTER_URL = 'https://bvsfclqlopzkfmeinbqs.supabase.co/functions/v1/ai-doc-splitter'
-const AI_CHUNK_SIZE = 2800   // chars per chunk sent to Claude
-const AI_CHUNK_OVERLAP = 80  // overlap to avoid cutting mid-post
 
 async function splitWithAIDirectly(
   text: string,
   onProgress?: (current: number, total: number) => void
 ): Promise<string[]> {
-  // Chunk the document
-  const chunks: string[] = []
-  let pos = 0
-  while (pos < text.length) {
-    let end = Math.min(pos + AI_CHUNK_SIZE, text.length)
-    if (end < text.length) {
-      const lb = text.lastIndexOf('\n\n', end)
-      if (lb > pos + AI_CHUNK_SIZE / 2) end = lb
-    }
-    const chunk = text.slice(pos, end).trim()
-    if (chunk.length >= 50) chunks.push(chunk)
-    pos = end - AI_CHUNK_OVERLAP
-    if (pos >= text.length) break
+  // Send full document in 1 call — edge function handles chunking server-side
+  // Timeout: 90s (Supabase edge allows up to 150s; Anthropic Haiku ~30-60s for full doc)
+  const TIMEOUT_MS = 90000
+  onProgress?.(0, 1)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  try {
+    const res = await fetch(AI_SPLITTER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    onProgress?.(1, 1)
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.posts || []) as string[]
+  } catch {
+    clearTimeout(timeoutId)
+    return []
   }
-
-  // Process chunks — batch of 3 in parallel, with 25s timeout per call
-  const BATCH = 3
-  const CHUNK_TIMEOUT_MS = 25000
-  const allPosts: string[] = []
-  let done = 0
-
-  for (let i = 0; i < chunks.length; i += BATCH) {
-    const batch = chunks.slice(i, i + BATCH)
-    const results = await Promise.all(batch.map(async chunk => {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), CHUNK_TIMEOUT_MS)
-      try {
-        const res = await fetch(AI_SPLITTER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: chunk }),
-          signal: controller.signal,
-        })
-        clearTimeout(timeoutId)
-        if (!res.ok) return [] as string[]
-        const data = await res.json()
-        return (data.posts || []) as string[]
-      } catch {
-        clearTimeout(timeoutId)
-        return [] as string[]
-      }
-    }))
-    done = Math.min(done + batch.length, chunks.length)
-    onProgress?.(done, chunks.length)
-    for (const posts of results) {
-      for (const post of posts) {
-        const last = allPosts[allPosts.length - 1] || ''
-        if (post.trim().length >= 50 && post.slice(0, 60) !== last.slice(0, 60)) {
-          allPosts.push(post.trim())
-        }
-      }
-    }
-  }
-  return allPosts
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1028,7 +994,7 @@ export default function BulkImport({
                         whiteSpace: 'nowrap', flexShrink: 0,
                       }}>
                       {retryingAI
-                        ? <><Loader2 style={{ width: 11, height: 11, animation: 'spin 1s linear infinite' }} />{retryProgress ? ` Analyse ${retryProgress.current}/${retryProgress.total}…` : ' IA en cours…'}</>
+                        ? <><Loader2 style={{ width: 11, height: 11, animation: 'spin 1s linear infinite' }} /> Analyse en cours…</>
                         : <><Sparkles style={{ width: 11, height: 11 }} /> Réparer avec l'IA</>}
                     </button>
                   </div>
