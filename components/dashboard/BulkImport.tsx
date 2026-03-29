@@ -280,7 +280,10 @@ const AI_SPLITTER_URL = 'https://bvsfclqlopzkfmeinbqs.supabase.co/functions/v1/a
 const AI_CHUNK_SIZE = 2800   // chars per chunk sent to Claude
 const AI_CHUNK_OVERLAP = 80  // overlap to avoid cutting mid-post
 
-async function splitWithAIDirectly(text: string): Promise<string[]> {
+async function splitWithAIDirectly(
+  text: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<string[]> {
   // Chunk the document
   const chunks: string[] = []
   let pos = 0
@@ -296,23 +299,35 @@ async function splitWithAIDirectly(text: string): Promise<string[]> {
     if (pos >= text.length) break
   }
 
-  // Process chunks — batch of 3 in parallel
+  // Process chunks — batch of 3 in parallel, with 25s timeout per call
   const BATCH = 3
+  const CHUNK_TIMEOUT_MS = 25000
   const allPosts: string[] = []
+  let done = 0
+
   for (let i = 0; i < chunks.length; i += BATCH) {
     const batch = chunks.slice(i, i + BATCH)
     const results = await Promise.all(batch.map(async chunk => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), CHUNK_TIMEOUT_MS)
       try {
         const res = await fetch(AI_SPLITTER_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: chunk }),
+          signal: controller.signal,
         })
+        clearTimeout(timeoutId)
         if (!res.ok) return [] as string[]
         const data = await res.json()
         return (data.posts || []) as string[]
-      } catch { return [] as string[] }
+      } catch {
+        clearTimeout(timeoutId)
+        return [] as string[]
+      }
     }))
+    done = Math.min(done + batch.length, chunks.length)
+    onProgress?.(done, chunks.length)
     for (const posts of results) {
       for (const post of posts) {
         const last = allPosts[allPosts.length - 1] || ''
@@ -414,6 +429,7 @@ export default function BulkImport({
   const [method, setMethod] = useState('')
   const [importWarning, setImportWarning] = useState<string | null>(null)
   const [retryingAI, setRetryingAI] = useState(false)
+  const [retryProgress, setRetryProgress] = useState<{ current: number; total: number } | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState('')
@@ -517,10 +533,13 @@ export default function BulkImport({
   const handleRetryWithAI = async () => {
     if (!rawText || retryingAI) return
     setRetryingAI(true)
+    setRetryProgress(null)
     setAiError('')
     setError('')
     try {
-      const extracted = await splitWithAIDirectly(rawText)
+      const extracted = await splitWithAIDirectly(rawText, (current, total) => {
+        setRetryProgress({ current, total })
+      })
       if (extracted.length >= 2) {
         setPosts(extracted)
         setStructure('ai-direct'); setMethod('ai'); setImportWarning(null)
@@ -533,6 +552,7 @@ export default function BulkImport({
       setAiError(err.message || "Erreur IA — réessaie dans quelques secondes.")
     } finally {
       setRetryingAI(false)
+      setRetryProgress(null)
     }
   }
 
@@ -1008,7 +1028,7 @@ export default function BulkImport({
                         whiteSpace: 'nowrap', flexShrink: 0,
                       }}>
                       {retryingAI
-                        ? <><Loader2 style={{ width: 11, height: 11, animation: 'spin 1s linear infinite' }} /> IA en cours…</>
+                        ? <><Loader2 style={{ width: 11, height: 11, animation: 'spin 1s linear infinite' }} />{retryProgress ? ` Analyse ${retryProgress.current}/${retryProgress.total}…` : ' IA en cours…'}</>
                         : <><Sparkles style={{ width: 11, height: 11 }} /> Réparer avec l'IA</>}
                     </button>
                   </div>
